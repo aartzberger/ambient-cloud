@@ -44,7 +44,9 @@ class Milvus_Existing_VectorStores implements INode {
                 label: 'Milvus Server URL',
                 name: 'milvusServerUrl',
                 type: 'string',
-                placeholder: 'http://localhost:19530'
+                placeholder: '7.tcp.ngrok.io:27703',
+                default: '7.tcp.ngrok.io:27703',
+                optional: true
             },
             {
                 label: 'Milvus Collection Name',
@@ -68,7 +70,9 @@ class Milvus_Existing_VectorStores implements INode {
 
     async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
         // server setup
-        const address = nodeData.inputs?.milvusServerUrl as string
+        const address = nodeData.inputs?.milvusServerUrl 
+            ? nodeData.inputs.milvusServerUrl as string 
+            : nodeData.inputs?.default as string;
         const collectionName = nodeData.inputs?.milvusCollection as string
 
         // embeddings
