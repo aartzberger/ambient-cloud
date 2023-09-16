@@ -56,7 +56,7 @@ const Marketplace = () => {
     const [isChatflowsLoading, setChatflowsLoading] = useState(true)
     const [isToolsLoading, setToolsLoading] = useState(true)
     const [images, setImages] = useState({})
-    const tabItems = ['Chatflows', 'Tools']
+    const tabItems = ['Flows', 'Tools']
     const [value, setValue] = useState(0)
     const [showToolDialog, setShowToolDialog] = useState(false)
     const [toolDialogProps, setToolDialogProps] = useState({})
@@ -137,7 +137,7 @@ const Marketplace = () => {
         <>
             <MainCard sx={{ background: customization.isDarkMode ? theme.palette.common.black : '' }}>
                 <Stack flexDirection='row'>
-                    <h1>Marketplace</h1>
+                    <h1>Templates</h1>
                 </Stack>
                 <Tabs sx={{ mb: 2 }} variant='fullWidth' value={value} onChange={handleChange} aria-label='tabs'>
                     {tabItems.map((item, index) => (
@@ -151,7 +151,7 @@ const Marketplace = () => {
                 </Tabs>
                 {tabItems.map((item, index) => (
                     <TabPanel key={index} value={value} index={index}>
-                        {item === 'Chatflows' && (
+                        {item === 'Flows' && (
                             <Grid container spacing={gridSpacing}>
                                 {!isChatflowsLoading &&
                                     getAllChatflowsMarketplacesApi.data &&

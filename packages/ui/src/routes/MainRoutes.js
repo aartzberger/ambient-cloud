@@ -19,6 +19,9 @@ const Tools = Loadable(lazy(() => import('views/tools')))
 // credentials routing
 const Credentials = Loadable(lazy(() => import('views/credentials')))
 
+// vectorstore routing
+const Stores = Loadable(lazy(() => import('views/vectorstores')))
+
 // ==============================|| MAIN ROUTING ||============================== //
 
 const MainRoutes = {
@@ -36,6 +39,10 @@ const MainRoutes = {
         {
             path: '/marketplaces',
             element: <Marketplaces />
+        },
+        {
+            path: '/vectorstores',
+            element: <Stores />
         },
         {
             path: '/apikey',

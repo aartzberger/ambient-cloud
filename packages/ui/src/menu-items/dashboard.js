@@ -13,7 +13,7 @@ const dashboard = {
     children: [
         {
             id: 'chatflows',
-            title: 'Chatflows',
+            title: 'Flows',
             type: 'item',
             url: '/chatflows',
             icon: icons.IconHierarchy,
@@ -21,9 +21,17 @@ const dashboard = {
         },
         {
             id: 'marketplaces',
-            title: 'Marketplaces',
+            title: 'Templates',
             type: 'item',
             url: '/marketplaces',
+            icon: icons.IconBuildingStore,
+            breadcrumbs: true
+        },
+        {
+            id: 'vectorstores',
+            title: 'My Data',
+            type: 'item',
+            url: '/vectorstores',
             icon: icons.IconBuildingStore,
             breadcrumbs: true
         },
