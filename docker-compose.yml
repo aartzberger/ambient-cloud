@@ -1,0 +1,22 @@
+version: "3.6"
+
+networks:
+    ambient:
+      external: true
+
+services:
+  base:
+    build: .
+    image: ambient-flowise-base
+    profiles:
+      - build
+
+  ambient:
+    image: ambient-flowise-base
+    restart: unless-stopped
+    networks:
+      - ambient
+    working_dir: /usr/src/packages
+    command: [ "yarn", "start" ]
+
+  
