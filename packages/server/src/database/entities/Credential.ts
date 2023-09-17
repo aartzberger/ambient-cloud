@@ -1,11 +1,23 @@
 /* eslint-disable */
-import { Entity, Column, PrimaryGeneratedColumn, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm'
+import { Entity, 
+         Column, 
+         PrimaryGeneratedColumn, 
+         Index, 
+         CreateDateColumn, 
+         UpdateDateColumn,
+         ManyToOne, 
+         JoinColumn
+         } from 'typeorm'
 import { ICredential } from '../../Interface'
+import { User } from './User'; // import the User entity
 
 @Entity()
 export class Credential implements ICredential {
     @PrimaryGeneratedColumn('uuid')
     id: string
+
+    @Column()
+    userId: string
 
     @Column()
     name: string
@@ -21,4 +33,7 @@ export class Credential implements ICredential {
 
     @UpdateDateColumn()
     updatedDate: Date
+
+    @ManyToOne(type => User, user => user.credentials)
+    user: User;
 }

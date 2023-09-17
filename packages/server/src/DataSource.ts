@@ -57,7 +57,7 @@ export const init = async (): Promise<void> => {
             appDataSource = new DataSource({
                 type: 'sqlite',
                 database: path.resolve(homePath, 'database.sqlite'),
-                synchronize: false,
+                synchronize: true,
                 migrationsRun: false,
                 entities: Object.values(entities),
                 migrations: sqliteMigrations

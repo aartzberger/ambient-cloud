@@ -1,4 +1,7 @@
-import express, { Request, Response } from 'express'
+import express, { Request, Response, NextFunction } from 'express'
+import session from 'express-session'
+import passport from 'passport';
+import { Strategy } from 'passport-google-oauth20';
 import multer from 'multer'
 import path from 'path'
 import cors from 'cors'
@@ -10,6 +13,7 @@ import logger from './utils/logger'
 import { expressRequestLogger } from './utils/logger'
 
 import {
+    IUser,
     IChatFlow,
     IncomingInput,
     IReactFlowNode,
@@ -48,6 +52,7 @@ import {
 import { cloneDeep, omit } from 'lodash'
 import { getDataSource } from './DataSource'
 import { NodesPool } from './NodesPool'
+import { User } from './database/entities/User'
 import { ChatFlow } from './database/entities/ChatFlow'
 import { ChatMessage } from './database/entities/ChatMessage'
 import { Credential } from './database/entities/Credential'
@@ -126,6 +131,75 @@ export class App {
         }
 
         const upload = multer({ dest: `${path.join(__dirname, '..', 'uploads')}/` })
+
+        this.app.use(session({
+            secret: 'secret-key',
+            resave: false,
+            saveUninitialized: true
+        }));
+
+        this.app.use(passport.initialize());
+        this.app.use(passport.session());
+
+        // Apply the authentication middleware.
+        function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
+            if (req.isAuthenticated()) {
+                return next();
+            }
+            res.redirect('/login');
+        }
+
+        passport.serializeUser((user: any, done) => {
+            done(null, user.id);
+        });
+        
+        passport.deserializeUser(async (id: string, done) => {
+            const user = await this.AppDataSource.getRepository(User).findOneBy({
+                id:id
+            });
+            done(null, user);
+        });
+
+        passport.use(new Strategy({
+            clientID: '530294522870-o17j0nite5q2tcslg0tsn1li9bh4rtv3.apps.googleusercontent.com',
+            clientSecret: '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',
+            callbackURL: 'https://flow-ambient.ngrok.app/api/v1/auth/google/callback'
+        }, async (accessToken: any, refreshToken: any, profile: any, done: any) => {
+            // Check if user exists in the database
+            const existingUser = await this.AppDataSource.getRepository(User).findOneBy({ 
+                id: profile.id 
+            });
+            
+            if (existingUser) {
+                // Existing user, use this user
+                return done(null, existingUser);
+            }
+            // New user, create a new user and then use that user
+            const newUser = await this.AppDataSource.getRepository(User).save({
+                id: profile.id,
+                name: profile.displayName,
+                email: profile.emails[0].value
+            });
+
+            return done(null, newUser);
+        }));
+
+
+        // ----------------------------------------
+        // Login
+        // ----------------------------------------
+        this.app.get('/auth/google', passport.authenticate('google', {
+            scope: ['profile', 'email'],
+            prompt: 'select_account'
+        }));
+
+        this.app.get('/api/v1/auth/google/callback', 
+        passport.authenticate('google', { failureRedirect: '/login' }), 
+            (req, res) => {
+            // Successful authentication, redirect home.
+            res.redirect('/chatflows');
+        });
+
 
         // ----------------------------------------
         // Components
@@ -247,8 +321,10 @@ export class App {
         // ----------------------------------------
 
         // Get all chatflows
-        this.app.get('/api/v1/chatflows', async (req: Request, res: Response) => {
-            const chatflows: IChatFlow[] = await this.AppDataSource.getRepository(ChatFlow).find()
+        this.app.get('/api/v1/chatflows', ensureAuthenticated, async (req: Request, res: Response) => {
+            const chatflows: IChatFlow[] = await this.AppDataSource.getRepository(ChatFlow).find({
+                where: { userId: (req.user as User).id }
+            })
             return res.json(chatflows)
         })
 
@@ -295,6 +371,7 @@ export class App {
             const body = req.body
             const newChatFlow = new ChatFlow()
             Object.assign(newChatFlow, body)
+            newChatFlow.user = req.user as User
 
             const chatflow = this.AppDataSource.getRepository(ChatFlow).create(newChatFlow)
             const results = await this.AppDataSource.getRepository(ChatFlow).save(chatflow)
@@ -384,6 +461,7 @@ export class App {
             const body = req.body
             const newChatMessage = new ChatMessage()
             Object.assign(newChatMessage, body)
+            newChatMessage.user = req.user as User
 
             const chatmessage = this.AppDataSource.getRepository(ChatMessage).create(newChatMessage)
             const results = await this.AppDataSource.getRepository(ChatMessage).save(chatmessage)
@@ -415,9 +493,11 @@ export class App {
         // ----------------------------------------
 
         // Create new credential
-        this.app.post('/api/v1/credentials', async (req: Request, res: Response) => {
+        this.app.post('/api/v1/credentials', ensureAuthenticated, async (req: Request, res: Response) => {
             const body = req.body
             const newCredential = await transformToCredentialEntity(body)
+            newCredential.user = req.user as User
+
             const credential = this.AppDataSource.getRepository(Credential).create(newCredential)
             const results = await this.AppDataSource.getRepository(Credential).save(credential)
             return res.json(results)
@@ -431,19 +511,23 @@ export class App {
                     for (let i = 0; i < req.query.credentialName.length; i += 1) {
                         const name = req.query.credentialName[i] as string
                         const credentials = await this.AppDataSource.getRepository(Credential).findBy({
-                            credentialName: name
+                            credentialName: name,
+                            userId: (req.user as User).id
                         })
                         returnCredentials.push(...credentials)
                     }
                 } else {
                     const credentials = await this.AppDataSource.getRepository(Credential).findBy({
-                        credentialName: req.query.credentialName as string
+                        credentialName: req.query.credentialName as string,
+                        userId: (req.user as User).id
                     })
                     returnCredentials = [...credentials]
                 }
                 return res.json(returnCredentials)
             } else {
-                const credentials = await this.AppDataSource.getRepository(Credential).find()
+                const credentials = await this.AppDataSource.getRepository(Credential).findBy({
+                    userId: (req.user as User).id
+                })
                 const returnCredentials = []
                 for (const credential of credentials) {
                     returnCredentials.push(omit(credential, ['encryptedData']))
@@ -455,7 +539,7 @@ export class App {
         // Get specific credential
         this.app.get('/api/v1/credentials/:id', async (req: Request, res: Response) => {
             const credential = await this.AppDataSource.getRepository(Credential).findOneBy({
-                id: req.params.id
+                id: req.params.id,
             })
 
             if (!credential) return res.status(404).send(`Credential ${req.params.id} not found`)
@@ -500,8 +584,10 @@ export class App {
         // ----------------------------------------
 
         // Get all tools
-        this.app.get('/api/v1/tools', async (req: Request, res: Response) => {
-            const tools = await this.AppDataSource.getRepository(Tool).find()
+        this.app.get('/api/v1/tools', ensureAuthenticated, async (req: Request, res: Response) => {
+            const tools = await this.AppDataSource.getRepository(Tool).find({
+                where: { user: req.user }
+            })
             return res.json(tools)
         })
 
@@ -518,6 +604,7 @@ export class App {
             const body = req.body
             const newTool = new Tool()
             Object.assign(newTool, body)
+            newTool.user = req.user as User
 
             const tool = this.AppDataSource.getRepository(Tool).create(newTool)
             const results = await this.AppDataSource.getRepository(Tool).save(tool)
@@ -607,8 +694,12 @@ export class App {
         // ----------------------------------------
 
         this.app.get('/api/v1/database/export', async (req: Request, res: Response) => {
-            const chatmessages = await this.AppDataSource.getRepository(ChatMessage).find()
-            const chatflows = await this.AppDataSource.getRepository(ChatFlow).find()
+            const chatmessages = await this.AppDataSource.getRepository(ChatMessage).find({
+                where: { userId: (req.user as User).id }
+            })
+            const chatflows = await this.AppDataSource.getRepository(ChatFlow).find({
+                where: { userId: (req.user as User).id }
+            })
             const apikeys = await getAPIKeys()
             const result: IDatabaseExport = {
                 chatmessages,
@@ -672,7 +763,7 @@ export class App {
         // ----------------------------------------
 
         // Get all chatflows for marketplaces
-        this.app.get('/api/v1/marketplaces/chatflows', async (req: Request, res: Response) => {
+        this.app.get('/api/v1/marketplaces/chatflows', ensureAuthenticated, async (req: Request, res: Response) => {
             const marketplaceDir = path.join(__dirname, '..', 'marketplaces', 'chatflows')
             const jsonsInDir = fs.readdirSync(marketplaceDir).filter((file) => path.extname(file) === '.json')
             const templates: any[] = []
@@ -692,7 +783,7 @@ export class App {
         })
 
         // Get all tools for marketplaces
-        this.app.get('/api/v1/marketplaces/tools', async (req: Request, res: Response) => {
+        this.app.get('/api/v1/marketplaces/tools', ensureAuthenticated, async (req: Request, res: Response) => {
             const marketplaceDir = path.join(__dirname, '..', 'marketplaces', 'tools')
             const jsonsInDir = fs.readdirSync(marketplaceDir).filter((file) => path.extname(file) === '.json')
             const templates: any[] = []

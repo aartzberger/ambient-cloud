@@ -1,12 +1,29 @@
 import { ICommonObject, INode, INodeData as INodeDataFromComponent, INodeParams } from 'flowise-components'
+import { User } from '../src/database/entities/User'; // import the ChatFlow entity
+import { ChatFlow } from '../src/database/entities/ChatFlow'; // import the ChatFlow entity
+import { ChatMessage } from '../src/database/entities/ChatMessage'; // import the ChatFlow entity
+import { Credential } from '../src/database/entities/Credential'; // import the ChatFlow entity
+import { Tool } from '../src/database/entities/Tool'; // import the ChatFlow entity
 
 export type MessageType = 'apiMessage' | 'userMessage'
 
 /**
  * Databases
  */
+
+export interface IUser {
+    id: string
+    name: string
+    email: string
+    chatflows?: ChatFlow[]
+    chatmessages?: ChatMessage[]
+    credentials?: Credential[]
+    tools?: Tool[]
+}
+
 export interface IChatFlow {
     id: string
+    userId: string
     name: string
     flowData: string
     updatedDate: Date
@@ -15,15 +32,18 @@ export interface IChatFlow {
     isPublic?: boolean
     apikeyid?: string
     chatbotConfig?: string
+    user: User
 }
 
 export interface IChatMessage {
     id: string
+    userId: string
     role: MessageType
     content: string
     chatflowid: string
     createdDate: Date
     sourceDocuments?: string
+    user: User
 }
 
 export interface ITool {
@@ -36,6 +56,7 @@ export interface ITool {
     func?: string
     updatedDate: Date
     createdDate: Date
+    user: User
 }
 
 export interface ICredential {
@@ -45,6 +66,7 @@ export interface ICredential {
     encryptedData: string
     updatedDate: Date
     createdDate: Date
+    user: User
 }
 
 export interface IComponentNodes {
