@@ -13,7 +13,7 @@ import LogoSection from '../LogoSection'
 import ProfileSection from './ProfileSection'
 
 // assets
-import { IconMenu2 } from '@tabler/icons'
+import { IconMenu2, IconLogout } from '@tabler/icons'
 
 // store
 import { SET_DARKMODE } from 'store/actions'
@@ -127,6 +127,27 @@ const Header = ({ handleLeftDrawerToggle }) => {
             </Box>
             <Box sx={{ flexGrow: 1 }} />
             <MaterialUISwitch checked={isDark} onChange={changeDarkMode} />
+            <Box sx={{ ml: 2 }}></Box>
+            <ButtonBase title='Back' sx={{ borderRadius: '50%' }}>
+                <Avatar
+                    variant='rounded'
+                    sx={{
+                        ...theme.typography.commonAvatar,
+                        ...theme.typography.mediumAvatar,
+                        transition: 'all .2s ease-in-out',
+                        background: theme.palette.secondary.light,
+                        color: theme.palette.secondary.dark,
+                        '&:hover': {
+                            background: theme.palette.secondary.dark,
+                            color: theme.palette.secondary.light
+                        }
+                    }}
+                    color='inherit'
+                    // onClick={handleLogin}
+                >
+                    <IconLogout stroke={1.5} size='1.3rem' />
+                </Avatar>
+            </ButtonBase>
             <Box sx={{ ml: 2 }}></Box>
             <ProfileSection handleLogout={signOutClicked} username={localStorage.getItem('username') ?? ''} />
         </>

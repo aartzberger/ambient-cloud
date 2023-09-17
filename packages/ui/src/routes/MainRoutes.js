@@ -29,10 +29,6 @@ const MainRoutes = {
     element: <MainLayout />,
     children: [
         {
-            path: '/',
-            element: <Chatflows />
-        },
-        {
             path: '/chatflows',
             element: <Chatflows />
         },
