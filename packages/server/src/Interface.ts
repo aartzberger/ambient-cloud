@@ -59,6 +59,14 @@ export interface ITool {
     user: User
 }
 
+export interface IRemoteDb {
+    id: string
+    endpoint: string
+    updatedDate: Date
+    createdDate: Date
+    user: User
+}
+
 export interface ICredential {
     id: string
     name: string

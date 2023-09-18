@@ -13,14 +13,13 @@ import logger from './utils/logger'
 import { expressRequestLogger } from './utils/logger'
 
 import {
-    IUser,
     IChatFlow,
     IncomingInput,
     IReactFlowNode,
     IReactFlowObject,
     INodeData,
     IDatabaseExport,
-    ICredentialReturnResponse
+    ICredentialReturnResponse,
 } from './Interface'
 import {
     getNodeModulesPackagePath,
@@ -57,6 +56,7 @@ import { ChatFlow } from './database/entities/ChatFlow'
 import { ChatMessage } from './database/entities/ChatMessage'
 import { Credential } from './database/entities/Credential'
 import { Tool } from './database/entities/Tool'
+import { RemoteDb } from './database/entities/RemoteDb'
 import { ChatflowPool } from './ChatflowPool'
 import { ICommonObject, INodeOptionsValue } from 'flowise-components'
 
@@ -638,6 +638,62 @@ export class App {
             const results = await this.AppDataSource.getRepository(Tool).delete({ id: req.params.id })
             return res.json(results)
         })
+
+        // ----------------------------------------
+        // RemoteDb
+        // ----------------------------------------
+        // create or update remotedb
+        this.app.post('/api/v1/remotedb', async (req: Request, res: Response) => {
+
+            const body = req.body
+
+            // check if there is already a db for a given user
+            const currentdb = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
+                userId: (req.user as User).id,
+            })
+
+            if (currentdb) {
+                // if there is already a db, update the endpoint
+                const updateRemoteDb= new RemoteDb()
+                Object.assign(updateRemoteDb, body)
+
+                this.AppDataSource.getRepository(RemoteDb).merge(currentdb, updateRemoteDb)
+                const results = await this.AppDataSource.getRepository(RemoteDb).save(currentdb)
+                return res.json(results)
+            } else {
+                // if there is no db associated with user, create a new one
+                const body = req.body
+                const newRemoteDb = new RemoteDb()
+                Object.assign(newRemoteDb, body)
+                newRemoteDb.user = req.user as User
+
+                const remotedb = this.AppDataSource.getRepository(RemoteDb).create(newRemoteDb)
+                const results = await this.AppDataSource.getRepository(RemoteDb).save(remotedb)
+                return res.json(results)
+            }
+        })
+
+        // Update tool
+        this.app.put('/api/v1/tools/:id', async (req: Request, res: Response) => {
+            const tool = await this.AppDataSource.getRepository(Tool).findOneBy({
+                id: req.params.id
+            })
+
+            if (!tool) {
+                res.status(404).send(`Tool ${req.params.id} not found`)
+                return
+            }
+
+            const body = req.body
+            const updateTool = new Tool()
+            Object.assign(updateTool, body)
+
+            this.AppDataSource.getRepository(Tool).merge(tool, updateTool)
+            const result = await this.AppDataSource.getRepository(Tool).save(tool)
+
+            return res.json(result)
+        })
+
 
         // ----------------------------------------
         // Configuration

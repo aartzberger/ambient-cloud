@@ -5,6 +5,7 @@ import { ChatFlow } from './ChatFlow'; // import the ChatFlow entity
 import { ChatMessage } from './ChatMessage'; // import the ChatFlow entity
 import { Credential } from './Credential'; // import the ChatFlow entity
 import { Tool } from './Tool'; // import the ChatFlow entity
+import { RemoteDb } from './RemoteDb'; // import the ChatFlow entity
 
 
 
@@ -38,4 +39,9 @@ export class User implements IUser {
         cascade: true, // This will allow you to save tools when saving a user
     })
     tools: Tool[];
+
+    @OneToMany(type => RemoteDb, remotedb => remotedb.user, {
+        cascade: true, // This will allow you to save tools when saving a user
+    })
+    remotedb: RemoteDb[];
 }
