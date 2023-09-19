@@ -639,6 +639,27 @@ export class App {
             return res.json(results)
         })
 
+        // Update tool
+        this.app.put('/api/v1/tools/:id', async (req: Request, res: Response) => {
+            const tool = await this.AppDataSource.getRepository(Tool).findOneBy({
+                id: req.params.id
+            })
+
+            if (!tool) {
+                res.status(404).send(`Tool ${req.params.id} not found`)
+                return
+            }
+
+            const body = req.body
+            const updateTool = new Tool()
+            Object.assign(updateTool, body)
+
+            this.AppDataSource.getRepository(Tool).merge(tool, updateTool)
+            const result = await this.AppDataSource.getRepository(Tool).save(tool)
+
+            return res.json(result)
+        })
+
         // ----------------------------------------
         // RemoteDb
         // ----------------------------------------
@@ -679,26 +700,25 @@ export class App {
             }
         })
 
-        // Update tool
-        this.app.put('/api/v1/tools/:id', async (req: Request, res: Response) => {
-            const tool = await this.AppDataSource.getRepository(Tool).findOneBy({
-                id: req.params.id
+        // return the remote client endpoint for a given user
+        this.app.get('/api/v1/user-client-endpoint', async (req: Request, res: Response) => {
+            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
+                userId: (req.user as User).id
             })
 
-            if (!tool) {
-                res.status(404).send(`Tool ${req.params.id} not found`)
-                return
-            }
+            const endpointData = {endpoint: (remoteData as RemoteDb).clientUrl}
+            return res.json(endpointData)
+        });
 
-            const body = req.body
-            const updateTool = new Tool()
-            Object.assign(updateTool, body)
+        // return the remote milvus endpoint for a given user
+        this.app.get('/api/v1/user-milvus-endpoint', async (req: Request, res: Response) => {
+            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
+                userId: (req.user as User).id
+            })
 
-            this.AppDataSource.getRepository(Tool).merge(tool, updateTool)
-            const result = await this.AppDataSource.getRepository(Tool).save(tool)
-
-            return res.json(result)
-        })
+            const endpointData = {endpoint: (remoteData as RemoteDb).milvusUrl}
+            return res.json(endpointData)
+        });
 
 
         // ----------------------------------------
