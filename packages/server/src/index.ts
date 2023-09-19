@@ -1,7 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express'
 import session from 'express-session'
-import passport from 'passport';
-import { Strategy } from 'passport-google-oauth20';
+import passport from 'passport'
+import { Strategy } from 'passport-google-oauth20'
 import multer from 'multer'
 import path from 'path'
 import cors from 'cors'
@@ -649,27 +649,33 @@ export class App {
 
             // check if there is already a db for a given user
             const currentdb = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                userId: (req.user as User).id,
+                userId: body.id,
             })
+            const user = await this.AppDataSource.getRepository(User).findOneBy({
+                id: body.id,
+            })
+
+            const endpointData = {milvusUrl: body.milvusUrl, clientUrl: body.clientUrl}
 
             if (currentdb) {
                 // if there is already a db, update the endpoint
                 const updateRemoteDb= new RemoteDb()
-                Object.assign(updateRemoteDb, body)
+                Object.assign(updateRemoteDb, endpointData)
 
                 this.AppDataSource.getRepository(RemoteDb).merge(currentdb, updateRemoteDb)
                 const results = await this.AppDataSource.getRepository(RemoteDb).save(currentdb)
                 return res.json(results)
-            } else {
+            } else if (!currentdb && user) {
                 // if there is no db associated with user, create a new one
-                const body = req.body
                 const newRemoteDb = new RemoteDb()
-                Object.assign(newRemoteDb, body)
-                newRemoteDb.user = req.user as User
+                Object.assign(newRemoteDb, endpointData)
+                newRemoteDb.user = user
 
                 const remotedb = this.AppDataSource.getRepository(RemoteDb).create(newRemoteDb)
                 const results = await this.AppDataSource.getRepository(RemoteDb).save(remotedb)
                 return res.json(results)
+            } else {
+                return res.status(404).send(`User ${body.id} not found`)
             }
         })
 

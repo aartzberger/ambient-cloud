@@ -61,7 +61,8 @@ export interface ITool {
 
 export interface IRemoteDb {
     id: string
-    endpoint: string
+    milvusUrl: string
+    clientUrl: string
     updatedDate: Date
     createdDate: Date
     user: User

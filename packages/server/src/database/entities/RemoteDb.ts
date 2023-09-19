@@ -18,7 +18,10 @@ id: string
 userId: string
 
 @Column()
-endpoint: string
+milvusUrl: string
+
+@Column()
+clientUrl: string
 
 @CreateDateColumn()
 createdDate: Date
