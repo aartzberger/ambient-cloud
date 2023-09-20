@@ -1,10 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import { FormControl, OutlinedInput } from '@mui/material'
 import ExpandTextDialog from 'ui-component/dialog/ExpandTextDialog'
 
+// API
+import remotesApi from 'api/remotes'
+
 export const Input = ({ inputParam, value, onChange, disabled = false, showDialog, dialogProps, onDialogCancel, onDialogConfirm }) => {
     const [myValue, setMyValue] = useState(value ?? '')
+    const [url, setUrl] = useState(value ?? '')
 
     const getInputType = (type) => {
         switch (type) {
@@ -19,6 +23,20 @@ export const Input = ({ inputParam, value, onChange, disabled = false, showDialo
         }
     }
 
+    useEffect(() => {
+        const getMilvusUrl = async () => {
+            try {
+                const res = await remotesApi.getUserMilvusEndpoint()
+                setUrl(res.data.endpoint ? res.data.endpoint : 'none found')
+            } catch (e) {
+                console.error(e)
+            }
+        }
+
+        inputParam.name === 'milvusServerUrl' && getMilvusUrl()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
     return (
         <>
             <FormControl sx={{ mt: 1, width: '100%' }} size='small'>
@@ -30,7 +48,7 @@ export const Input = ({ inputParam, value, onChange, disabled = false, showDialo
                     placeholder={inputParam.placeholder}
                     multiline={!!inputParam.rows}
                     rows={inputParam.rows ?? 1}
-                    value={myValue}
+                    value={inputParam.name === 'milvusServerUrl' && url ? url : myValue}
                     name={inputParam.name}
                     onChange={(e) => {
                         setMyValue(e.target.value)

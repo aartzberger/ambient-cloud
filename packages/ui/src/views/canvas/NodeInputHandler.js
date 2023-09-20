@@ -22,6 +22,7 @@ import { TooltipWithParser } from 'ui-component/tooltip/TooltipWithParser'
 import ToolDialog from 'views/tools/ToolDialog'
 import FormatPromptValuesDialog from 'ui-component/dialog/FormatPromptValuesDialog'
 import CredentialInputHandler from './CredentialInputHandler'
+import { MilvusUrlHandler } from './MilvusUrlHandler'
 
 // utils
 import { getInputVariables } from 'utils/genericHelper'
