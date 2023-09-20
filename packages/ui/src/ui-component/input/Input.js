@@ -6,7 +6,17 @@ import ExpandTextDialog from 'ui-component/dialog/ExpandTextDialog'
 // API
 import remotesApi from 'api/remotes'
 
-export const Input = ({ inputParam, value, onChange, disabled = false, showDialog, dialogProps, onDialogCancel, onDialogConfirm }) => {
+export const Input = ({
+    data,
+    inputParam,
+    value,
+    onChange,
+    disabled = false,
+    showDialog,
+    dialogProps,
+    onDialogCancel,
+    onDialogConfirm
+}) => {
     const [myValue, setMyValue] = useState(value ?? '')
     const [url, setUrl] = useState(value ?? '')
 
@@ -23,11 +33,14 @@ export const Input = ({ inputParam, value, onChange, disabled = false, showDialo
         }
     }
 
+    // TODO: ideally we should spin milvus url into ints own ui component
     useEffect(() => {
         const getMilvusUrl = async () => {
             try {
                 const res = await remotesApi.getUserMilvusEndpoint()
-                setUrl(res.data.endpoint ? res.data.endpoint : 'none found')
+                setUrl(res.data.endpoint ? res.data.endpoint : none)
+                data.inputs[inputParam.name] = res.data.endpoint ? res.data.endpoint : none
+                console.log('cman1', data)
             } catch (e) {
                 console.error(e)
             }
@@ -78,6 +91,7 @@ export const Input = ({ inputParam, value, onChange, disabled = false, showDialo
 }
 
 Input.propTypes = {
+    data: PropTypes.object,
     inputParam: PropTypes.object,
     value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     onChange: PropTypes.func,

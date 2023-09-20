@@ -19,7 +19,7 @@ class Milvus_Existing_VectorStores implements INode {
     outputs: INodeOutputsValue[]
 
     constructor() {
-        this.label = 'Milvus Load Existing collection'
+        this.label = 'Use Data from My Docs'
         this.name = 'milvusExistingCollection'
         this.version = 1.0
         this.type = 'Milvus'
@@ -41,7 +41,7 @@ class Milvus_Existing_VectorStores implements INode {
                 type: 'Embeddings'
             },
             {
-                label: 'Milvus Server URL',
+                label: 'Data Server URL',
                 name: 'milvusServerUrl',
                 type: 'string',
                 placeholder: '7.tcp.ngrok.io:27703',
@@ -49,19 +49,19 @@ class Milvus_Existing_VectorStores implements INode {
                 optional: true
             },
             {
-                label: 'Milvus Collection Name',
+                label: 'Collection Name',
                 name: 'milvusCollection',
                 type: 'string'
             }
         ]
         this.outputs = [
             {
-                label: 'Milvus Retriever',
+                label: 'Data Retriever',
                 name: 'retriever',
                 baseClasses: this.baseClasses
             },
             {
-                label: 'Milvus Vector Store',
+                label: 'Vector Store',
                 name: 'vectorStore',
                 baseClasses: [this.type, ...getBaseClasses(Milvus)]
             }
@@ -91,6 +91,7 @@ class Milvus_Existing_VectorStores implements INode {
         const milvusPassword = getCredentialParam('milvusPassword', credentialData, nodeData)
 
         // init MilvusLibArgs
+        console.log('milvusServerUrl', address)
         const milVusArgs: MilvusLibArgs = {
             url: address,
             collectionName: collectionName

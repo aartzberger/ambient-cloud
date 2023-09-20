@@ -260,6 +260,7 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
                         )}
                         {(inputParam.type === 'string' || inputParam.type === 'password' || inputParam.type === 'number') && (
                             <Input
+                                data={data}
                                 key={data.inputs[inputParam.name]}
                                 disabled={disabled}
                                 inputParam={inputParam}
