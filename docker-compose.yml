@@ -16,6 +16,8 @@ services:
     restart: unless-stopped
     networks:
       - ambient
+    volumes:
+      - ./db_version:/root/.flowise
     working_dir: /usr/src/packages
     command: [ "yarn", "start" ]
 
