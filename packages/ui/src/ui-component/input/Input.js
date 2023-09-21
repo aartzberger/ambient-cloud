@@ -35,18 +35,17 @@ export const Input = ({
 
     // TODO: ideally we should spin milvus url into ints own ui component
     useEffect(() => {
-        const getMilvusUrl = async () => {
+        const getUrl = async () => {
             try {
-                const res = await remotesApi.getUserMilvusEndpoint()
+                const res = await remotesApi.getUserClientEndpoint()
                 setUrl(res.data.endpoint ? res.data.endpoint : none)
                 data.inputs[inputParam.name] = res.data.endpoint ? res.data.endpoint : none
-                console.log('cman1', data)
             } catch (e) {
                 console.error(e)
             }
         }
 
-        inputParam.name === 'milvusServerUrl' && getMilvusUrl()
+        inputParam.name === 'serverUrl' && getUrl()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
@@ -61,7 +60,7 @@ export const Input = ({
                     placeholder={inputParam.placeholder}
                     multiline={!!inputParam.rows}
                     rows={inputParam.rows ?? 1}
-                    value={inputParam.name === 'milvusServerUrl' && url ? url : myValue}
+                    value={inputParam.name === 'serverUrl' && url ? url : myValue}
                     name={inputParam.name}
                     onChange={(e) => {
                         setMyValue(e.target.value)
