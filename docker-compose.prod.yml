@@ -9,6 +9,8 @@ services:
     restart: unless-stopped
     networks:
       - ambient
+    environment:
+      - DEPLOYED_URL=flow-ambient.ngrok.app
     volumes:
       - ./db_version:/root/.flowise
     working_dir: /usr/src/packages

@@ -160,10 +160,12 @@ export class App {
             done(null, user);
         });
 
+        const DEPLOYED_URL = process.env.DEPLOYED_URL
+
         passport.use(new Strategy({
             clientID: '530294522870-o17j0nite5q2tcslg0tsn1li9bh4rtv3.apps.googleusercontent.com',
             clientSecret: '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',
-            callbackURL: 'https://flow-ambient.ngrok.app/api/v1/auth/google/callback'
+            callbackURL: `https://${DEPLOYED_URL}/api/v1/auth/google/callback`
         }, async (accessToken: any, refreshToken: any, profile: any, done: any) => {
             // Check if user exists in the database
             const existingUser = await this.AppDataSource.getRepository(User).findOneBy({ 
