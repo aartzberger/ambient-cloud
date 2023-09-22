@@ -706,7 +706,7 @@ export class App {
                 userId: (req.user as User).id
             })
 
-            const endpointData = {endpoint: (remoteData as RemoteDb).clientUrl}
+            const endpointData = {endpoint: remoteData ? (remoteData as RemoteDb).clientUrl : ''}
             return res.json(endpointData)
         });
 
@@ -716,7 +716,7 @@ export class App {
                 userId: (req.user as User).id
             })
 
-            const endpointData = {endpoint: (remoteData as RemoteDb).milvusUrl}
+            const endpointData = {endpoint: remoteData ? (remoteData as RemoteDb).clientUrl : ''}
             return res.json(endpointData)
         });
 

@@ -42,6 +42,8 @@ export const Input = ({
                 data.inputs[inputParam.name] = res.data.endpoint ? res.data.endpoint : none
             } catch (e) {
                 console.error(e)
+                setUrl('None')
+                data.inputs[inputParam.name] = 'None'
             }
         }
 
