@@ -5,14 +5,9 @@ networks:
       external: true
 
 services:
-  base:
-    build: .
-    image: ambient-flowise-base
-    profiles:
-      - build
-
   ambient:
-    image: ambient-flowise-base
+    build: .
+    image: cmclean165/ambient-cloud:latest
     restart: unless-stopped
     networks:
       - ambient
@@ -20,5 +15,19 @@ services:
       - ./db_version:/root/.flowise
     working_dir: /usr/src/packages
     command: [ "yarn", "start" ]
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: unless-stopped
+    networks:
+      - ambient
+    command:
+      - start
+      - --all
+      - --config=/etc/ngrok.yml
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml
+    ports:
+      - 4040:4040
 
   
