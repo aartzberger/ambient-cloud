@@ -2,11 +2,10 @@ version: "3.6"
 
 networks:
   ambient:
-    driver: bridge
 
 services:
   ambient:
-    image: cmclean165/ambient:v1.0
+    image: cmclean165/ambient-cloud:latest
     restart: unless-stopped
     networks:
       - ambient
@@ -14,17 +13,5 @@ services:
       - ./db_version:/root/.flowise
     working_dir: /usr/src/packages
     command: ["yarn", "start"]
-
-  ngrok:
-    image: ngrok/ngrok:latest
-    restart: unless-stopped
-    networks:
-      - ambient
-    command:
-      - start
-      - --all
-      - --config=/etc/ngrok.yml
-    volumes:
-      - ./ngrok.yml:/etc/ngrok.yml
     ports:
-      - 4040:4040
+      - 3000:3000
