@@ -79,7 +79,7 @@ class Reference_Remote_VectorStores implements INode {
         this.version = 1.0
         this.type = 'Remote'
         this.icon = 'milvus.svg'
-        this.category = 'Vector Stores'
+        this.category = 'Databases'
         this.description = 'Reference data from your remote database (i.e: Document has been upserted)'
         this.baseClasses = [this.type, 'BaseRetriever']
         this.inputs = [
