@@ -22,6 +22,9 @@ const Credentials = Loadable(lazy(() => import('views/credentials')))
 // vectorstore routing
 const Stores = Loadable(lazy(() => import('views/vectorstores')))
 
+// automations routing
+const Automations = Loadable(lazy(() => import('views/automations')))
+
 // ==============================|| MAIN ROUTING ||============================== //
 
 const MainRoutes = {
@@ -39,6 +42,10 @@ const MainRoutes = {
         {
             path: '/vectorstores',
             element: <Stores />
+        },
+        {
+            path: '/automations',
+            element: <Automations />
         },
         {
             path: '/apikey',
