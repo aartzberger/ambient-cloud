@@ -1,5 +1,5 @@
 import { getEnvironmentVariable } from '../../../src/utils'
-import { LLM, BaseLLMParams } from 'langchain/llms/huggingface_hub'
+import { LLM, BaseLLMParams } from 'langchain/llms'
 
 export interface HFInput {
     /** Model to use */
