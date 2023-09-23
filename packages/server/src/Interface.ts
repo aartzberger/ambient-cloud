@@ -31,8 +31,10 @@ export interface IChatFlow {
     deployed?: boolean
     isPublic?: boolean
     apikeyid?: string
+    analytic?: string
     chatbotConfig?: string
     user: User
+    apiConfig?: any
 }
 
 export interface IChatMessage {

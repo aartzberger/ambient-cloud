@@ -59,6 +59,7 @@ import { Tool } from './database/entities/Tool'
 import { RemoteDb } from './database/entities/RemoteDb'
 import { ChatflowPool } from './ChatflowPool'
 import { ICommonObject, INodeOptionsValue } from 'flowise-components'
+import { createRateLimiter, getRateLimiter, initializeRateLimiter } from './utils/rateLimit'
 
 export class App {
     app: express.Application
@@ -91,6 +92,10 @@ export class App {
 
                 // Initialize encryption key
                 await getEncryptionKey()
+
+                // Initialize Rate Limit
+                const AllChatFlow: IChatFlow[] = await getAllChatFlow()
+                await initializeRateLimiter(AllChatFlow)
             })
             .catch((err) => {
                 logger.error('❌ [server]: Error during Data Source initialization:', err)
@@ -101,6 +106,9 @@ export class App {
         // Limit is needed to allow sending/receiving base64 encoded string
         this.app.use(express.json({ limit: '50mb' }))
         this.app.use(express.urlencoded({ limit: '50mb', extended: true }))
+
+        if (process.env.NUMBER_OF_PROXIES && parseInt(process.env.NUMBER_OF_PROXIES) > 0)
+            this.app.set('trust proxy', parseInt(process.env.NUMBER_OF_PROXIES))
 
         // Allow access from *
         this.app.use(cors())
@@ -121,7 +129,8 @@ export class App {
                 '/api/v1/prediction/',
                 '/api/v1/node-icon/',
                 '/api/v1/components-credentials-icon/',
-                '/api/v1/chatflows-streaming'
+                '/api/v1/chatflows-streaming',
+                '/api/v1/ip'
             ]
             this.app.use((req, res, next) => {
                 if (req.url.includes('/api/v1/')) {
@@ -202,6 +211,16 @@ export class App {
             res.redirect('/chatflows');
         });
 
+
+        // ----------------------------------------
+        // Configure number of proxies in Host Environment
+        // ----------------------------------------
+        this.app.get('/api/v1/ip', (request, response) => {
+            response.send({
+                ip: request.ip,
+                msg: 'See the returned IP address in the response. If it matches your current IP address ( which you can get by going to http://ip.nfriedly.com/ or https://api.ipify.org/ ), then the number of proxies is correct and the rate limiter should now work correctly. If not, increase the number of proxies by 1 until the IP address matches your own. Visit https://docs.flowiseai.com/deployment#rate-limit-setup-guide for more information.'
+            })
+        })
 
         // ----------------------------------------
         // Components
@@ -395,6 +414,9 @@ export class App {
             const body = req.body
             const updateChatFlow = new ChatFlow()
             Object.assign(updateChatFlow, body)
+
+            updateChatFlow.id = chatflow.id
+            createRateLimiter(updateChatFlow)
 
             this.AppDataSource.getRepository(ChatFlow).merge(chatflow, updateChatFlow)
             const result = await this.AppDataSource.getRepository(ChatFlow).save(chatflow)
@@ -833,9 +855,14 @@ export class App {
         // ----------------------------------------
 
         // Send input message and get prediction result (External)
-        this.app.post('/api/v1/prediction/:id', upload.array('files'), async (req: Request, res: Response) => {
-            await this.processPrediction(req, res, socketIO)
-        })
+        this.app.post(
+            '/api/v1/prediction/:id',
+            upload.array('files'),
+            (req: Request, res: Response, next: NextFunction) => getRateLimiter(req, res, next),
+            async (req: Request, res: Response) => {
+                await this.processPrediction(req, res, socketIO)
+            }
+        )
 
         // Send input message and get prediction result (Internal)
         this.app.post('/api/v1/internal-prediction/:id', async (req: Request, res: Response) => {
@@ -1122,13 +1149,15 @@ export class App {
                       socketIOClientId: incomingInput.socketIOClientId,
                       logger,
                       appDataSource: this.AppDataSource,
-                      databaseEntities
+                      databaseEntities,
+                      analytic: chatflow.analytic
                   })
                 : await nodeInstance.run(nodeToExecuteData, incomingInput.question, {
                       chatHistory: incomingInput.history,
                       logger,
                       appDataSource: this.AppDataSource,
-                      databaseEntities
+                      databaseEntities,
+                      analytic: chatflow.analytic
                   })
 
             logger.debug(`[server]: Finished running ${nodeToExecuteData.label} (${nodeToExecuteData.id})`)
@@ -1167,6 +1196,10 @@ export async function getChatId(chatflowid: string) {
 }
 
 let serverApp: App | undefined
+
+export async function getAllChatFlow(): Promise<IChatFlow[]> {
+    return await getDataSource().getRepository(ChatFlow).find()
+}
 
 export async function start(): Promise<void> {
     serverApp = new App()
