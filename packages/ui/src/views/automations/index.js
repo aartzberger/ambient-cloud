@@ -1,29 +1,32 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import PropTypes from 'prop-types'
 
 // material-ui
-import { Grid, Box, Stack, Tabs, Tab } from '@mui/material'
+import { Grid, Box, Stack, Tabs, Tab, Button } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
-import { IconHierarchy, IconTool } from '@tabler/icons'
+import { IconHierarchy, IconTool, IconPlus, IconFileImport } from '@tabler/icons'
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard'
 import ItemCard from 'ui-component/cards/ItemCard'
 import { gridSpacing } from 'store/constant'
 import WorkflowEmptySVG from 'assets/images/workflow_empty.svg'
-import ToolDialog from 'views/tools/ToolDialog'
+import HandlerDialog from './HandlerDialog'
+import TriggerDialog from './TriggerDialog'
+import AutomationDialog from './AutomationDialog'
+import { StyledButton } from 'ui-component/button/StyledButton'
 
 // API
 import automationsApi from 'api/automations'
-import marketplacesApi from 'api/marketplaces'
+import handlersApi from 'api/automationhandlers'
+import triggersApi from 'api/triggers'
+import chatflowApi from 'api/chatflows'
 
 // Hooks
 import useApi from 'hooks/useApi'
-
-// const
-import { baseURL } from 'store/constant'
+import { set } from 'lodash'
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props
@@ -46,99 +49,204 @@ TabPanel.propTypes = {
     value: PropTypes.number.isRequired
 }
 
-// ==============================|| Marketplace ||============================== //
+// ==============================|| Automation Builder ||============================== //
 
 const Automations = () => {
     const navigate = useNavigate()
+    const inputRef = useRef(null)
 
     const theme = useTheme()
     const customization = useSelector((state) => state.customization)
 
+    const [isTriggersLoading, setTriggersLoading] = useState(true)
+    const [isHandlersLoading, setHandlersLoading] = useState(true)
+    const [isAutomationsLoading, setAutomationsLoading] = useState(true)
     const [isChatflowsLoading, setChatflowsLoading] = useState(true)
-    const [isToolsLoading, setToolsLoading] = useState(true)
-    const [images, setImages] = useState({})
-    const tabItems = ['Flows', 'Tools']
+    const tabItems = ['Automations', 'Triggers', 'Handlers']
     const [value, setValue] = useState(0)
-    const [showToolDialog, setShowToolDialog] = useState(false)
-    const [toolDialogProps, setToolDialogProps] = useState({})
 
-    const getAllChatflowsMarketplacesApi = useApi(marketplacesApi.getAllChatflowsMarketplaces)
-    const getAllToolsMarketplacesApi = useApi(marketplacesApi.getAllToolsMarketplaces)
+    // keep track of all the returned data
+    const [chatflowData, setChatflowData] = useState()
+    const [handlerData, setHandlerData] = useState()
+    const [triggerData, setTriggerData] = useState()
 
-    const onUseTemplate = (selectedTool) => {
+    // for triggers dialog
+    const [showTriggerDialog, setShowTriggerDialog] = useState(false)
+    const [triggerDialogProps, setTriggerlDialogProps] = useState({})
+    // for handlers dialog
+    const [showHandlerDialog, setShowHandlerDialog] = useState(false)
+    const [handlerDialogProps, setHandlerDialogProps] = useState({})
+    // for automations dialog
+    const [showAutomationDialog, setShowAutomationDialog] = useState(false)
+    const [automationDialogProps, setAutomationDialogProps] = useState({})
+
+    const getAllTriggersApi = useApi(triggersApi.getAllTriggers)
+    const getAllHandlersApi = useApi(handlersApi.getAllAutomationHandlers)
+    const getAllAutomationsApi = useApi(automationsApi.getAllAutomations)
+    const getAllChatflowsApi = useApi(chatflowApi.getAllChatflows)
+
+    const goToDialog = (selected) => {
         const dialogProp = {
-            title: 'Add New Tool',
-            type: 'IMPORT',
-            cancelButtonName: 'Cancel',
-            confirmButtonName: 'Add',
-            data: selectedTool
+            title: 'selected',
+            type: 'ADD',
+            data: selected
         }
-        setToolDialogProps(dialogProp)
-        setShowToolDialog(true)
-    }
 
-    const goToTool = (selectedTool) => {
-        const dialogProp = {
-            title: selectedTool.templateName,
-            type: 'TEMPLATE',
-            data: selectedTool
+        if (tabItems[value] === 'Triggers') {
+            setTriggerlDialogProps(dialogProp)
+            setShowTriggerDialog(true)
+        } else if (tabItems[value] === 'Handlers') {
+            setHandlerDialogProps(dialogProp)
+            setShowHandlerDialog(true)
+        } else if (tabItems[value] === 'Automations') {
+            setAutomationDialogProps(dialogProp)
+            setShowAutomationDialog(true)
         }
-        setToolDialogProps(dialogProp)
-        setShowToolDialog(true)
-    }
-
-    const goToCanvas = (selectedChatflow) => {
-        navigate(`/marketplace/${selectedChatflow.id}`, { state: selectedChatflow })
     }
 
     const handleChange = (event, newValue) => {
         setValue(newValue)
     }
 
-    useEffect(() => {
-        getAllChatflowsMarketplacesApi.request()
-        getAllToolsMarketplacesApi.request()
+    const addNew = () => {
+        const dialogProp = {
+            title: `Add New ${tabItems[value]}`,
+            type: 'ADD',
+            cancelButtonName: 'Cancel',
+            confirmButtonName: 'Add'
+        }
 
+        if (tabItems[value] === 'Triggers') {
+            setTriggerlDialogProps(dialogProp)
+            setShowTriggerDialog(true)
+        } else if (tabItems[value] === 'Handlers') {
+            setHandlerDialogProps(dialogProp)
+            setShowHandlerDialog(true)
+        } else if (tabItems[value] === 'Automations') {
+            setAutomationDialogProps(dialogProp)
+            setShowAutomationDialog(true)
+        }
+    }
+
+    const handleFileUpload = (e) => {
+        if (!e.target.files) return
+
+        const file = e.target.files[0]
+
+        const reader = new FileReader()
+        reader.onload = (evt) => {
+            if (!evt?.target?.result) {
+                return
+            }
+            const { result } = evt.target
+            onUploadFile(result)
+        }
+        reader.readAsText(file)
+    }
+
+    const addLabel = (data) => {
+        if (!data) return data // This will return early if data is null or undefined
+
+        if (Array.isArray(data)) {
+            data.forEach((item) => {
+                item.label = item.name
+            })
+        }
+
+        return data
+    }
+
+    useEffect(() => {
+        getAllTriggersApi.request()
+        getAllHandlersApi.request()
+        getAllAutomationsApi.request()
+        getAllChatflowsApi.request()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     useEffect(() => {
-        setChatflowsLoading(getAllChatflowsMarketplacesApi.loading)
-    }, [getAllChatflowsMarketplacesApi.loading])
+        setAutomationsLoading(getAllAutomationsApi.loading)
+    }, [getAllAutomationsApi.loading])
 
     useEffect(() => {
-        setToolsLoading(getAllToolsMarketplacesApi.loading)
-    }, [getAllToolsMarketplacesApi.loading])
+        setChatflowsLoading(getAllChatflowsApi.loading)
+    }, [getAllChatflowsApi.loading])
 
     useEffect(() => {
-        if (getAllChatflowsMarketplacesApi.data) {
-            try {
-                const chatflows = getAllChatflowsMarketplacesApi.data
-                const images = {}
-                for (let i = 0; i < chatflows.length; i += 1) {
-                    const flowDataStr = chatflows[i].flowData
-                    const flowData = JSON.parse(flowDataStr)
-                    const nodes = flowData.nodes || []
-                    images[chatflows[i].id] = []
-                    for (let j = 0; j < nodes.length; j += 1) {
-                        const imageSrc = `${baseURL}/api/v1/node-icon/${nodes[j].data.name}`
-                        if (!images[chatflows[i].id].includes(imageSrc)) {
-                            images[chatflows[i].id].push(imageSrc)
-                        }
-                    }
-                }
-                setImages(images)
-            } catch (e) {
-                console.error(e)
-            }
+        setTriggersLoading(getAllTriggersApi.loading)
+    }, [getAllTriggersApi.loading])
+
+    useEffect(() => {
+        setHandlersLoading(getAllHandlersApi.loading)
+    }, [getAllHandlersApi.loading])
+
+    useEffect(() => {
+        setChatflowData(addLabel(getAllChatflowsApi.data))
+        setHandlerData(addLabel(getAllHandlersApi.data))
+        setTriggerData(addLabel(getAllTriggersApi.data))
+    }, [getAllHandlersApi.data, getAllTriggersApi.data, getAllChatflowsApi.data])
+
+    const editTrigger = (selectedTrigger) => {
+        const dialogProp = {
+            title: 'Edit Tool',
+            type: 'EDIT',
+            cancelButtonName: 'Cancel',
+            confirmButtonName: 'Save',
+            data: selectedTrigger
         }
-    }, [getAllChatflowsMarketplacesApi.data])
+        setTriggerlDialogProps(dialogProp)
+        setShowTriggerDialog(true)
+    }
+
+    const editHandler = (selectedHandler) => {
+        const dialogProp = {
+            title: 'Edit Tool',
+            type: 'EDIT',
+            cancelButtonName: 'Cancel',
+            confirmButtonName: 'Save',
+            data: selectedHandler
+        }
+        setHandlerDialogProps(dialogProp)
+        setShowHandlerDialog(true)
+    }
+
+    const editAutomation = (selectedAutomation) => {
+        const dialogProp = {
+            title: 'Edit Tool',
+            type: 'EDIT',
+            cancelButtonName: 'Cancel',
+            confirmButtonName: 'Save',
+            data: selectedAutomation
+        }
+        setAutomationDialogProps(dialogProp)
+        setShowAutomationDialog(true)
+    }
+
+    const onConfirm = () => {
+        setShowHandlerDialog(false)
+        setShowTriggerDialog(false)
+        setShowAutomationDialog(false)
+        getAllAutomationsApi.request()
+        getAllTriggersApi.request()
+        getAllHandlersApi.request()
+        getAllChatflowsApi.request()
+    }
 
     return (
         <>
             <MainCard sx={{ background: customization.isDarkMode ? theme.palette.common.black : '' }}>
                 <Stack flexDirection='row'>
-                    <h1>Templates</h1>
+                    <h1>Automation Builder&nbsp;</h1>
+                    <Box sx={{ flexGrow: 1 }} />
+                    <Box sx={{ mb: 1.25 }}>
+                        <Button variant='outlined' sx={{ mr: 2 }} onClick={() => inputRef.current.click()} startIcon={<IconFileImport />}>
+                            Load
+                        </Button>
+                        <input ref={inputRef} type='file' hidden accept='.json' onChange={(e) => handleFileUpload(e)} />
+                        <StyledButton variant='contained' sx={{ color: 'white' }} onClick={addNew} startIcon={<IconPlus />}>
+                            Create
+                        </StyledButton>
+                    </Box>
                 </Stack>
                 <Tabs sx={{ mb: 2 }} variant='fullWidth' value={value} onChange={handleChange} aria-label='tabs'>
                     {tabItems.map((item, index) => (
@@ -152,62 +260,100 @@ const Automations = () => {
                 </Tabs>
                 {tabItems.map((item, index) => (
                     <TabPanel key={index} value={value} index={index}>
-                        {item === 'Flows' && (
-                            <Grid container spacing={gridSpacing}>
-                                {!isChatflowsLoading &&
-                                    getAllChatflowsMarketplacesApi.data &&
-                                    getAllChatflowsMarketplacesApi.data.map((data, index) => (
+                        {item === 'Automations' &&
+                            !isAutomationsLoading &&
+                            (getAllAutomationsApi.data && getAllAutomationsApi.data.length > 0 ? (
+                                <Grid container spacing={gridSpacing}>
+                                    {getAllAutomationsApi.data.map((data, index) => (
                                         <Grid key={index} item lg={3} md={4} sm={6} xs={12}>
-                                            <ItemCard onClick={() => goToCanvas(data)} data={data} images={images[data.id]} />
+                                            <ItemCard data={data} onClick={() => editAutomation(data)} />
                                         </Grid>
                                     ))}
-                            </Grid>
-                        )}
-                        {item === 'Tools' && (
-                            <Grid container spacing={gridSpacing}>
-                                {!isToolsLoading &&
-                                    getAllToolsMarketplacesApi.data &&
-                                    getAllToolsMarketplacesApi.data.map((data, index) => (
+                                </Grid>
+                            ) : (
+                                <Stack sx={{ alignItems: 'center', justifyContent: 'center' }} flexDirection='column'>
+                                    <Box sx={{ p: 2, height: 'auto' }}>
+                                        <img
+                                            style={{ objectFit: 'cover', height: '30vh', width: 'auto' }}
+                                            src={WorkflowEmptySVG}
+                                            alt='WorkflowEmptySVG'
+                                        />
+                                    </Box>
+                                    <div>No Automations Yet</div>
+                                </Stack>
+                            ))}
+                        {item === 'Triggers' &&
+                            !isTriggersLoading &&
+                            (getAllTriggersApi.data && getAllTriggersApi.data.length > 0 ? (
+                                <Grid container spacing={gridSpacing}>
+                                    {getAllTriggersApi.data.map((data, index) => (
                                         <Grid key={index} item lg={3} md={4} sm={6} xs={12}>
-                                            <ItemCard data={data} onClick={() => goToTool(data)} />
+                                            <ItemCard data={data} onClick={() => editTrigger(data)} />
                                         </Grid>
                                     ))}
-                            </Grid>
-                        )}
+                                </Grid>
+                            ) : (
+                                <Stack sx={{ alignItems: 'center', justifyContent: 'center' }} flexDirection='column'>
+                                    <Box sx={{ p: 2, height: 'auto' }}>
+                                        <img
+                                            style={{ objectFit: 'cover', height: '30vh', width: 'auto' }}
+                                            src={WorkflowEmptySVG}
+                                            alt='WorkflowEmptySVG'
+                                        />
+                                    </Box>
+                                    <div>No Triggers Yet</div>
+                                </Stack>
+                            ))}
+                        {item === 'Handlers' &&
+                            !isHandlersLoading &&
+                            (getAllHandlersApi.data && getAllHandlersApi.data.length > 0 ? (
+                                <Grid container spacing={gridSpacing}>
+                                    {getAllHandlersApi.data.map((data, index) => (
+                                        <Grid key={index} item lg={3} md={4} sm={6} xs={12}>
+                                            <ItemCard data={data} onClick={() => editHandler(data)} />
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            ) : (
+                                <Stack sx={{ alignItems: 'center', justifyContent: 'center' }} flexDirection='column'>
+                                    <Box sx={{ p: 2, height: 'auto' }}>
+                                        <img
+                                            style={{ objectFit: 'cover', height: '30vh', width: 'auto' }}
+                                            src={WorkflowEmptySVG}
+                                            alt='WorkflowEmptySVG'
+                                        />
+                                    </Box>
+                                    <div>No Handlers Yet</div>
+                                </Stack>
+                            ))}
                     </TabPanel>
                 ))}
-                {!isChatflowsLoading && (!getAllChatflowsMarketplacesApi.data || getAllChatflowsMarketplacesApi.data.length === 0) && (
-                    <Stack sx={{ alignItems: 'center', justifyContent: 'center' }} flexDirection='column'>
-                        <Box sx={{ p: 2, height: 'auto' }}>
-                            <img
-                                style={{ objectFit: 'cover', height: '30vh', width: 'auto' }}
-                                src={WorkflowEmptySVG}
-                                alt='WorkflowEmptySVG'
-                            />
-                        </Box>
-                        <div>No Automations Yet</div>
-                    </Stack>
-                )}
-                {!isToolsLoading && (!getAllToolsMarketplacesApi.data || getAllToolsMarketplacesApi.data.length === 0) && (
-                    <Stack sx={{ alignItems: 'center', justifyContent: 'center' }} flexDirection='column'>
-                        <Box sx={{ p: 2, height: 'auto' }}>
-                            <img
-                                style={{ objectFit: 'cover', height: '30vh', width: 'auto' }}
-                                src={WorkflowEmptySVG}
-                                alt='WorkflowEmptySVG'
-                            />
-                        </Box>
-                        <div>No Automations Yet</div>
-                    </Stack>
-                )}
             </MainCard>
-            <ToolDialog
-                show={showToolDialog}
-                dialogProps={toolDialogProps}
-                onCancel={() => setShowToolDialog(false)}
-                onConfirm={() => setShowToolDialog(false)}
-                onUseTemplate={(tool) => onUseTemplate(tool)}
-            ></ToolDialog>
+
+            <HandlerDialog
+                show={showHandlerDialog}
+                dialogProps={handlerDialogProps}
+                onCancel={() => setShowHandlerDialog(false)}
+                onConfirm={onConfirm}
+                onUseTemplate={(selected) => goToDialog(selected)}
+            ></HandlerDialog>
+            <TriggerDialog
+                show={showTriggerDialog}
+                dialogProps={triggerDialogProps}
+                onCancel={() => setShowTriggerDialog(false)}
+                onConfirm={onConfirm}
+                onUseTemplate={(selected) => goToDialog(selected)}
+            ></TriggerDialog>
+            <AutomationDialog
+                show={showAutomationDialog}
+                dialogProps={automationDialogProps}
+                onCancel={() => setShowAutomationDialog(false)}
+                onConfirm={onConfirm}
+                onUseTemplate={(selected) => goToDialog(selected)}
+                chatflows={chatflowData}
+                triggers={triggerData}
+                handlers={handlerData}
+            ></AutomationDialog>
         </>
     )
 }
