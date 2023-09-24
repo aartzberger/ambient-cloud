@@ -4,6 +4,9 @@ import { ChatFlow } from '../src/database/entities/ChatFlow'; // import the Chat
 import { ChatMessage } from '../src/database/entities/ChatMessage'; // import the ChatFlow entity
 import { Credential } from '../src/database/entities/Credential'; // import the ChatFlow entity
 import { Tool } from '../src/database/entities/Tool'; // import the ChatFlow entity
+import { Trigger } from '../src/database/entities/Trigger'; // import the ChatFlow entity
+import { Automation } from './database/entities/Automation'; // import the ChatFlow entity
+import { AutomationHandler } from './database/entities/AutomationHandler'; // import the ChatFlow entity
 
 export type MessageType = 'apiMessage' | 'userMessage'
 
@@ -34,6 +37,7 @@ export interface IChatFlow {
     analytic?: string
     chatbotConfig?: string
     user: User
+    automation?: Automation
     apiConfig?: any
 }
 
@@ -59,6 +63,48 @@ export interface ITool {
     updatedDate: Date
     createdDate: Date
     user: User
+}
+
+export interface IAutomation {
+    id: string
+    userId: string
+    chatflowid: string
+    triggerid: string
+    handlerid: string
+    name: string
+    description: string
+    color: string
+    iconSrc?: string
+    updatedDate: Date
+    createdDate: Date
+    user: User
+}
+
+export interface ITrigger {
+    id: string
+    userId: string
+    name: string
+    type:string
+    description: string
+    color: string
+    iconSrc?: string
+    func?: string
+    updatedDate: Date
+    createdDate: Date
+    user: User
+}
+
+export interface IAutomationHandler {
+    id: string
+    userId: string
+    name: string
+    description: string
+    color: string
+    iconSrc?: string
+    schema?: string
+    func?: string
+    updatedDate: Date
+    createdDate: Date
 }
 
 export interface IRemoteDb {

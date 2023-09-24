@@ -53,6 +53,9 @@ import { getDataSource } from './DataSource'
 import { NodesPool } from './NodesPool'
 import { User } from './database/entities/User'
 import { ChatFlow } from './database/entities/ChatFlow'
+import { Automation } from './database/entities/Automation'
+import { Trigger } from './database/entities/Trigger'
+import { AutomationHandler } from './database/entities/AutomationHandler'
 import { ChatMessage } from './database/entities/ChatMessage'
 import { Credential } from './database/entities/Credential'
 import { Tool } from './database/entities/Tool'
@@ -604,6 +607,192 @@ export class App {
         })
 
         // ----------------------------------------
+        // Automations
+        // ----------------------------------------
+
+        // Get all automations
+        this.app.get('/api/v1/automations', ensureAuthenticated, async (req: Request, res: Response) => {
+            const automations = await this.AppDataSource.getRepository(Automation).find({
+                where: { user: req.user }
+            })
+            return res.json(automations)
+        })
+
+        // Get specific automation
+        this.app.get('/api/v1/automations/:id', async (req: Request, res: Response) => {
+            const automatin = await this.AppDataSource.getRepository(Automation).findOneBy({
+                id: req.params.id
+            })
+            return res.json(automatin)
+        })
+
+        // Add automation
+        this.app.post('/api/v1/automations', async (req: Request, res: Response) => {
+            const body = req.body
+            // create the automation trigger
+            const newAutomation = new Automation()
+            Object.assign(newAutomation, body)
+            newAutomation.user = req.user as User
+
+            const automation = this.AppDataSource.getRepository(Automation).create(newAutomation)
+            const results = await this.AppDataSource.getRepository(Automation).save(automation)
+
+            return res.json(results)
+        })
+
+        // Update automation
+        this.app.put('/api/v1/automations/:id', async (req: Request, res: Response) => {
+            const automation = await this.AppDataSource.getRepository(Automation).findOneBy({
+                id: req.params.id
+            })
+
+            if (!automation) {
+                res.status(404).send(`Automation ${req.params.id} not found`)
+                return
+            }
+
+            const updatedAutomation = new Automation()
+            Object.assign(updatedAutomation, req.body)
+            updatedAutomation.user = req.user as User
+
+            // update the automation
+            this.AppDataSource.getRepository(Automation).merge(automation, updatedAutomation)
+            const result = await this.AppDataSource.getRepository(Automation).save(automation)
+
+            return res.json(result)
+        })
+
+        // Delete Automation
+        this.app.delete('/api/v1/automations/:id', async (req: Request, res: Response) => {
+            const results = await this.AppDataSource.getRepository(Automation).delete({ id: req.params.id })
+            return res.json(results)
+        })
+
+        // ----------------------------------------
+        // Triggers
+        // ----------------------------------------
+
+        // Get all triggers
+        this.app.get('/api/v1/triggers', ensureAuthenticated, async (req: Request, res: Response) => {
+            const triggers = await this.AppDataSource.getRepository(Trigger).find({
+                where: { user: req.user }
+            })
+            return res.json(triggers)
+        })
+
+        // Get specific trigger
+        this.app.get('/api/v1/triggers/:id', async (req: Request, res: Response) => {
+            const trigger = await this.AppDataSource.getRepository(Trigger).findOneBy({
+                id: req.params.id
+            })
+            return res.json(trigger)
+        })
+
+        // Add trigger
+        this.app.post('/api/v1/triggers', async (req: Request, res: Response) => {
+            const body = req.body
+            // create the automation trigger
+            const newTrigger = new Trigger()
+            Object.assign(newTrigger, body)
+            newTrigger.user = req.user as User
+
+            const trigger = this.AppDataSource.getRepository(Trigger).create(newTrigger)
+            const results = await this.AppDataSource.getRepository(Trigger).save(trigger)
+
+            return res.json(results)
+        })
+
+        // Update trigger
+        this.app.put('/api/v1/triggers/:id', async (req: Request, res: Response) => {
+            const trigger = await this.AppDataSource.getRepository(Trigger).findOneBy({
+                id: req.params.id
+            })
+
+            if (!trigger) {
+                res.status(404).send(`Automation ${req.params.id} not found`)
+                return
+            }
+
+            const updatedTrigger = new Trigger()
+            Object.assign(updatedTrigger, req.body)
+            updatedTrigger.user = req.user as User
+
+            // update the automation
+            this.AppDataSource.getRepository(Trigger).merge(trigger, updatedTrigger)
+            const result = await this.AppDataSource.getRepository(Trigger).save(trigger)
+
+            return res.json(result)
+        })
+
+        // Delete trigger
+        this.app.delete('/api/v1/triggers/:id', async (req: Request, res: Response) => {
+            const result = await this.AppDataSource.getRepository(Trigger).delete({ id: req.params.id })
+            return res.json(result)
+        })
+
+        // ----------------------------------------
+        // AutomationHandlers
+        // ----------------------------------------
+
+        // Get all handlers
+        this.app.get('/api/v1/automation-handlers', ensureAuthenticated, async (req: Request, res: Response) => {
+            const handlers = await this.AppDataSource.getRepository(AutomationHandler).find({
+                where: { user: req.user }
+            })
+            return res.json(handlers)
+        })
+
+        // Get specific handler
+        this.app.get('/api/v1/automation-handlers/:id', async (req: Request, res: Response) => {
+            const handler = await this.AppDataSource.getRepository(AutomationHandler).findOneBy({
+                id: req.params.id
+            })
+            return res.json(handler)
+        })
+
+        // Add handler
+        this.app.post('/api/v1/automation-handlers', async (req: Request, res: Response) => {
+            const body = req.body
+            // create the automation trigger
+            const newHandler = new AutomationHandler()
+            Object.assign(newHandler, body)
+            newHandler.user = req.user as User
+
+            const handler = this.AppDataSource.getRepository(AutomationHandler).create(newHandler)
+            const results = await this.AppDataSource.getRepository(AutomationHandler).save(handler)
+
+            return res.json(results)
+        })
+
+        // Update handler
+        this.app.put('/api/v1/automation-handlers/:id', async (req: Request, res: Response) => {
+            const handler = await this.AppDataSource.getRepository(AutomationHandler).findOneBy({
+                id: req.params.id
+            })
+
+            if (!handler) {
+                res.status(404).send(`Automation ${req.params.id} not found`)
+                return
+            }
+
+            const updatedHandler = new AutomationHandler()
+            Object.assign(updatedHandler, req.body)
+            updatedHandler.user = req.user as User
+
+            // update the handler
+            this.AppDataSource.getRepository(AutomationHandler).merge(handler, updatedHandler)
+            const result = await this.AppDataSource.getRepository(AutomationHandler).save(handler)
+
+            return res.json(result)
+        })
+
+        // Delete handler
+        this.app.delete('/api/v1/automation-handlers/:id', async (req: Request, res: Response) => {
+            const result = await this.AppDataSource.getRepository(AutomationHandler).delete({ id: req.params.id })
+            return res.json(result)
+        })
+
+        // ----------------------------------------
         // Tools
         // ----------------------------------------
 
@@ -661,27 +850,6 @@ export class App {
         this.app.delete('/api/v1/tools/:id', async (req: Request, res: Response) => {
             const results = await this.AppDataSource.getRepository(Tool).delete({ id: req.params.id })
             return res.json(results)
-        })
-
-        // Update tool
-        this.app.put('/api/v1/tools/:id', async (req: Request, res: Response) => {
-            const tool = await this.AppDataSource.getRepository(Tool).findOneBy({
-                id: req.params.id
-            })
-
-            if (!tool) {
-                res.status(404).send(`Tool ${req.params.id} not found`)
-                return
-            }
-
-            const body = req.body
-            const updateTool = new Tool()
-            Object.assign(updateTool, body)
-
-            this.AppDataSource.getRepository(Tool).merge(tool, updateTool)
-            const result = await this.AppDataSource.getRepository(Tool).save(tool)
-
-            return res.json(result)
         })
 
         // ----------------------------------------

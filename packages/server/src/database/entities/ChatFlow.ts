@@ -5,7 +5,6 @@ import { Entity,
          UpdateDateColumn, 
          PrimaryGeneratedColumn, 
          ManyToOne, 
-         JoinColumn 
         } from 'typeorm'
 import { IChatFlow } from '../../Interface'
 import { User } from './User'; // import the User entity
