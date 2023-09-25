@@ -1,8 +1,8 @@
 // assets
-import { IconHierarchy, IconBuildingStore, IconKey, IconTool, IconLock, IconSettingsAutomation } from '@tabler/icons'
+import { IconHierarchy, IconTemplate, IconKey, IconTool, IconLock, IconSettingsAutomation, IconDatabase } from '@tabler/icons'
 
 // constant
-const icons = { IconHierarchy, IconBuildingStore, IconKey, IconTool, IconLock, IconSettingsAutomation }
+const icons = { IconHierarchy, IconTemplate, IconKey, IconTool, IconLock, IconSettingsAutomation, IconDatabase }
 
 // ==============================|| DASHBOARD MENU ITEMS ||============================== //
 
@@ -28,11 +28,11 @@ const dashboard = {
             breadcrumbs: true
         },
         {
-            id: 'marketplaces',
-            title: 'Templates',
+            id: 'tools',
+            title: 'Tools',
             type: 'item',
-            url: '/marketplaces',
-            icon: icons.IconBuildingStore,
+            url: '/tools',
+            icon: icons.IconTool,
             breadcrumbs: true
         },
         {
@@ -40,15 +40,15 @@ const dashboard = {
             title: 'Remote Data',
             type: 'item',
             url: '/vectorstores',
-            icon: icons.IconBuildingStore,
+            icon: icons.IconDatabase,
             breadcrumbs: true
         },
         {
-            id: 'tools',
-            title: 'Tools',
+            id: 'marketplaces',
+            title: 'Templates',
             type: 'item',
-            url: '/tools',
-            icon: icons.IconTool,
+            url: '/marketplaces',
+            icon: icons.IconTemplate,
             breadcrumbs: true
         },
         {

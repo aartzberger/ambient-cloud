@@ -9,11 +9,11 @@ $primary200: #90caf9;
 $primary800: #1565c0;
 
 // secondary
-$secondaryLight: #ede7f6;
-$secondaryMain: #673ab7;
-$secondaryDark: #5e35b1;
-$secondary200: #b39ddb;
-$secondary800: #4527a0;
+$secondaryLight: #FFF3E0;  // Light amber
+$secondaryMain:  #FF9800;  // Main orange
+$secondaryDark:  #EF6C00;  // Darker orange
+$secondary200:   #FFCC80;  // Slightly muted orange
+$secondary800:   #E65100;  // Deep orange
 
 // success Colors
 $successLight: #cdf5d8;
@@ -64,11 +64,11 @@ $darkPrimary200: #c9d4e9;
 $darkPrimary800: #32353b;
 
 // secondary dark
-$darkSecondaryLight: #454c59;
-$darkSecondaryMain: #7c4dff;
-$darkSecondaryDark: #ffffff;
-$darkSecondary200: #32353b;
-$darkSecondary800: #6200ea;
+$darkSecondaryLight: #6c6f75;  // Lighter muted gray
+$darkSecondaryMain:  #515456;  // Muted gray main
+$darkSecondaryDark:  #3a3d41;  // Darker muted gray
+$darkSecondary200:   #64676b;  // Slightly lighter gray
+$darkSecondary800:   #2c2f33;  // Deep gray
 
 // text variants
 $darkTextTitle: #d7dcec;
