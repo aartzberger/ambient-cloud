@@ -445,21 +445,11 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                         />
                     </Box>
                     <Box sx={{ p: 2, display: selectedTriggerType === 'endpoint' || selectedTriggerType === 'webhook' ? 'block' : 'none' }}>
-                        {selectedTriggerType === 'endpoint' ? (
-                            <Typography>
-                                {'Trigger Url: ' + baseURL + '/api/v1/automation/run'}
-                                <br />
-                                {'Params => id: ' + automationUrl + ', input: "your text"'}
-                                <br />
-                                {'Method: POST'}
-                            </Typography>
-                        ) : (
-                            <Typography>
-                                {'Trigger Url: ' + baseURL + '/api/v1/automation/run/?id=' + automationUrl}
-                                <br />
-                                {'Method: GET'}
-                            </Typography>
-                        )}
+                        <Typography>
+                            {'Trigger Url: ' + baseURL + '/api/v1/automations/run/' + automationUrl}
+                            <br />
+                            {'Method: POST'}
+                        </Typography>
                     </Box>
                 </Box>
                 <Box sx={{ p: 2 }}>

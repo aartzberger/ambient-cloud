@@ -617,6 +617,16 @@ export class App {
         // Automations
         // ----------------------------------------
 
+        // process for making automatoin prediction
+        this.app.post(
+            '/api/v1/automations/run/:id',
+            upload.array('files'),
+            (req: Request, res: Response, next: NextFunction) => getRateLimiter(req, res, next),
+            async (req: Request, res: Response) => {
+                await this.processAutomation(req, res)
+            }
+        )
+
         // Get all automations
         this.app.get('/api/v1/automations', ensureAuthenticated, async (req: Request, res: Response) => {
             const automations = await this.AppDataSource.getRepository(Automation).find({
@@ -1349,11 +1359,11 @@ export class App {
      * @param {Response} res
      * @param {string} method
      */
-    async processAutomation(req: Request, res: Response, method: string, isInternal = false, socketIO?: Server) {
+    async processAutomation(req: Request, res: Response, isInternal = false, socketIO?: Server) {
         try {
             // first parse the information from the request
-            const automationUrlId = req.method == 'GET' ? req.params.id : req.body.id
-            let input = req.body?.input || null
+            const automationUrlId = req.params.id
+            let input = req.body
             // get the coorelating automation
             const automation = await this.AppDataSource.getRepository(Automation).findOneBy({
                 url: automationUrlId
