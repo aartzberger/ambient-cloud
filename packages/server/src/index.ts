@@ -1363,7 +1363,6 @@ export class App {
         try {
             // first parse the information from the request
             const automationUrlId = req.params.id
-            let input = req.body
             // get the coorelating automation
             const automation = await this.AppDataSource.getRepository(Automation).findOneBy({
                 url: automationUrlId
@@ -1387,13 +1386,20 @@ export class App {
             }
 
             // next, if there is a trigger function, run it on the input
+            let input = null;
+            const body = req.body
             if (trigger.func) {
                 try {
-                    input = JsRunner(trigger.func, input)
+                    input = await JsRunner(trigger.func, input, body, res)
+                    if (res.headersSent) return;
                 } catch (e) {
                     return res.status(404).send('Failed to run trigger function')
                 }
             }
+            if (!input) return res.status(404).send('Failed to run trigger function')
+
+            // chat flow can take a while to process. this makes it so that the request doesn't timeout
+            res.status(200).send()
 
             // next, handle the prediction with the chatflow
             let incomingInput: IncomingInput = {
@@ -1568,13 +1574,13 @@ export class App {
             // finally, if there is a handler function, run it on the output
             if (handler.func) {
                 try {
-                    input = await JsRunner(handler.func, result)
+                    result = await JsRunner(handler.func, result, body)
                 } catch (e) {
-                    return res.status(404).send('Failed to run handler function')
+                    console.log('error')
+                    // return res.status(404).send('Failed to run handler function')
                 }
             }
 
-            return res.status(200).send('Automation Successful')
         } catch (e: any) {
             logger.error('[server]: Error:', e)
             return res.status(500).send(e.message)
