@@ -33,6 +33,12 @@ triggerid: string
 @Column()
 handlerid: string
 
+@Column({ nullable: true })
+interval: string
+
+@Column({ nullable: true })
+url: string
+
 @Column()
 name: string
 

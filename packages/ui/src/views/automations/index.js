@@ -188,7 +188,7 @@ const Automations = () => {
 
     const editTrigger = (selectedTrigger) => {
         const dialogProp = {
-            title: 'Edit Tool',
+            title: 'Edit Trigger',
             type: 'EDIT',
             cancelButtonName: 'Cancel',
             confirmButtonName: 'Save',
@@ -200,7 +200,7 @@ const Automations = () => {
 
     const editHandler = (selectedHandler) => {
         const dialogProp = {
-            title: 'Edit Tool',
+            title: 'Edit Handler',
             type: 'EDIT',
             cancelButtonName: 'Cancel',
             confirmButtonName: 'Save',
@@ -212,7 +212,7 @@ const Automations = () => {
 
     const editAutomation = (selectedAutomation) => {
         const dialogProp = {
-            title: 'Edit Tool',
+            title: 'Edit Automation',
             type: 'EDIT',
             cancelButtonName: 'Cancel',
             confirmButtonName: 'Save',

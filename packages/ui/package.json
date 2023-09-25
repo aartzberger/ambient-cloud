@@ -27,6 +27,7 @@
         "html-react-parser": "^3.0.4",
         "lodash": "^4.17.21",
         "moment": "^2.29.3",
+        "nanoid": "^5.0.1",
         "notistack": "^2.0.4",
         "prismjs": "^1.28.0",
         "prop-types": "^15.7.2",

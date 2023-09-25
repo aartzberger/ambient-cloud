@@ -29,6 +29,8 @@ export class AutomationHandler implements IAutomationHandler {
     @Column({ nullable: true })
     iconSrc?: string
 
+    @Column({ nullable: true, type: 'text' })
+    func?: string
 
     @CreateDateColumn()
     createdDate: Date

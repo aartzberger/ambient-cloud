@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom'
 import PropTypes from 'prop-types'
 import { useState, useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { enqueueSnackbar as enqueueSnackbarAction, closeSnackbar as closeSnackbarAction } from 'store/actions'
 
 import { Box, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, OutlinedInput } from '@mui/material'
@@ -9,7 +9,9 @@ import { StyledButton } from 'ui-component/button/StyledButton'
 import { TooltipWithParser } from 'ui-component/tooltip/TooltipWithParser'
 import ConfirmDialog from 'ui-component/dialog/ConfirmDialog'
 import { Dropdown } from 'ui-component/dropdown/AutomationsDropdown'
-import { useTheme } from '@mui/material/styles'
+import { nanoid } from 'nanoid'
+import { baseURL } from 'store/constant'
+import { Input } from 'ui-component/input/Input'
 
 // Icons
 import { IconX, IconFileExport } from '@tabler/icons'
@@ -52,6 +54,21 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
     const [automationChatflowName, setAutomationChatflowName] = useState('')
     const [automationTriggerName, setAutomationTriggerName] = useState('')
     const [automationHandlerName, setAutomationHandlerName] = useState('')
+    const [selectedTriggerType, setSelectedTriggerType] = useState('')
+
+    const [automationInterval, setAutomationInterval] = useState()
+    const [automationUrl, setAutomationUrl] = useState('')
+
+    const makeUniqueUrl = () => {
+        const uniqueId = nanoid()
+        const url = uniqueId
+        return url
+    }
+
+    const triggerTypeFromId = (id) => {
+        const object = triggers.find((item) => item.id === id)
+        return object ? object.type : 'null'
+    }
 
     const updateChatflow = (id) => {
         const object = chatflows.find((item) => item.id === id)
@@ -62,6 +79,7 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
     const updateTrigger = (id) => {
         const object = triggers.find((item) => item.id === id)
         setAutomationTriggerName(object ? object.name : 'null')
+        setSelectedTriggerType(object ? object.type : 'null')
         setAutomationTriggerId(id)
     }
 
@@ -93,6 +111,9 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
             setAutomationChatflowName(nameFromId(chatflows, getSpecificAutomationApi.data.chatflowid))
             setAutomationTriggerName(nameFromId(triggers, getSpecificAutomationApi.data.triggerid))
             setAutomationHandlerName(nameFromId(handlers, getSpecificAutomationApi.data.handlerid))
+            setAutomationInterval(getSpecificAutomationApi.data.interval)
+            setAutomationUrl(getSpecificAutomationApi.data.url)
+            setSelectedTriggerType(triggerTypeFromId(getSpecificAutomationApi.data.triggerid))
         }
     }, [getSpecificAutomationApi.data])
 
@@ -109,6 +130,9 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
             setAutomationChatflowName(nameFromId(chatflows, dialogProps.data.chatflowid))
             setAutomationTriggerName(nameFromId(triggers, dialogProps.data.triggerid))
             setAutomationHandlerName(nameFromId(handlers, dialogProps.data.handlerid))
+            setAutomationTriggerId(dialogProps.data.triggerid)
+            setAutomationUrl(dialogProps.data.url)
+            setSelectedTriggerType(triggerTypeFromId(dialogProps.data.triggerid))
         } else if (dialogProps.type === 'ADD') {
             // When automation dialog is to add a new automation
             setAutomationId('')
@@ -121,6 +145,9 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
             setAutomationChatflowName('')
             setAutomationTriggerName('')
             setAutomationHandlerName('')
+            setAutomationInterval('')
+            setAutomationUrl(makeUniqueUrl())
+            setSelectedTriggerType('')
         }
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -178,7 +205,9 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                 iconSrc: automationIcon,
                 chatflowid: automationChatflowId,
                 triggerid: automationTriggerId,
-                handlerid: automationHandlerId
+                handlerid: automationHandlerId,
+                interval: automationInterval,
+                url: automationUrl
             }
             const createResp = await automationApi.createNewAutomation(obj)
             if (createResp.data) {
@@ -224,7 +253,9 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                 iconSrc: automationIcon,
                 chatflowid: automationChatflowId,
                 triggerid: automationTriggerId,
-                handlerid: automationHandlerId
+                handlerid: automationHandlerId,
+                interval: automationInterval,
+                url: automationUrl
             })
             if (saveResp.data) {
                 enqueueSnackbar({
@@ -391,7 +422,7 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                 <Box sx={{ p: 2 }}>
                     <Stack sx={{ position: 'relative' }} direction='row'>
                         <Typography variant='overline'>
-                            Seletect a Trigger
+                            Select a Trigger
                             <span style={{ color: 'red' }}>&nbsp;*</span>
                             <TooltipWithParser style={{ marginLeft: 10 }} title={'This is what will trigger the process to start,'} />
                         </Typography>
@@ -405,6 +436,31 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                         useId={true}
                         addLabel={true}
                     />
+                    <Box sx={{ display: selectedTriggerType === 'interval' ? 'block' : 'none', width: '25%' }}>
+                        <Input
+                            data={{}}
+                            inputParam={{ name: 'interval-input', type: 'number', placeholder: 'Interval in minutes' }}
+                            onChange={setAutomationInterval}
+                            value={automationInterval}
+                        />
+                    </Box>
+                    <Box sx={{ p: 2, display: selectedTriggerType === 'endpoint' || selectedTriggerType === 'webhook' ? 'block' : 'none' }}>
+                        {selectedTriggerType === 'endpoint' ? (
+                            <Typography>
+                                {'Trigger Url: ' + baseURL + '/api/v1/automation/run'}
+                                <br />
+                                {'Params => id: ' + automationUrl + ', input: "your text"'}
+                                <br />
+                                {'Method: POST'}
+                            </Typography>
+                        ) : (
+                            <Typography>
+                                {'Trigger Url: ' + baseURL + '/api/v1/automation/run/?id=' + automationUrl}
+                                <br />
+                                {'Method: GET'}
+                            </Typography>
+                        )}
+                    </Box>
                 </Box>
                 <Box sx={{ p: 2 }}>
                     <Stack sx={{ position: 'relative' }} direction='row'>
