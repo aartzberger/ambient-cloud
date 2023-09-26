@@ -26,7 +26,6 @@ export interface IUser {
 
 export interface IChatFlow {
     id: string
-    userId: string
     name: string
     flowData: string
     updatedDate: Date
@@ -43,7 +42,6 @@ export interface IChatFlow {
 
 export interface IChatMessage {
     id: string
-    userId: string
     role: MessageType
     content: string
     chatflowid: string
@@ -67,7 +65,6 @@ export interface ITool {
 
 export interface IAutomation {
     id: string
-    userId: string
     chatflowid: string
     triggerid: string
     handlerid: string
@@ -84,7 +81,6 @@ export interface IAutomation {
 
 export interface ITrigger {
     id: string
-    userId: string
     name: string
     type:string
     description: string
@@ -98,7 +94,6 @@ export interface ITrigger {
 
 export interface IAutomationHandler {
     id: string
-    userId: string
     name: string
     description: string
     color: string

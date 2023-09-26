@@ -354,7 +354,7 @@ export class App {
         // Get all chatflows
         this.app.get('/api/v1/chatflows', ensureAuthenticated, async (req: Request, res: Response) => {
             const chatflows: IChatFlow[] = await this.AppDataSource.getRepository(ChatFlow).find({
-                where: { userId: (req.user as User).id }
+                where: { user: req.user as User }
             })
             return res.json(chatflows)
         })
@@ -546,21 +546,21 @@ export class App {
                         const name = req.query.credentialName[i] as string
                         const credentials = await this.AppDataSource.getRepository(Credential).findBy({
                             credentialName: name,
-                            userId: (req.user as User).id
+                            user: req.user as User
                         })
                         returnCredentials.push(...credentials)
                     }
                 } else {
                     const credentials = await this.AppDataSource.getRepository(Credential).findBy({
                         credentialName: req.query.credentialName as string,
-                        userId: (req.user as User).id
+                        user: req.user as User
                     })
                     returnCredentials = [...credentials]
                 }
                 return res.json(returnCredentials)
             } else {
                 const credentials = await this.AppDataSource.getRepository(Credential).findBy({
-                    userId: (req.user as User).id
+                    user: req.user as User
                 })
                 const returnCredentials = []
                 for (const credential of credentials) {
@@ -877,15 +877,22 @@ export class App {
             const body = req.body
 
             // check if there is already a db for a given user
-            const currentdb = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                userId: body.id
-            })
             const user = await this.AppDataSource.getRepository(User).findOneBy({
                 id: body.id
             })
 
+            // no user found in database
+            if (!user) {
+                return res.status(404).send(`User ${body.id} not found`)
+            }
+
+            const currentdb = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
+                user: user
+            })
+
             const endpointData = { milvusUrl: body.milvusUrl, clientUrl: body.clientUrl }
 
+            // if there is already a db, update the endpoint. otherwise, create a new one
             if (currentdb) {
                 // if there is already a db, update the endpoint
                 const updateRemoteDb = new RemoteDb()
@@ -903,15 +910,13 @@ export class App {
                 const remotedb = this.AppDataSource.getRepository(RemoteDb).create(newRemoteDb)
                 const results = await this.AppDataSource.getRepository(RemoteDb).save(remotedb)
                 return res.json(results)
-            } else {
-                return res.status(404).send(`User ${body.id} not found`)
             }
         })
 
         // return the remote client endpoint for a given user
         this.app.get('/api/v1/user-client-endpoint', async (req: Request, res: Response) => {
             const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                userId: (req.user as User).id
+                user: req.user as User
             })
 
             const endpointData = { endpoint: remoteData ? (remoteData as RemoteDb).clientUrl : '' }
@@ -921,7 +926,7 @@ export class App {
         // return the remote milvus endpoint for a given user
         this.app.get('/api/v1/user-milvus-endpoint', async (req: Request, res: Response) => {
             const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                userId: (req.user as User).id
+                user: req.user as User
             })
 
             const endpointData = { endpoint: remoteData ? (remoteData as RemoteDb).clientUrl : '' }
@@ -984,10 +989,10 @@ export class App {
 
         this.app.get('/api/v1/database/export', async (req: Request, res: Response) => {
             const chatmessages = await this.AppDataSource.getRepository(ChatMessage).find({
-                where: { userId: (req.user as User).id }
+                where: { user: req.user as User }
             })
             const chatflows = await this.AppDataSource.getRepository(ChatFlow).find({
-                where: { userId: (req.user as User).id }
+                where: { user: req.user as User }
             })
             const apikeys = await getAPIKeys()
             const result: IDatabaseExport = {

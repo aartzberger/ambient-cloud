@@ -16,9 +16,6 @@ export class ChatMessage implements IChatMessage {
     id: string
 
     @Column()
-    userId: string
-
-    @Column()
     role: MessageType
 
     @Index()

@@ -15,9 +15,6 @@ export class RemoteDb implements IRemoteDb {
 id: string
 
 @Column()
-userId: string
-
-@Column()
 milvusUrl: string
 
 @Column()

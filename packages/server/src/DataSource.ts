@@ -60,7 +60,7 @@ export const init = async (): Promise<void> => {
                 synchronize: true,
                 migrationsRun: false,
                 entities: Object.values(entities),
-                migrations: sqliteMigrations
+                // migrations: sqliteMigrations
             })
             break
     }

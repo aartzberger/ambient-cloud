@@ -15,9 +15,6 @@ export class AutomationHandler implements IAutomationHandler {
     id: string
 
     @Column()
-    userId: string
-
-    @Column()
     name: string
 
     @Column({ type: 'text' })

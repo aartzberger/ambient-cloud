@@ -18,9 +18,6 @@ export class Trigger implements ITrigger {
     id: string
 
     @Column()
-    userId: string
-
-    @Column()
     name: string
 
     @Column()
