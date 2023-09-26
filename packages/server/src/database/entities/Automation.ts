@@ -22,6 +22,9 @@ export class Automation implements IAutomation {
 id: string
 
 @Column()
+enabled: boolean
+
+@Column()
 chatflowid: string
 
 @Column()

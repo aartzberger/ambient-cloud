@@ -65,6 +65,7 @@ export interface ITool {
 
 export interface IAutomation {
     id: string
+    enabled: boolean
     chatflowid: string
     triggerid: string
     handlerid: string

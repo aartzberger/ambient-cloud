@@ -34,6 +34,18 @@ const ItemCard = ({ isLoading, data, images, onClick }) => {
                 <SkeletonChatflowCard />
             ) : (
                 <CardWrapper border={false} content={false} onClick={onClick}>
+                    {Object.prototype.hasOwnProperty.call(data, 'enabled') && (
+                        <div
+                            style={{
+                                width: 10,
+                                height: 10,
+                                marginTop: 10,
+                                marginLeft: 10,
+                                borderRadius: '50%',
+                                background: data.enabled ? 'green' : 'red'
+                            }}
+                        ></div>
+                    )}
                     <Box sx={{ p: 2.25 }}>
                         <Grid container direction='column'>
                             <div

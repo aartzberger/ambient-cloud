@@ -1373,6 +1373,8 @@ export class App {
                 url: automationUrlId
             })
             if (!automation) return res.status(404).send(`Automation ${automationUrlId} not found`)
+            if (!automation.enabled) return res.status(404).send(`Automation ${automationUrlId} is not enabled`)
+
             // get the coorelating trigger
             const trigger = await this.AppDataSource.getRepository(Trigger).findOneBy({
                 id: automation.triggerid

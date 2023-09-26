@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
 import { enqueueSnackbar as enqueueSnackbarAction, closeSnackbar as closeSnackbarAction } from 'store/actions'
 
-import { Box, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, OutlinedInput } from '@mui/material'
+import { Box, Typography, Switch, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, OutlinedInput } from '@mui/material'
 import { StyledButton } from 'ui-component/button/StyledButton'
 import { TooltipWithParser } from 'ui-component/tooltip/TooltipWithParser'
 import ConfirmDialog from 'ui-component/dialog/ConfirmDialog'
@@ -12,7 +12,7 @@ import { Dropdown } from 'ui-component/dropdown/AutomationsDropdown'
 import { nanoid } from 'nanoid'
 import { baseURL } from 'store/constant'
 import { Input } from 'ui-component/input/Input'
-
+import { SwitchInput } from 'ui-component/switch/Switch'
 // Icons
 import { IconX, IconFileExport } from '@tabler/icons'
 
@@ -27,7 +27,6 @@ import useApi from 'hooks/useApi'
 import useNotifier from 'utils/useNotifier'
 import { generateRandomGradient } from 'utils/genericHelper'
 import { HIDE_CANVAS_DIALOG, SHOW_CANVAS_DIALOG } from 'store/actions'
-import { set, update } from 'lodash'
 
 const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm, chatflows, triggers, handlers }) => {
     const portalElement = document.getElementById('portal')
@@ -51,6 +50,7 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
     const [automationChatflowId, setAutomationChatflowId] = useState('')
     const [automationTriggerId, setAutomationTriggerId] = useState('')
     const [automationHandlerId, setAutomationHandlerId] = useState('')
+    const [automationEnabled, setAutomationEnabled] = useState(false)
     const [automationChatflowName, setAutomationChatflowName] = useState('')
     const [automationTriggerName, setAutomationTriggerName] = useState('')
     const [automationHandlerName, setAutomationHandlerName] = useState('')
@@ -103,6 +103,7 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
     useEffect(() => {
         if (getSpecificAutomationApi.data) {
             setAutomationId(getSpecificAutomationApi.data.id)
+            setAutomationEnabled(getSpecificAutomationApi.data.enabled)
             setAutomationName(getSpecificAutomationApi.data.name)
             setAutomationDesc(getSpecificAutomationApi.data.description)
             setAutomationChatflowId(getSpecificAutomationApi.data.chatflowid)
@@ -121,6 +122,7 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
         if (dialogProps.type === 'EDIT' && dialogProps.data) {
             // When automation dialog is opened from automations dashboard
             setAutomationId(dialogProps.data.id)
+            setAutomationEnabled(dialogProps.data.enabled)
             setAutomationName(dialogProps.data.name)
             setAutomationDesc(dialogProps.data.description)
             setAutomationIcon(dialogProps.data.iconSrc)
@@ -136,6 +138,7 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
         } else if (dialogProps.type === 'ADD') {
             // When automation dialog is to add a new automation
             setAutomationId('')
+            setAutomationEnabled(false)
             setAutomationName('')
             setAutomationDesc('')
             setAutomationIcon('')
@@ -200,6 +203,7 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
         try {
             const obj = {
                 name: automationName,
+                enabled: automationEnabled,
                 description: automationDesc,
                 color: generateRandomGradient(),
                 iconSrc: automationIcon,
@@ -249,6 +253,7 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
         try {
             const saveResp = await automationApi.updateAutomation(automationId, {
                 name: automationName,
+                enabled: automationEnabled,
                 description: automationDesc,
                 iconSrc: automationIcon,
                 chatflowid: automationChatflowId,
@@ -353,6 +358,12 @@ const AutomationDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                 <div style={{ display: 'flex', flexDirection: 'row' }}>
                     {dialogProps.title}
                     <div style={{ flex: 1 }} />
+                    <Switch
+                        checked={automationEnabled}
+                        onChange={(event) => {
+                            setAutomationEnabled(event.target.checked)
+                        }}
+                    />
                     {dialogProps.type === 'EDIT' && (
                         <Button variant='outlined' onClick={() => exportAutomation()} startIcon={<IconFileExport />}>
                             Export
