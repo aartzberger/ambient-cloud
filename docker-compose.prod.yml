@@ -10,7 +10,7 @@ services:
     networks:
       - ambient
     environment:
-      - DEPLOYED_URL=flow-ambient.ngrok.app
+      - DEPLOYED_URL=www.ambientware.co
     volumes:
       - ./db_version:/root/.flowise
     working_dir: /usr/src/packages
