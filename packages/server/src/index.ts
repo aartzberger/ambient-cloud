@@ -334,7 +334,8 @@ export class App {
 
                     const returnOptions: INodeOptionsValue[] = await nodeInstance.loadMethods![methodName]!.call(nodeInstance, nodeData, {
                         appDataSource: this.AppDataSource,
-                        databaseEntities: databaseEntities
+                        databaseEntities: databaseEntities,
+                        req: req
                     })
 
                     return res.json(returnOptions)
@@ -1393,12 +1394,12 @@ export class App {
             }
 
             // next, if there is a trigger function, run it on the input
-            let input = null;
+            let input = null
             const body = req.body
             if (trigger.func) {
                 try {
                     input = await JsRunner(trigger.func, input, body, res)
-                    if (res.headersSent) return;
+                    if (res.headersSent) return
                 } catch (e) {
                     return res.status(404).send('Failed to run trigger function')
                 }
@@ -1587,7 +1588,6 @@ export class App {
                     // return res.status(404).send('Failed to run handler function')
                 }
             }
-
         } catch (e: any) {
             logger.error('[server]: Error:', e)
             return res.status(500).send(e.message)

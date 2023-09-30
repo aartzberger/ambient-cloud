@@ -1,4 +1,5 @@
 import { ICommonObject, IDatabaseEntity, INode, INodeData, INodeOptionsValue, INodeParams } from '../../../src/Interface'
+import { Request } from 'express'
 import { getBaseClasses } from '../../../src/utils'
 import { DynamicStructuredTool } from './core'
 import { z } from 'zod'
@@ -36,7 +37,7 @@ class CustomTool_Tools implements INode {
 
     //@ts-ignore
     loadMethods = {
-        async listTools(_: INodeData, options: ICommonObject): Promise<INodeOptionsValue[]> {
+        async listTools(_: INodeData, options: ICommonObject, req: Request): Promise<INodeOptionsValue[]> {
             const returnData: INodeOptionsValue[] = []
 
             const appDataSource = options.appDataSource as DataSource
@@ -46,7 +47,9 @@ class CustomTool_Tools implements INode {
                 return returnData
             }
 
-            const tools = await appDataSource.getRepository(databaseEntities['Tool']).find()
+            const tools = await appDataSource.getRepository(databaseEntities['Tool']).find({
+                where: { user: req.user }
+            })
 
             for (let i = 0; i < tools.length; i += 1) {
                 const data = {
