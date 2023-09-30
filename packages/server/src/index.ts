@@ -930,7 +930,7 @@ export class App {
                 user: req.user as User
             })
 
-            const endpointData = { endpoint: remoteData ? (remoteData as RemoteDb).clientUrl : '' }
+            const endpointData = { endpoint: remoteData ? (remoteData as RemoteDb).milvusUrl : '' }
             return res.json(endpointData)
         })
 

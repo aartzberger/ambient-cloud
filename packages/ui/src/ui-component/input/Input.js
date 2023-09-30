@@ -37,7 +37,7 @@ export const Input = ({
     useEffect(() => {
         const getUrl = async () => {
             try {
-                const res = await remotesApi.getUserClientEndpoint()
+                const res = await remotesApi.getUserMilvusEndpoint()
                 setUrl(res.data.endpoint ? res.data.endpoint : none)
                 data.inputs[inputParam.name] = res.data.endpoint ? res.data.endpoint : none
             } catch (e) {
@@ -47,7 +47,7 @@ export const Input = ({
             }
         }
 
-        inputParam.name === 'serverUrl' && getUrl()
+        inputParam.name === 'milvusServerUrl' && getUrl()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
@@ -62,7 +62,7 @@ export const Input = ({
                     placeholder={inputParam.placeholder}
                     multiline={!!inputParam.rows}
                     rows={inputParam.rows ?? 1}
-                    value={inputParam.name === 'serverUrl' && url ? url : myValue}
+                    value={inputParam.name === 'milvusServerUrl' && url ? url : myValue}
                     name={inputParam.name}
                     onChange={(e) => {
                         setMyValue(e.target.value)

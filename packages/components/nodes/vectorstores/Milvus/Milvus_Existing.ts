@@ -1,9 +1,11 @@
-import { ICommonObject, INode, INodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
-import { DataType, ErrorCode } from '@zilliz/milvus2-sdk-node'
+import { ICommonObject, IDatabaseEntity, INode, INodeData, INodeOutputsValue, INodeOptionsValue, INodeParams } from '../../../src/Interface'
+import { DataType, ErrorCode, MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { MilvusLibArgs, Milvus } from 'langchain/vectorstores/milvus'
 import { Embeddings } from 'langchain/embeddings/base'
 import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
 import { Document } from 'langchain/document'
+import { DataSource } from 'typeorm'
+import { Request } from 'express'
 
 class Milvus_Existing_VectorStores implements INode {
     label: string
@@ -19,7 +21,7 @@ class Milvus_Existing_VectorStores implements INode {
     outputs: INodeOutputsValue[]
 
     constructor() {
-        this.label = 'Milvus Load Existing collection'
+        this.label = 'Load Existing collection'
         this.name = 'milvusExistingCollection'
         this.version = 2.0
         this.type = 'Milvus'
@@ -47,9 +49,10 @@ class Milvus_Existing_VectorStores implements INode {
                 placeholder: 'http://localhost:19530'
             },
             {
-                label: 'Milvus Collection Name',
-                name: 'milvusCollection',
-                type: 'string'
+                label: 'Collection Name',
+                name: 'selectedCollection',
+                type: 'asyncOptions',
+                loadMethod: 'listCollections'
             },
             {
                 label: 'Milvus Filter',
@@ -83,6 +86,34 @@ class Milvus_Existing_VectorStores implements INode {
                 baseClasses: [this.type, ...getBaseClasses(Milvus)]
             }
         ]
+    }
+
+    //@ts-ignore
+    loadMethods = {
+        async listCollections(_: INodeData, options: ICommonObject, req: Request): Promise<INodeOptionsValue[]> {
+            const returnData: INodeOptionsValue[] = []
+
+            const appDataSource = options.appDataSource as DataSource
+            const databaseEntities = options.databaseEntities as IDatabaseEntity
+            if (appDataSource === undefined || !appDataSource) {
+                return returnData
+            }
+            const RemoteDb = await appDataSource.getRepository(databaseEntities['RemoteDb']).findOneBy({
+                user: options.user
+            })
+            const milvusUrl = (RemoteDb as any).milvusUrl
+
+            const client = new MilvusClient({ address: milvusUrl })
+            const collectionData = await client.showCollections()
+            for (let collection of collectionData.data) {
+                const data = {
+                    label: collection.name,
+                    name: collection.name
+                } as INodeOptionsValue
+                returnData.push(data)
+            }
+            return returnData
+        }
     }
 
     async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {

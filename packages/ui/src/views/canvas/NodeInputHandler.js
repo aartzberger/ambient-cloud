@@ -30,7 +30,7 @@ import { getInputVariables } from 'utils/genericHelper'
 // const
 import { FLOWISE_CREDENTIAL_ID } from 'store/constant'
 
-const EDITABLE_TOOLS = ['selectedTool']
+const EDITABLE_ENTITIES = ['selectedTool', 'selectedCollection']
 
 const CustomWidthTooltip = styled(({ className, ...props }) => <Tooltip {...props} classes={{ popper: className }} />)({
     [`& .${tooltipClasses.tooltip}`]: {
@@ -51,6 +51,8 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
     const [expandDialogProps, setExpandDialogProps] = useState({})
     const [showAsyncOptionDialog, setAsyncOptionEditDialog] = useState('')
     const [asyncOptionEditDialogProps, setAsyncOptionEditDialogProps] = useState({})
+    const [showAsyncCollectionDialog, setAsyncCollectionEditDialog] = useState('')
+    const [asyncCollectionEditDialogProps, setAsyncCollectionEditDialogProps] = useState({})
     const [reloadTimestamp, setReloadTimestamp] = useState(Date.now().toString())
     const [showFormatPromptValuesDialog, setShowFormatPromptValuesDialog] = useState(false)
     const [formatPromptValuesDialogProps, setFormatPromptValuesDialogProps] = useState({})
@@ -105,6 +107,14 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
                 confirmButtonName: 'Save',
                 toolId: inputValue
             })
+        } else if (inputParamName === 'selectedCollection') {
+            setAsyncOptionEditDialogProps({
+                title: 'Edit Collection',
+                type: 'EDIT',
+                cancelButtonName: 'Cancel',
+                confirmButtonName: 'Save',
+                toolId: inputValue
+            })
         }
         setAsyncOptionEditDialog(inputParamName)
     }
@@ -113,6 +123,13 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
         if (inputParamName === 'selectedTool') {
             setAsyncOptionEditDialogProps({
                 title: 'Add New Tool',
+                type: 'ADD',
+                cancelButtonName: 'Cancel',
+                confirmButtonName: 'Add'
+            })
+        } else if (inputParamName === 'selectedCollection') {
+            setAsyncCollectionEditDialogProps({
+                title: 'Add New Collection',
                 type: 'ADD',
                 cancelButtonName: 'Cancel',
                 confirmButtonName: 'Add'
@@ -319,11 +336,11 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
                                         name={inputParam.name}
                                         nodeData={data}
                                         value={data.inputs[inputParam.name] ?? inputParam.default ?? 'choose an option'}
-                                        isCreateNewOption={EDITABLE_TOOLS.includes(inputParam.name)}
+                                        isCreateNewOption={EDITABLE_ENTITIES.includes(inputParam.name)}
                                         onSelect={(newValue) => (data.inputs[inputParam.name] = newValue)}
                                         onCreateNew={() => addAsyncOption(inputParam.name)}
                                     />
-                                    {EDITABLE_TOOLS.includes(inputParam.name) && data.inputs[inputParam.name] && (
+                                    {EDITABLE_ENTITIES.includes(inputParam.name) && data.inputs[inputParam.name] && (
                                         <IconButton
                                             title='Edit'
                                             color='primary'
@@ -340,11 +357,17 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
                 </>
             )}
             <ToolDialog
-                show={EDITABLE_TOOLS.includes(showAsyncOptionDialog)}
+                show={EDITABLE_ENTITIES.includes(showAsyncOptionDialog)}
                 dialogProps={asyncOptionEditDialogProps}
                 onCancel={() => setAsyncOptionEditDialog('')}
                 onConfirm={onConfirmAsyncOption}
             ></ToolDialog>
+            {/* <CollectionDialog
+                show={EDITABLE_COLLECTIONS.includes(showAsyncCollectionDialog)}
+                dialogProps={asyncCollectionEditDialogProps}
+                onCancel={() => setAsyncOptionEditDialog('')}
+                onConfirm={onConfirmAsyncOption}
+            ></CollectionDialog> */}
         </div>
     )
 }
