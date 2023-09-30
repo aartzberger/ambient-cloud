@@ -11,6 +11,7 @@ import basicAuth from 'express-basic-auth'
 import { Server } from 'socket.io'
 import logger from './utils/logger'
 import { expressRequestLogger } from './utils/logger'
+import { MilvusClient } from '@zilliz/milvus2-sdk-node'
 
 import {
     IChatFlow,
@@ -932,6 +933,96 @@ export class App {
 
             const endpointData = { endpoint: remoteData ? (remoteData as RemoteDb).milvusUrl : '' }
             return res.json(endpointData)
+        })
+
+        // return a specific collection
+        this.app.get('/api/v1/milvus-collections/:name', async (req: Request, res: Response) => {
+            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
+                user: req.user as User
+            })
+
+            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+            if (!client) return res.status(400).send('Milvus client not found')
+
+            const collection = await client.describeCollection({
+                // Return the name and schema of the collection.
+                collection_name: req.params.name
+            })
+
+            return res.json(collection)
+        })
+
+        // return a list of collections belonging to a given user
+        this.app.get('/api/v1/milvus-collections', async (req: Request, res: Response) => {
+            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
+                user: req.user as User
+            })
+
+            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+            if (!client) return res.status(400).send('Milvus client not found')
+
+            const collections = await client.showCollections()
+
+            const returnData: INodeOptionsValue[] = []
+            for (let collection of collections.data) {
+                const data = {
+                    name: collection.name
+                } as INodeOptionsValue
+                returnData.push(data)
+            }
+
+            return res.json(returnData)
+        })
+
+        // remove a collection from a given user
+        this.app.get('/api/v1/delete-collections/:name', async (req: Request, res: Response) => {
+            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
+                user: req.user as User
+            })
+
+            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+            if (!client) return res.status(400).send('Milvus client not found')
+
+            const collection = await client.describeCollection({
+                // Return the name and schema of the collection.
+                collection_name: req.params.name
+            })
+
+            return res.json(collection)
+        })
+
+        // update a collection from a given user
+        this.app.get('/api/v1/update-collections/:name', async (req: Request, res: Response) => {
+            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
+                user: req.user as User
+            })
+
+            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+            if (!client) return res.status(400).send('Milvus client not found')
+
+            const collection = await client.describeCollection({
+                // Return the name and schema of the collection.
+                collection_name: req.params.name
+            })
+
+            return res.json(collection)
+        })
+
+        // create a collection from a given user
+        this.app.get('/api/v1/create-collections/:name', async (req: Request, res: Response) => {
+            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
+                user: req.user as User
+            })
+
+            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+            if (!client) return res.status(400).send('Milvus client not found')
+
+            const collection = await client.describeCollection({
+                // Return the name and schema of the collection.
+                collection_name: req.params.name
+            })
+
+            return res.json(collection)
         })
 
         // ----------------------------------------
