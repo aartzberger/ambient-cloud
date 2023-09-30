@@ -20,9 +20,9 @@ import { isValidConnection } from 'utils/genericHelper'
 import { JsonEditorInput } from 'ui-component/json/JsonEditor'
 import { TooltipWithParser } from 'ui-component/tooltip/TooltipWithParser'
 import ToolDialog from 'views/tools/ToolDialog'
+import CollectionDialog from 'views/vectorstores/CollectionDialog'
 import FormatPromptValuesDialog from 'ui-component/dialog/FormatPromptValuesDialog'
 import CredentialInputHandler from './CredentialInputHandler'
-import { MilvusUrlHandler } from './MilvusUrlHandler'
 
 // utils
 import { getInputVariables } from 'utils/genericHelper'
@@ -113,7 +113,7 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
                 type: 'EDIT',
                 cancelButtonName: 'Cancel',
                 confirmButtonName: 'Save',
-                toolId: inputValue
+                name: inputValue
             })
         }
         setAsyncOptionEditDialog(inputParamName)
@@ -357,17 +357,17 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
                 </>
             )}
             <ToolDialog
-                show={EDITABLE_ENTITIES.includes(showAsyncOptionDialog)}
+                show={EDITABLE_ENTITIES.includes(showAsyncOptionDialog) && showAsyncOptionDialog === 'selectedTool'}
                 dialogProps={asyncOptionEditDialogProps}
                 onCancel={() => setAsyncOptionEditDialog('')}
                 onConfirm={onConfirmAsyncOption}
             ></ToolDialog>
-            {/* <CollectionDialog
-                show={EDITABLE_COLLECTIONS.includes(showAsyncCollectionDialog)}
-                dialogProps={asyncCollectionEditDialogProps}
+            <CollectionDialog
+                show={EDITABLE_ENTITIES.includes(showAsyncOptionDialog) && showAsyncOptionDialog === 'selectedCollection'}
+                dialogProps={asyncOptionEditDialogProps}
                 onCancel={() => setAsyncOptionEditDialog('')}
                 onConfirm={onConfirmAsyncOption}
-            ></CollectionDialog> */}
+            ></CollectionDialog>
         </div>
     )
 }
