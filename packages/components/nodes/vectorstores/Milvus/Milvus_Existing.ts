@@ -1,11 +1,14 @@
 import { ICommonObject, IDatabaseEntity, INode, INodeData, INodeOutputsValue, INodeOptionsValue, INodeParams } from '../../../src/Interface'
 import { DataType, ErrorCode, MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { MilvusLibArgs, Milvus } from 'langchain/vectorstores/milvus'
-import { Embeddings } from 'langchain/embeddings/base'
+import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
 import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
 import { Document } from 'langchain/document'
 import { DataSource } from 'typeorm'
 import { Request } from 'express'
+
+// TODO CMAN - chang this for input
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
 class Milvus_Existing_VectorStores implements INode {
     label: string
@@ -37,11 +40,11 @@ class Milvus_Existing_VectorStores implements INode {
             credentialNames: ['milvusAuth']
         }
         this.inputs = [
-            {
-                label: 'Embeddings',
-                name: 'embeddings',
-                type: 'Embeddings'
-            },
+            // {
+            //     label: 'Embeddings',
+            //     name: 'embeddings',
+            //     type: 'Embeddings'
+            // },
             {
                 label: 'Milvus Server URL',
                 name: 'milvusServerUrl',
@@ -119,11 +122,10 @@ class Milvus_Existing_VectorStores implements INode {
     async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
         // server setup
         const address = nodeData.inputs?.milvusServerUrl as string
-        const collectionName = nodeData.inputs?.milvusCollection as string
+        const collectionName = nodeData.inputs?.selectedCollection as string
         const milvusFilter = nodeData.inputs?.milvusFilter as string
-
         // embeddings
-        const embeddings = nodeData.inputs?.embeddings as Embeddings
+        const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
         const topK = nodeData.inputs?.topK as string
 
         // output

@@ -13,9 +13,10 @@ import { GridActionsCellItem } from '@mui/x-data-grid'
 import DeleteIcon from '@mui/icons-material/Delete'
 import ConfirmDialog from 'ui-component/dialog/ConfirmDialog'
 import { useTheme } from '@mui/material/styles'
+import { File } from 'ui-component/file/File'
 
 // Icons
-import { IconX, IconFileExport } from '@tabler/icons'
+import { IconX } from '@tabler/icons'
 
 // API
 import remotesApi from 'api/remotes'
@@ -43,9 +44,12 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
     const closeSnackbar = (...args) => dispatch(closeSnackbarAction(...args))
 
     const getSpecificCollectionApi = useApi(remotesApi.getSpecificCollection)
+    const querySpecificCollectionApi = useApi(remotesApi.querySpecificCollection)
+    const loadUnloadCollectionApi = useApi(remotesApi.loadUnloadCollection)
 
     const [collectionName, setCollectionName] = useState('')
     const [collectionDesc, setCollectionDesc] = useState('')
+    const [fileData, setFileData] = useState(null)
 
     const deleteItem = useCallback(
         (id) => () => {
@@ -56,8 +60,8 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
         []
     )
 
-    const uploadFile = () => {
-        console.log('upload file')
+    const uploadFile = (value) => {
+        setFileData(value)
     }
 
     const addNewRow = () => {
@@ -123,21 +127,34 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
 
     useEffect(() => {
         if (getSpecificCollectionApi.data) {
-            console.log(getSpecificCollectionApi.data)
             setCollectionName(getSpecificCollectionApi.data.collection_name)
             setCollectionDesc(getSpecificCollectionApi.data.schema.description)
         }
     }, [getSpecificCollectionApi.data])
 
     useEffect(() => {
+        if (querySpecificCollectionApi.data) {
+            console.log(querySpecificCollectionApi.data)
+        }
+    }, [querySpecificCollectionApi.data])
+
+    useEffect(() => {
+        if (loadUnloadCollectionApi.data) {
+            console.log(loadUnloadCollectionApi.data)
+        }
+    }, [loadUnloadCollectionApi.data])
+
+    useEffect(() => {
         if (dialogProps.type === 'EDIT' && dialogProps.name) {
             // When tool dialog is opened from CustomTool node in canvas
             setCollectionName('')
             getSpecificCollectionApi.request(dialogProps.name)
+            querySpecificCollectionApi.request(dialogProps.name)
         } else if (dialogProps.type === 'EDIT' && dialogProps.data.name) {
             // When tool dialog is opened from CustomTool node in canvas
             setCollectionName('')
             getSpecificCollectionApi.request(dialogProps.data.name)
+            querySpecificCollectionApi.request(dialogProps.data.name)
         } else if (dialogProps.type === 'ADD') {
             // When tool dialog is to add a new tool
             setCollectionName('')
@@ -158,9 +175,24 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
 
     const saveCollection = async () => {
         try {
-            const saveResp = await toolsApi.updateTool(toolId, {
-                name: collectionName
+            const saveResp = await remotesApi.createCollection(collectionName, {
+                files: fileData
             })
+            if (saveResp.data) {
+                enqueueSnackbar({
+                    message: 'Tool saved',
+                    options: {
+                        key: new Date().getTime() + Math.random(),
+                        variant: 'success',
+                        action: (key) => (
+                            <Button style={{ color: 'white' }} onClick={() => closeSnackbar(key)}>
+                                <IconX />
+                            </Button>
+                        )
+                    }
+                })
+                onConfirm(saveResp.data.id)
+            }
         } catch (error) {
             console.error(error)
         }
@@ -176,7 +208,40 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
         const isConfirmed = await confirm(confirmPayload)
 
         if (isConfirmed) {
-            console.log('delete tool')
+            try {
+                const delResp = await remotesApi.deleteCollection(collectionName)
+                if (delResp.data) {
+                    enqueueSnackbar({
+                        message: 'Collection deleted',
+                        options: {
+                            key: new Date().getTime() + Math.random(),
+                            variant: 'success',
+                            action: (key) => (
+                                <Button style={{ color: 'white' }} onClick={() => closeSnackbar(key)}>
+                                    <IconX />
+                                </Button>
+                            )
+                        }
+                    })
+                    onConfirm()
+                }
+            } catch (error) {
+                const errorData = error.response.data || `${error.response.status}: ${error.response.statusText}`
+                enqueueSnackbar({
+                    message: `Failed to delete Collection: ${errorData}`,
+                    options: {
+                        key: new Date().getTime() + Math.random(),
+                        variant: 'error',
+                        persist: true,
+                        action: (key) => (
+                            <Button style={{ color: 'white' }} onClick={() => closeSnackbar(key)}>
+                                <IconX />
+                            </Button>
+                        )
+                    }
+                })
+                onCancel()
+            }
         }
     }
 
@@ -193,9 +258,6 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                 <div style={{ display: 'flex', flexDirection: 'row' }}>
                     {dialogProps.title}
                     <div style={{ flex: 1 }} />
-                    <Button variant='outlined' onClick={() => uploadFile()} startIcon={<IconFileExport />}>
-                        Import Data
-                    </Button>
                 </div>
             </DialogTitle>
             <DialogContent>
@@ -242,6 +304,9 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                         onChange={(e) => setCollectionDesc(e.target.value)}
                     />
                 </Box>
+                <Box sx={{ p: 2 }}>
+                    <File disabled={false} fileType={'*'} onChange={(newValue) => uploadFile(newValue)} value={'Choose a file to upload'} />
+                </Box>
             </DialogContent>
             <DialogActions>
                 {dialogProps.type === 'EDIT' && (
@@ -253,7 +318,7 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                     <StyledButton
                         disabled={!collectionName && collectionDesc}
                         variant='contained'
-                        onClick={() => (dialogProps.type === 'ADD' || dialogProps.type === 'IMPORT' ? addNewTool() : saveTool())}
+                        onClick={() => (dialogProps.type === 'ADD' || dialogProps.type === 'IMPORT' ? saveCollection() : saveCollection())}
                     >
                         {dialogProps.confirmButtonName}
                     </StyledButton>

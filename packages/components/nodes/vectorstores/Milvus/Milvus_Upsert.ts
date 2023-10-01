@@ -201,11 +201,12 @@ function checkJsonString(value: string): { isJson: boolean; obj: any } {
 
 class MilvusUpsert extends Milvus {
     async addVectors(vectors: number[][], documents: Document[]): Promise<void> {
+        this.textFieldMaxLength = 65535
+
         if (vectors.length === 0) {
             return
         }
         await this.ensureCollection(vectors, documents)
-
         const insertDatas: InsertRow[] = []
 
         for (let index = 0; index < vectors.length; index++) {

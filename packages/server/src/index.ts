@@ -49,6 +49,8 @@ import {
     getEncryptionKey,
     checkMemorySessionId
 } from './utils'
+import MilvusUpsert from './utils/Upsert'
+import { DocumentLoaders, getFileName } from './utils/DocsLoader'
 import JsRunner from './utils/js_runner.js'
 import { cloneDeep, omit } from 'lodash'
 import { getDataSource } from './DataSource'
@@ -65,6 +67,12 @@ import { RemoteDb } from './database/entities/RemoteDb'
 import { ChatflowPool } from './ChatflowPool'
 import { ICommonObject, INodeOptionsValue } from 'flowise-components'
 import { createRateLimiter, getRateLimiter, initializeRateLimiter } from './utils/rateLimit'
+
+import { RecursiveCharacterTextSplitter, RecursiveCharacterTextSplitterParams } from 'langchain/text_splitter'
+import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
+
+// TODO CMAN - chang this for input
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
 export class App {
     app: express.Application
@@ -952,6 +960,51 @@ export class App {
             return res.json(collection)
         })
 
+        // load or unload a specific collection
+        this.app.post('/api/v1/load-unload-collection', async (req: Request, res: Response) => {
+            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
+                user: req.user as User
+            })
+
+            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+            if (!client) return res.status(400).send('Milvus client not found')
+
+            const load = req.body.load
+            const name = req.body.collection
+
+            let status;
+            if (load) {
+                status = await client.loadCollection({
+                    // Return the name and schema of the collection.
+                    collection_name: name
+                })
+            } else {
+                status = await client.releaseCollection({
+                    // Return the name and schema of the collection.
+                    collection_name: name
+                })
+            }
+
+            return res.json(status)
+        })
+
+        // query collection name to get docs info
+        this.app.get('/api/v1/milvus-query/:name', async (req: Request, res: Response) => {
+            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
+                user: req.user as User
+            })
+
+            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+            if (!client) return res.status(400).send('Milvus client not found')
+
+            const queryResult = await client.getCollectionStatistics({
+                // Return the name and schema of the collection.
+                collection_name: req.params.name,
+            })
+
+            return res.json(queryResult)
+        })
+
         // return a list of collections belonging to a given user
         this.app.get('/api/v1/milvus-collections', async (req: Request, res: Response) => {
             const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
@@ -975,7 +1028,7 @@ export class App {
         })
 
         // remove a collection from a given user
-        this.app.get('/api/v1/delete-collections/:name', async (req: Request, res: Response) => {
+        this.app.get('/api/v1/delete-collection/:name', async (req: Request, res: Response) => {
             const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
                 user: req.user as User
             })
@@ -983,7 +1036,7 @@ export class App {
             const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
             if (!client) return res.status(400).send('Milvus client not found')
 
-            const collection = await client.describeCollection({
+            const collection = await client.dropCollection({
                 // Return the name and schema of the collection.
                 collection_name: req.params.name
             })
@@ -992,7 +1045,7 @@ export class App {
         })
 
         // update a collection from a given user
-        this.app.get('/api/v1/update-collections/:name', async (req: Request, res: Response) => {
+        this.app.post('/api/v1/update-collection/:name', async (req: Request, res: Response) => {
             const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
                 user: req.user as User
             })
@@ -1009,20 +1062,68 @@ export class App {
         })
 
         // create a collection from a given user
-        this.app.get('/api/v1/create-collections/:name', async (req: Request, res: Response) => {
+        this.app.post('/api/v1/create-collection/:collectionName', async (req: Request, res: Response) => {
             const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
                 user: req.user as User
             })
 
-            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
-            if (!client) return res.status(400).send('Milvus client not found')
+            const obj = {} as RecursiveCharacterTextSplitterParams
 
-            const collection = await client.describeCollection({
-                // Return the name and schema of the collection.
-                collection_name: req.params.name
-            })
+            obj.chunkSize = 1500
+            obj.chunkOverlap = 200
+            const textSplitter = new RecursiveCharacterTextSplitter(obj)
 
-            return res.json(collection)
+            const fileBase64 = req.body.files
+            const collectionName = req.params.collectionName
+
+            let alldocs = []
+            let files: string[] = []
+
+            if (fileBase64.startsWith('[') && fileBase64.endsWith(']')) {
+                files = JSON.parse(fileBase64)
+            } else {
+                files = [fileBase64]
+            }
+
+            for (const file of files) {
+                const splitDataURI = file.split(',')
+                const fileName = getFileName(file)
+                const fileExtension = fileName.split('.').pop()
+
+                splitDataURI.pop()
+                const bf = Buffer.from(splitDataURI.pop() || '', 'base64')
+
+                const documentLoader = DocumentLoaders.get(fileExtension) as any
+
+                const loader = new documentLoader(new Blob([bf]))
+
+                if (textSplitter) {
+                    const docs = await loader.loadAndSplit(textSplitter)
+                    for (const doc of docs) {
+                        doc.metadata.fileName = fileName
+                    }
+                    alldocs.push(...docs)
+                } else {
+                    const docs = await loader.load()
+                    for (const doc of docs) {
+                        doc.metadata.fileName = fileName
+                    }
+                    alldocs.push(...docs)
+                    // }
+                }
+            }
+
+            // TODO CMAN - make this dynamic
+            const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
+
+            const milvusArgs = {
+                collectionName: collectionName,
+                url: remoteData ? (remoteData.milvusUrl as string) : ''
+            }
+
+            const vectorStore = await MilvusUpsert.fromDocuments(alldocs, embeddings, milvusArgs)
+
+            return res.json('ok')
         })
 
         // ----------------------------------------
