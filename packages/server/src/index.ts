@@ -1126,13 +1126,13 @@ export class App {
                 if (textSplitter) {
                     const docs = await loader.loadAndSplit(textSplitter)
                     for (const doc of docs) {
-                        doc.metadata.fileName = fileName
+                        doc.metadata = {fileName: fileName}
                     }
                     alldocs.push(...docs)
                 } else {
                     const docs = await loader.load()
                     for (const doc of docs) {
-                        doc.metadata.fileName = fileName
+                        doc.metadata = {fileName: fileName}
                     }
                     alldocs.push(...docs)
                     // }
@@ -1150,6 +1150,7 @@ export class App {
 
             const vectorStore = await MilvusUpsert.fromDocuments(alldocs, embeddings, milvusArgs)
 
+            // TODO CMAN - need to return something relevant
             return res.json('ok')
         })
 

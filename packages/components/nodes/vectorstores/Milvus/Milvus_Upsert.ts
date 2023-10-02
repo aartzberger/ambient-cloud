@@ -126,7 +126,7 @@ class Milvus_Upsert_VectorStores implements INode {
         let finalDocs = []
         // TOTO CMAN - this should update with actual name of file
         for (let doc of splitDocs) {
-            doc.metadata.fileName = 'external_upload_file'
+            doc.metadata = {fileName: 'external_uploaded_file'}
             finalDocs.push(doc)
         }
 
