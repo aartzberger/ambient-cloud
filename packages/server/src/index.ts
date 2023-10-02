@@ -50,6 +50,7 @@ import {
     checkMemorySessionId
 } from './utils'
 import MilvusUpsert from './utils/Upsert'
+import blacklistNodes from './utils/blacklist'
 import { DocumentLoaders, getFileName } from './utils/DocsLoader'
 import JsRunner from './utils/js_runner.js'
 import { cloneDeep, omit } from 'lodash'
@@ -249,6 +250,7 @@ export class App {
         this.app.get('/api/v1/nodes', (req: Request, res: Response) => {
             const returnData = []
             for (const nodeName in this.nodesPool.componentNodes) {
+                if (blacklistNodes.includes(nodeName)) continue // skip over nodes that are blacklisted
                 const clonedNode = cloneDeep(this.nodesPool.componentNodes[nodeName])
                 returnData.push(clonedNode)
             }
