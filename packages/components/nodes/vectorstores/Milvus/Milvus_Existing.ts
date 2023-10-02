@@ -2,6 +2,7 @@ import { ICommonObject, IDatabaseEntity, INode, INodeData, INodeOutputsValue, IN
 import { DataType, ErrorCode, MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { MilvusLibArgs, Milvus } from 'langchain/vectorstores/milvus'
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
+import { HuggingFaceInferenceEmbeddings } from 'langchain/embeddings/hf'
 import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
 import { Document } from 'langchain/document'
 import { DataSource } from 'typeorm'
@@ -125,14 +126,15 @@ class Milvus_Existing_VectorStores implements INode {
         const collectionName = nodeData.inputs?.selectedCollection as string
         const milvusFilter = nodeData.inputs?.milvusFilter as string
         // embeddings
-        const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
+        const embeddings = new HuggingFaceInferenceEmbeddings({model: 'sentence-transformers/all-MiniLM-L6-v2'}) // api key passed by env variable
+        // const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
         const topK = nodeData.inputs?.topK as string
 
         // output
         const output = nodeData.outputs?.output as string
 
         // format data
-        const k = topK ? parseInt(topK, 10) : 4
+        const k = topK ? parseInt(topK, 10) : 10
 
         // credential
         const credentialData = await getCredentialData(nodeData.credential ?? '', options)

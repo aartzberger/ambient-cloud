@@ -70,7 +70,9 @@ import { ICommonObject, INodeOptionsValue } from 'flowise-components'
 import { createRateLimiter, getRateLimiter, initializeRateLimiter } from './utils/rateLimit'
 
 import { RecursiveCharacterTextSplitter, RecursiveCharacterTextSplitterParams } from 'langchain/text_splitter'
-import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
+// import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
+import { HuggingFaceInferenceEmbeddings } from 'langchain/embeddings/hf'
+import { ViewColumn } from 'typeorm'
 
 // TODO CMAN - chang this for input
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
@@ -1138,7 +1140,8 @@ export class App {
             }
 
             // TODO CMAN - make this dynamic
-            const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
+            // const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
+            const embeddings = new HuggingFaceInferenceEmbeddings({model: 'sentence-transformers/all-MiniLM-L6-v2'}) // api key passed by env variable
 
             const milvusArgs = {
                 collectionName: collectionName,

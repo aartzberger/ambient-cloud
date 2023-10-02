@@ -1,5 +1,6 @@
 import { Document } from 'langchain/document'
 import { Milvus } from 'langchain/vectorstores/milvus'
+
 import { ErrorCode, MetricType, IndexType, DataType } from '@zilliz/milvus2-sdk-node'
 
 interface InsertRow {

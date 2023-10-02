@@ -175,7 +175,7 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
 
     const updateCollection = async () => {
         try {
-            let saveResp
+            let saveResp = null
 
             if (oldCollectionName !== collectionName && dialogProps.type !== 'ADD') {
                 const args = {
@@ -184,8 +184,9 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                 }
                 saveResp = await remotesApi.renameCollection(args)
             }
+            console.log('here')
 
-            if (saveResp?.data || oldCollectionName === '' || dialogProps.type === 'ADD') {
+            if (saveResp ? saveResp.data : true) {
                 enqueueSnackbar({
                     message: 'Collection saved',
                     options: {
