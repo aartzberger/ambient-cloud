@@ -184,7 +184,6 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                 }
                 saveResp = await remotesApi.renameCollection(args)
             }
-            console.log('here')
 
             if (saveResp ? saveResp.data : true) {
                 enqueueSnackbar({

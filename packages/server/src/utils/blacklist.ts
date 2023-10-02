@@ -4,7 +4,6 @@ const blacklistNodes = [
     'faissExistingIndex',
     'faissUpsert',
     'memoryVectorStore',
-    'milvusUpsert',
     'openSearchExistingIndex',
     'openSearchUpsertDocument',
     'pineconeExistingIndex',

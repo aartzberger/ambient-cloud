@@ -1,10 +1,12 @@
-import { ICommonObject, INode, INodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
-import { DataType, ErrorCode, MetricType, IndexType } from '@zilliz/milvus2-sdk-node'
+import { ICommonObject, INode, INodeData, INodeOutputsValue, INodeParams, IDatabaseEntity, INodeOptionsValue } from '../../../src/Interface'
+import { DataType, ErrorCode, MetricType, IndexType, MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { MilvusLibArgs, Milvus } from 'langchain/vectorstores/milvus'
-import { Embeddings } from 'langchain/embeddings/base'
+import { HuggingFaceInferenceEmbeddings } from 'langchain/embeddings/hf'
 import { Document } from 'langchain/document'
 import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
 import { flatten } from 'lodash'
+import { DataSource } from 'typeorm'
+import { RecursiveCharacterTextSplitter, RecursiveCharacterTextSplitterParams } from 'langchain/text_splitter'
 
 class Milvus_Upsert_VectorStores implements INode {
     label: string
@@ -28,13 +30,13 @@ class Milvus_Upsert_VectorStores implements INode {
         this.category = 'Vector Stores'
         this.description = 'Add data to one of your collections!'
         this.baseClasses = [this.type, 'VectorStoreRetriever', 'BaseRetriever']
-        this.credential = {
-            label: 'Connect Credential',
-            name: 'credential',
-            type: 'credential',
-            optional: true,
-            credentialNames: ['milvusAuth']
-        }
+        // this.credential = {
+        //     label: 'Connect Credential',
+        //     name: 'credential',
+        //     type: 'credential',
+        //     optional: true,
+        //     credentialNames: ['milvusAuth']
+        // }
         this.inputs = [
             {
                 label: 'Document',
@@ -45,7 +47,8 @@ class Milvus_Upsert_VectorStores implements INode {
             {
                 label: 'Embeddings',
                 name: 'embeddings',
-                type: 'Embeddings'
+                type: 'Embeddings',
+                optional: true
             },
             {
                 label: 'Milvus Server URL',
@@ -54,7 +57,7 @@ class Milvus_Upsert_VectorStores implements INode {
                 placeholder: 'http://localhost:19530'
             },
             {
-                label: 'Milvus Collection Name',
+                label: 'Name of Collection to Create',
                 name: 'milvusCollection',
                 type: 'string'
             }
@@ -80,7 +83,10 @@ class Milvus_Upsert_VectorStores implements INode {
 
         // embeddings
         const docs = nodeData.inputs?.document as Document[]
-        const embeddings = nodeData.inputs?.embeddings as Embeddings
+        // embeddings
+        const embeddings = nodeData.inputs?.embeddings
+            ? nodeData.inputs?.embeddings
+            : new HuggingFaceInferenceEmbeddings({ model: 'sentence-transformers/all-MiniLM-L6-v2' })
         const topK = nodeData.inputs?.topK as string
 
         // output
@@ -104,9 +110,24 @@ class Milvus_Upsert_VectorStores implements INode {
         if (milvusPassword) milVusArgs.password = milvusPassword
 
         const flattenDocs = docs && docs.length ? flatten(docs) : []
-        const finalDocs = []
+        const flattened = []
         for (let i = 0; i < flattenDocs.length; i += 1) {
-            finalDocs.push(new Document(flattenDocs[i]))
+            flattened.push(new Document(flattenDocs[i]))
+        }
+
+        // text splitter
+        // if single document is passed, it has not been split yet
+        const obj = {} as RecursiveCharacterTextSplitterParams
+        obj.chunkSize = 1500
+        obj.chunkOverlap = 200
+        const textSplitter = new RecursiveCharacterTextSplitter(obj)
+        const splitDocs = await textSplitter.splitDocuments(flattened)
+
+        let finalDocs = []
+        // TOTO CMAN - this should update with actual name of file
+        for (let doc of splitDocs) {
+            doc.metadata.fileName = 'external_upload_file'
+            finalDocs.push(doc)
         }
 
         const vectorStore = await MilvusUpsert.fromDocuments(finalDocs, embeddings, milVusArgs)

@@ -1,7 +1,6 @@
 import { ICommonObject, IDatabaseEntity, INode, INodeData, INodeOutputsValue, INodeOptionsValue, INodeParams } from '../../../src/Interface'
 import { DataType, ErrorCode, MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { MilvusLibArgs, Milvus } from 'langchain/vectorstores/milvus'
-import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
 import { HuggingFaceInferenceEmbeddings } from 'langchain/embeddings/hf'
 import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
 import { Document } from 'langchain/document'
@@ -33,19 +32,20 @@ class Milvus_Existing_VectorStores implements INode {
         this.category = 'Vector Stores'
         this.description = 'Load one of your existing data collections!'
         this.baseClasses = [this.type, 'VectorStoreRetriever', 'BaseRetriever']
-        this.credential = {
-            label: 'Connect Credential',
-            name: 'credential',
-            type: 'credential',
-            optional: true,
-            credentialNames: ['milvusAuth']
-        }
+        // this.credential = {
+        //     label: 'Connect Credential',
+        //     name: 'credential',
+        //     type: 'credential',
+        //     optional: true,
+        //     credentialNames: ['milvusAuth']
+        // }
         this.inputs = [
-            // {
-            //     label: 'Embeddings',
-            //     name: 'embeddings',
-            //     type: 'Embeddings'
-            // },
+            {
+                label: 'Embeddings',
+                name: 'embeddings',
+                type: 'Embeddings',
+                optional: true
+            },
             {
                 label: 'Milvus Server URL',
                 name: 'milvusServerUrl',
@@ -126,7 +126,9 @@ class Milvus_Existing_VectorStores implements INode {
         const collectionName = nodeData.inputs?.selectedCollection as string
         const milvusFilter = nodeData.inputs?.milvusFilter as string
         // embeddings
-        const embeddings = new HuggingFaceInferenceEmbeddings({model: 'sentence-transformers/all-MiniLM-L6-v2'}) // api key passed by env variable
+        const embeddings = nodeData.inputs?.embeddings
+            ? nodeData.inputs?.embeddings
+            : new HuggingFaceInferenceEmbeddings({ model: 'sentence-transformers/all-MiniLM-L6-v2' })
         // const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
         const topK = nodeData.inputs?.topK as string
 

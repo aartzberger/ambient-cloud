@@ -51,7 +51,6 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
     const [expandDialogProps, setExpandDialogProps] = useState({})
     const [showAsyncOptionDialog, setAsyncOptionEditDialog] = useState('')
     const [asyncOptionEditDialogProps, setAsyncOptionEditDialogProps] = useState({})
-    const [showAsyncCollectionDialog, setAsyncCollectionEditDialog] = useState('')
     const [asyncCollectionEditDialogProps, setAsyncCollectionEditDialogProps] = useState({})
     const [reloadTimestamp, setReloadTimestamp] = useState(Date.now().toString())
     const [showFormatPromptValuesDialog, setShowFormatPromptValuesDialog] = useState(false)
