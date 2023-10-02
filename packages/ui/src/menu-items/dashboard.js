@@ -37,7 +37,7 @@ const dashboard = {
         },
         {
             id: 'vectorstores',
-            title: 'Remote Data',
+            title: 'Collections',
             type: 'item',
             url: '/vectorstores',
             icon: icons.IconDatabase,

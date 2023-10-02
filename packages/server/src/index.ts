@@ -972,7 +972,7 @@ export class App {
             const load = req.body.load
             const name = req.body.collection
 
-            let status;
+            let status
             if (load) {
                 status = await client.loadCollection({
                     // Return the name and schema of the collection.
@@ -997,9 +997,12 @@ export class App {
             const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
             if (!client) return res.status(400).send('Milvus client not found')
 
-            const queryResult = await client.getCollectionStatistics({
+            const queryResult = await client.query({
                 // Return the name and schema of the collection.
                 collection_name: req.params.name,
+                expr: '',
+                output_fields: ['fileName'],
+                limit: 15000
             })
 
             return res.json(queryResult)
@@ -1027,6 +1030,24 @@ export class App {
             return res.json(returnData)
         })
 
+        // delete collection entities
+        this.app.post('/api/v1/milvus-delete-entities/', async (req: Request, res: Response) => {
+            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
+                user: req.user as User
+            })
+
+            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+            if (!client) return res.status(400).send('Milvus client not found')
+
+            const result = await client.deleteEntities({
+                // Return the name and schema of the collection.
+                collection_name: req.body.collection_name,
+                expr: req.body.expr
+            })
+
+            return res.json(result)
+        })
+
         // remove a collection from a given user
         this.app.get('/api/v1/delete-collection/:name', async (req: Request, res: Response) => {
             const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
@@ -1045,7 +1066,7 @@ export class App {
         })
 
         // update a collection from a given user
-        this.app.post('/api/v1/update-collection/:name', async (req: Request, res: Response) => {
+        this.app.post('/api/v1/rename-collection', async (req: Request, res: Response) => {
             const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
                 user: req.user as User
             })
@@ -1053,9 +1074,10 @@ export class App {
             const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
             if (!client) return res.status(400).send('Milvus client not found')
 
-            const collection = await client.describeCollection({
+            const collection = await client.renameCollection({
                 // Return the name and schema of the collection.
-                collection_name: req.params.name
+                collection_name: req.body.oldName,
+                new_collection_name: req.body.newName
             })
 
             return res.json(collection)
@@ -1068,9 +1090,9 @@ export class App {
             })
 
             const obj = {} as RecursiveCharacterTextSplitterParams
-
             obj.chunkSize = 1500
             obj.chunkOverlap = 200
+
             const textSplitter = new RecursiveCharacterTextSplitter(obj)
 
             const fileBase64 = req.body.files

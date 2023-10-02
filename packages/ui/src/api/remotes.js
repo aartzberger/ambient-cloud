@@ -9,6 +9,8 @@ const deleteCollection = (name) => client.get(`/delete-collection/${name}`)
 const updateCollection = (name, data) => client.post(`/update-collection/${name}`, data)
 const createCollection = (name, data) => client.post(`/create-collection/${name}`, data)
 const loadUnloadCollection = (name, data) => client.post(`/load-unload-collection`, data)
+const deleteEntities = (data) => client.post(`/milvus-delete-entities`, data)
+const renameCollection = (data) => client.post(`/rename-collection`, data)
 
 export default {
     getUserClientEndpoint,
@@ -19,5 +21,7 @@ export default {
     deleteCollection,
     updateCollection,
     createCollection,
-    loadUnloadCollection
+    loadUnloadCollection,
+    deleteEntities,
+    renameCollection
 }
