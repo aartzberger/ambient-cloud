@@ -11,6 +11,8 @@ services:
       - ambient
     environment:
       - DEPLOYED_URL=www.ambientware.co
+      - BASE_URL=https://www.ambientware.co
+      - OPENAI_API_KEY={OPENAI_API_KEY}
     volumes:
       - ./db_version:/root/.flowise
     working_dir: /usr/src/packages

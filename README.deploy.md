@@ -13,11 +13,13 @@ This assums you already have a domain with proper forwarded DNS settings forward
     sudo ln -s /snap/bin/certbot /usr/bin/certbot
     ```
 
-3. Open nginx site config (/etc/nginx/sites-available/default) and change to the following:
+3. Open nginx site config (/etc/nginx/sites-available/default) and change to the following. if your gitting file size issue theck the client max body:
     ```
     server {
         listen 80;
         server_name www.ambientware.co; # Replace with your domain name(s)
+
+        client_max_body_size 500M; # allows file uploads up to 500 megabytes
 
         location / {
             proxy_pass http://127.0.0.1:3000; # Forward requests to port 3000 on localhost
