@@ -37,6 +37,9 @@ import { Credential } from '../database/entities/Credential'
 import { Tool } from '../database/entities/Tool'
 import { RemoteDb } from '../database/entities/RemoteDb'
 import { DataSource } from 'typeorm'
+import { Trigger } from '../database/entities/Trigger'
+import { AutomationHandler } from '../database/entities/AutomationHandler'
+import { Automation } from '../database/entities/Automation'
 
 const QUESTION_VAR_PREFIX = 'question'
 const CHAT_HISTORY_VAR_PREFIX = 'chat_history'
@@ -48,7 +51,10 @@ export const databaseEntities: IDatabaseEntity = {
     ChatMessage: ChatMessage,
     Tool: Tool,
     Credential: Credential,
-    RemoteDb: RemoteDb
+    RemoteDb: RemoteDb,
+    Trigger: Trigger,
+    AutomationHandler: AutomationHandler,
+    Automation: Automation
 }
 
 /**

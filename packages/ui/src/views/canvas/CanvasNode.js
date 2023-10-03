@@ -222,7 +222,7 @@ const CanvasNode = ({ data }) => {
                                 }}
                             >
                                 <Button sx={{ borderRadius: 25, width: '90%', mb: 2 }} variant='outlined' onClick={onDialogClicked}>
-                                    Additional Parameters
+                                    {data.type === 'Automation' ? 'Configure Automation' : 'Additional Parameters'}
                                 </Button>
                             </div>
                         )}

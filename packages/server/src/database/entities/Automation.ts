@@ -42,21 +42,6 @@ url: string
 @Column()
 name: string
 
-@Column({ type: 'text' })
-description: string
-
-@Column()
-color: string
-
-@Column({ nullable: true })
-iconSrc?: string
-
-@Column({ nullable: true, type: 'text' })
-schema?: string
-
-@Column({ nullable: true, type: 'text' })
-func?: string
-
 @CreateDateColumn()
 createdDate: Date
 

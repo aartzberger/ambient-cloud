@@ -69,6 +69,7 @@ export interface INodeParams {
     fileType?: string
     additionalParams?: boolean
     loadMethod?: string
+    disabled?: boolean
 }
 
 export interface INodeExecutionData {

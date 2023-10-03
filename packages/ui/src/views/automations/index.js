@@ -15,7 +15,6 @@ import { gridSpacing } from 'store/constant'
 import WorkflowEmptySVG from 'assets/images/workflow_empty.svg'
 import HandlerDialog from './HandlerDialog'
 import TriggerDialog from './TriggerDialog'
-import AutomationDialog from './AutomationDialog'
 import { StyledButton } from 'ui-component/button/StyledButton'
 
 // API
@@ -62,7 +61,7 @@ const Automations = () => {
     const [isHandlersLoading, setHandlersLoading] = useState(true)
     const [isAutomationsLoading, setAutomationsLoading] = useState(true)
     const [isChatflowsLoading, setChatflowsLoading] = useState(true)
-    const tabItems = ['Automations', 'Triggers', 'Handlers']
+    const tabItems = ['Triggers', 'Handlers']
     const [value, setValue] = useState(0)
 
     // keep track of all the returned data
@@ -76,9 +75,6 @@ const Automations = () => {
     // for handlers dialog
     const [showHandlerDialog, setShowHandlerDialog] = useState(false)
     const [handlerDialogProps, setHandlerDialogProps] = useState({})
-    // for automations dialog
-    const [showAutomationDialog, setShowAutomationDialog] = useState(false)
-    const [automationDialogProps, setAutomationDialogProps] = useState({})
 
     const getAllTriggersApi = useApi(triggersApi.getAllTriggers)
     const getAllHandlersApi = useApi(handlersApi.getAllAutomationHandlers)
@@ -98,9 +94,6 @@ const Automations = () => {
         } else if (tabItems[value] === 'Handlers') {
             setHandlerDialogProps(dialogProp)
             setShowHandlerDialog(true)
-        } else if (tabItems[value] === 'Automations') {
-            setAutomationDialogProps(dialogProp)
-            setShowAutomationDialog(true)
         }
     }
 
@@ -122,9 +115,6 @@ const Automations = () => {
         } else if (tabItems[value] === 'Handlers') {
             setHandlerDialogProps(dialogProp)
             setShowHandlerDialog(true)
-        } else if (tabItems[value] === 'Automations') {
-            setAutomationDialogProps(dialogProp)
-            setShowAutomationDialog(true)
         }
     }
 
@@ -210,22 +200,9 @@ const Automations = () => {
         setShowHandlerDialog(true)
     }
 
-    const editAutomation = (selectedAutomation) => {
-        const dialogProp = {
-            title: 'Edit Automation',
-            type: 'EDIT',
-            cancelButtonName: 'Cancel',
-            confirmButtonName: 'Save',
-            data: selectedAutomation
-        }
-        setAutomationDialogProps(dialogProp)
-        setShowAutomationDialog(true)
-    }
-
     const onConfirm = () => {
         setShowHandlerDialog(false)
         setShowTriggerDialog(false)
-        setShowAutomationDialog(false)
         getAllAutomationsApi.request()
         getAllTriggersApi.request()
         getAllHandlersApi.request()
@@ -260,28 +237,6 @@ const Automations = () => {
                 </Tabs>
                 {tabItems.map((item, index) => (
                     <TabPanel key={index} value={value} index={index}>
-                        {item === 'Automations' &&
-                            !isAutomationsLoading &&
-                            (getAllAutomationsApi.data && getAllAutomationsApi.data.length > 0 ? (
-                                <Grid container spacing={gridSpacing}>
-                                    {getAllAutomationsApi.data.map((data, index) => (
-                                        <Grid key={index} item lg={3} md={4} sm={6} xs={12}>
-                                            <ItemCard data={data} onClick={() => editAutomation(data)} />
-                                        </Grid>
-                                    ))}
-                                </Grid>
-                            ) : (
-                                <Stack sx={{ alignItems: 'center', justifyContent: 'center' }} flexDirection='column'>
-                                    <Box sx={{ p: 2, height: 'auto' }}>
-                                        <img
-                                            style={{ objectFit: 'cover', height: '30vh', width: 'auto' }}
-                                            src={WorkflowEmptySVG}
-                                            alt='WorkflowEmptySVG'
-                                        />
-                                    </Box>
-                                    <div>No Automations Yet</div>
-                                </Stack>
-                            ))}
                         {item === 'Triggers' &&
                             !isTriggersLoading &&
                             (getAllTriggersApi.data && getAllTriggersApi.data.length > 0 ? (
@@ -344,16 +299,6 @@ const Automations = () => {
                 onConfirm={onConfirm}
                 onUseTemplate={(selected) => goToDialog(selected)}
             ></TriggerDialog>
-            <AutomationDialog
-                show={showAutomationDialog}
-                dialogProps={automationDialogProps}
-                onCancel={() => setShowAutomationDialog(false)}
-                onConfirm={onConfirm}
-                onUseTemplate={(selected) => goToDialog(selected)}
-                chatflows={chatflowData}
-                triggers={triggerData}
-                handlers={handlerData}
-            ></AutomationDialog>
         </>
     )
 }

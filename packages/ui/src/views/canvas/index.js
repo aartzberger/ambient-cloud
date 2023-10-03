@@ -30,6 +30,7 @@ import { flowContext } from 'store/context/ReactFlowContext'
 // API
 import nodesApi from 'api/nodes'
 import chatflowsApi from 'api/chatflows'
+import automationsApi from 'api/automations'
 
 // Hooks
 import useApi from 'hooks/useApi'
@@ -79,6 +80,7 @@ const Canvas = () => {
 
     const [nodes, setNodes, onNodesChange] = useNodesState()
     const [edges, setEdges, onEdgesChange] = useEdgesState()
+    const [automations, setAutomations] = useState([])
 
     const [selectedNode, setSelectedNode] = useState(null)
 
@@ -90,6 +92,7 @@ const Canvas = () => {
     const createNewChatflowApi = useApi(chatflowsApi.createNewChatflow)
     const testChatflowApi = useApi(chatflowsApi.testChatflow)
     const updateChatflowApi = useApi(chatflowsApi.updateChatflow)
+    const createOrUpdateAutomationApi = useApi(automationsApi.createOrUpdateAutomation)
     const getSpecificChatflowApi = useApi(chatflowsApi.getSpecificChatflow)
 
     // ==============================|| Events & Actions ||============================== //
@@ -164,6 +167,9 @@ const Canvas = () => {
         }
         const isConfirmed = await confirm(confirmPayload)
 
+        // delete the automations first
+        createOrUpdateAutomationApi.request(chatflow.id, { automations: [] })
+
         if (isConfirmed) {
             try {
                 await chatflowsApi.deleteChatflow(chatflow.id)
@@ -187,9 +193,23 @@ const Canvas = () => {
         }
     }
 
-    const handleSaveFlow = (chatflowName) => {
+    const handleSaveFlow = async (chatflowName) => {
         if (reactFlowInstance) {
+            const nodeAutomations = []
             const nodes = reactFlowInstance.getNodes().map((node) => {
+                // keep track of automations for the chatflow
+                if (node.data.type === 'Automation') {
+                    const automation_data = {
+                        name: node.data.inputs.automationName,
+                        triggerid: node.data.inputs.selectedTrigger,
+                        handlerid: node.data.inputs.selectedHandler,
+                        enabled: node.data.inputs.automationEnabled,
+                        interval: node.data.inputs.triggerInterval,
+                        url: node.data.inputs.automationUrl.split('/').pop() // only take the url id from the full url
+                    }
+                    nodeAutomations.push(automation_data)
+                }
+
                 const nodeData = cloneDeep(node.data)
                 if (Object.prototype.hasOwnProperty.call(nodeData.inputs, FLOWISE_CREDENTIAL_ID)) {
                     nodeData.credential = nodeData.inputs[FLOWISE_CREDENTIAL_ID]
@@ -201,6 +221,9 @@ const Canvas = () => {
                 }
                 return node
             })
+
+            // update the automations that we have for all the nodes
+            setAutomations(nodeAutomations)
 
             const rfInstanceObject = reactFlowInstance.toObject()
             rfInstanceObject.nodes = nodes
@@ -362,6 +385,14 @@ const Canvas = () => {
     useEffect(() => {
         if (createNewChatflowApi.data) {
             const chatflow = createNewChatflowApi.data
+            // once we have the chatflow data, we can create the automations
+            if (createNewChatflowApi.data) {
+                for (const automation of automations) {
+                    // Add the chatflowid property to each automation object
+                    automation.chatflowid = createNewChatflowApi.data.id
+                }
+                createOrUpdateAutomationApi.request(createNewChatflowApi.data.id, { automations: automations })
+            }
             dispatch({ type: SET_CHATFLOW, chatflow })
             saveChatflowSuccess()
             window.history.replaceState(null, null, `/canvas/${chatflow.id}`)
@@ -377,6 +408,14 @@ const Canvas = () => {
     // Update chatflow successful
     useEffect(() => {
         if (updateChatflowApi.data) {
+            // once we have the chatflow data, we can update the automations
+            if (updateChatflowApi.data) {
+                for (const automation of automations) {
+                    // Add the chatflowid property to each automation object
+                    automation.chatflowid = updateChatflowApi.data.id
+                }
+                createOrUpdateAutomationApi.request(updateChatflowApi.data.id, { automations: automations })
+            }
             dispatch({ type: SET_CHATFLOW, chatflow: updateChatflowApi.data })
             saveChatflowSuccess()
         } else if (updateChatflowApi.error) {

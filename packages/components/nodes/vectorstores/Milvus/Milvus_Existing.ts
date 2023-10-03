@@ -2,10 +2,11 @@ import { ICommonObject, IDatabaseEntity, INode, INodeData, INodeOutputsValue, IN
 import { DataType, ErrorCode, MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { MilvusLibArgs, Milvus } from 'langchain/vectorstores/milvus'
 import { HuggingFaceInferenceEmbeddings } from 'langchain/embeddings/hf'
-import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
+import { getBaseClasses, getCredentialData } from '../../../src/utils'
 import { Document } from 'langchain/document'
 import { DataSource } from 'typeorm'
 import { Request } from 'express'
+import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
 
 // TODO CMAN - chang this for input
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
@@ -40,12 +41,12 @@ class Milvus_Existing_VectorStores implements INode {
         //     credentialNames: ['milvusAuth']
         // }
         this.inputs = [
-            {
-                label: 'Embeddings',
-                name: 'embeddings',
-                type: 'Embeddings',
-                optional: true
-            },
+            // {
+            //     label: 'Embeddings',
+            //     name: 'embeddings',
+            //     type: 'Embeddings',
+            //     optional: true
+            // },
             {
                 label: 'Milvus Server URL',
                 name: 'milvusServerUrl',
@@ -126,10 +127,10 @@ class Milvus_Existing_VectorStores implements INode {
         const collectionName = nodeData.inputs?.selectedCollection as string
         const milvusFilter = nodeData.inputs?.milvusFilter as string
         // embeddings
-        const embeddings = nodeData.inputs?.embeddings
-            ? nodeData.inputs?.embeddings
-            : new HuggingFaceInferenceEmbeddings({ model: 'sentence-transformers/all-MiniLM-L6-v2' })
-        // const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
+        // const embeddings = nodeData.inputs?.embeddings
+        //     ? nodeData.inputs?.embeddings
+        //     : new HuggingFaceInferenceEmbeddings({ model: 'sentence-transformers/all-MiniLM-L6-v2' })
+        const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
         const topK = nodeData.inputs?.topK as string
 
         // output
@@ -138,19 +139,11 @@ class Milvus_Existing_VectorStores implements INode {
         // format data
         const k = topK ? parseInt(topK, 10) : 10
 
-        // credential
-        const credentialData = await getCredentialData(nodeData.credential ?? '', options)
-        const milvusUser = getCredentialParam('milvusUser', credentialData, nodeData)
-        const milvusPassword = getCredentialParam('milvusPassword', credentialData, nodeData)
-
         // init MilvusLibArgs
         const milVusArgs: MilvusLibArgs = {
             url: address,
             collectionName: collectionName
         }
-
-        if (milvusUser) milVusArgs.username = milvusUser
-        if (milvusPassword) milVusArgs.password = milvusPassword
 
         const vectorStore = await Milvus.fromExistingCollection(embeddings, milVusArgs)
 

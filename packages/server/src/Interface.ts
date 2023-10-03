@@ -72,9 +72,6 @@ export interface IAutomation {
     interval: string
     url: string
     name: string
-    description: string
-    color: string
-    iconSrc?: string
     updatedDate: Date
     createdDate: Date
     user: User

@@ -139,14 +139,14 @@ const CanvasHeader = ({ chatflow, handleSaveFlow, handleDeleteFlow, handleLoadFl
         setAPIDialogOpen(true)
     }
 
-    const onSaveChatflowClick = () => {
-        if (chatflow.id) handleSaveFlow(flowName)
+    const onSaveChatflowClick = async () => {
+        if (chatflow.id) await handleSaveFlow(flowName)
         else setFlowDialogOpen(true)
     }
 
-    const onConfirmSaveName = (flowName) => {
+    const onConfirmSaveName = async (flowName) => {
         setFlowDialogOpen(false)
-        handleSaveFlow(flowName)
+        await handleSaveFlow(flowName)
     }
 
     useEffect(() => {

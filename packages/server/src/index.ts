@@ -70,9 +70,8 @@ import { ICommonObject, INodeOptionsValue } from 'flowise-components'
 import { createRateLimiter, getRateLimiter, initializeRateLimiter } from './utils/rateLimit'
 
 import { RecursiveCharacterTextSplitter, RecursiveCharacterTextSplitterParams } from 'langchain/text_splitter'
-// import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
-import { HuggingFaceInferenceEmbeddings } from 'langchain/embeddings/hf'
-import { ViewColumn } from 'typeorm'
+import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
+// import { HuggingFaceInferenceEmbeddings } from 'langchain/embeddings/hf'
 
 // TODO CMAN - chang this for input
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
@@ -657,40 +656,83 @@ export class App {
             return res.json(automatin)
         })
 
-        // Add automation
-        this.app.post('/api/v1/automations', async (req: Request, res: Response) => {
-            const body = req.body
-            // create the automation trigger
-            const newAutomation = new Automation()
-            Object.assign(newAutomation, body)
-            newAutomation.user = req.user as User
+        // // Add automation
+        // this.app.post('/api/v1/automations', async (req: Request, res: Response) => {
+        //     const body = req.body
+        //     const automationList = body.automations
 
-            const automation = this.AppDataSource.getRepository(Automation).create(newAutomation)
-            const results = await this.AppDataSource.getRepository(Automation).save(automation)
+        //     try {
+        //         for (let auto of automationList) {
+        //             // create the automation trigger
+        //             const newAutomation = new Automation()
+        //             Object.assign(newAutomation, auto)
+        //             newAutomation.user = req.user as User
+        //             const automation = this.AppDataSource.getRepository(Automation).create(newAutomation)
+        //             const results = await this.AppDataSource.getRepository(Automation).save(automation)
+        //             if (!results) return res.status(500).send(`Error when creating automation`)
+        //         }
 
-            return res.json(results)
-        })
+        //         return res.json('success')
+        //     } catch (err) {
+        //         return res.status(500).send(`Error when creating automation`)
+        //     }
+        // })
 
-        // Update automation
-        this.app.put('/api/v1/automations/:id', async (req: Request, res: Response) => {
-            const automation = await this.AppDataSource.getRepository(Automation).findOneBy({
-                id: req.params.id
-            })
+        // Update or add automation
+        this.app.post('/api/v1/automations/:chatflowid', async (req: Request, res: Response) => {
+            // get the chatflowid from the url
+            const chatflowid = req.params.chatflowid
 
-            if (!automation) {
-                res.status(404).send(`Automation ${req.params.id} not found`)
-                return
+            const automationList = req.body.automations
+
+            // keep track of urls (unique identifiers for automation) so we can use it to remove automations that are not in the list
+            let flowUrls = []
+
+            if (automationList.length !== 0) {
+                for (const auto of automationList) {
+                    const url = auto.url
+                    flowUrls.push(url)
+
+                    const automation = await this.AppDataSource.getRepository(Automation).findOneBy({
+                        chatflowid: chatflowid,
+                        url: url
+                    })
+
+                    if (!automation) {
+                        // no automation so we have to make a new one
+                        const newAutomation = new Automation()
+                        Object.assign(newAutomation, auto)
+                        newAutomation.user = req.user as User
+                        const automation = this.AppDataSource.getRepository(Automation).create(newAutomation)
+                        const results = await this.AppDataSource.getRepository(Automation).save(automation)
+                        if (!results) return res.status(500).send(`Error when creating automation`)
+                    } else {
+                        // automation exists so we update it
+                        const updatedAutomation = new Automation()
+                        Object.assign(updatedAutomation, auto)
+                        updatedAutomation.user = req.user as User
+
+                        // update the automation
+                        this.AppDataSource.getRepository(Automation).merge(automation, updatedAutomation)
+                        const results = await this.AppDataSource.getRepository(Automation).save(automation)
+                        if (!results) return res.status(500).send(`Error when updating automation`)
+                    }
+                }
             }
 
-            const updatedAutomation = new Automation()
-            Object.assign(updatedAutomation, req.body)
-            updatedAutomation.user = req.user as User
+            // finally, check all the automatins for a given chatflowid and delete the ones that are not in the automationList
+            const flowAutomations = await this.AppDataSource.getRepository(Automation).findBy({
+                chatflowid: chatflowid
+            })
 
-            // update the automation
-            this.AppDataSource.getRepository(Automation).merge(automation, updatedAutomation)
-            const result = await this.AppDataSource.getRepository(Automation).save(automation)
+            for (const auto of flowAutomations) {
+                if (!flowUrls.includes(auto.url)) {
+                    // this automation is not in the automationList so we delete it
+                    await this.AppDataSource.getRepository(Automation).delete({ id: auto.id })
+                }
+            }
 
-            return res.json(result)
+            return res.json('success')
         })
 
         // Delete Automation
@@ -1126,13 +1168,13 @@ export class App {
                 if (textSplitter) {
                     const docs = await loader.loadAndSplit(textSplitter)
                     for (const doc of docs) {
-                        doc.metadata = {fileName: fileName}
+                        doc.metadata = { fileName: fileName }
                     }
                     alldocs.push(...docs)
                 } else {
                     const docs = await loader.load()
                     for (const doc of docs) {
-                        doc.metadata = {fileName: fileName}
+                        doc.metadata = { fileName: fileName }
                     }
                     alldocs.push(...docs)
                     // }
@@ -1140,8 +1182,8 @@ export class App {
             }
 
             // TODO CMAN - make this dynamic
-            // const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
-            const embeddings = new HuggingFaceInferenceEmbeddings({model: 'sentence-transformers/all-MiniLM-L6-v2'}) // api key passed by env variable
+            const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
+            // const embeddings = new HuggingFaceInferenceEmbeddings({model: 'sentence-transformers/all-MiniLM-L6-v2'}) // api key passed by env variable
 
             const milvusArgs = {
                 collectionName: collectionName,
@@ -1804,7 +1846,7 @@ export class App {
                 try {
                     result = await JsRunner(handler.func, result, body)
                 } catch (e) {
-                    console.log('error')
+                    logger.error('[server]: Error:', e)
                     // return res.status(404).send('Failed to run handler function')
                 }
             }

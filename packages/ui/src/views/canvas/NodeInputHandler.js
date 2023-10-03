@@ -278,7 +278,7 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
                             <Input
                                 data={data}
                                 key={data.inputs[inputParam.name]}
-                                disabled={disabled}
+                                disabled={typeof inputParam.disabled !== 'undefined' ? inputParam.disabled : disabled}
                                 inputParam={inputParam}
                                 onChange={(newValue) => (data.inputs[inputParam.name] = newValue)}
                                 value={data.inputs[inputParam.name] ?? inputParam.default ?? ''}
