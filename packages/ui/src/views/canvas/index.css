@@ -19,6 +19,7 @@
     stroke-dasharray: 10 10; /* 20 units for dash, 20 units for space between dashes */
     stroke-dashoffset: 10;   /* Starting offset */
     animation: dash 1s linear infinite;
+    stroke-width: 3px;
 }
 
 .edgebutton:hover {

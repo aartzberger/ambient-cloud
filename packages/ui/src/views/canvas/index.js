@@ -552,6 +552,7 @@ const Canvas = () => {
                                 fitView
                                 deleteKeyCode={canvas.canvasDialogShow ? null : ['Backspace', 'Delete']}
                                 minZoom={0.1}
+                                background={'#d3d3d3'}
                             >
                                 <Controls
                                     style={{
