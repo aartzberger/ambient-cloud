@@ -1650,9 +1650,9 @@ export class App {
             if (!handler) return res.status(404).send(`Handler ${automation.handlerid} not found for automation`)
 
             // first handle the case where the automation is an interval
-            if (trigger.type === 'interval') {
+            if (Number(automation.interval) > 0) {
                 // TODO - need to implament this with celery
-                return res.status(200).send('OK: interval is set and running')
+                console.log('interval automation')
             }
 
             // next, if there is a trigger function, run it on the input

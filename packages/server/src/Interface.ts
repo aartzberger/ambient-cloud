@@ -1,12 +1,12 @@
 import { ICommonObject, INode, INodeData as INodeDataFromComponent, INodeParams } from 'flowise-components'
-import { User } from '../src/database/entities/User'; // import the ChatFlow entity
-import { ChatFlow } from '../src/database/entities/ChatFlow'; // import the ChatFlow entity
-import { ChatMessage } from '../src/database/entities/ChatMessage'; // import the ChatFlow entity
-import { Credential } from '../src/database/entities/Credential'; // import the ChatFlow entity
-import { Tool } from '../src/database/entities/Tool'; // import the ChatFlow entity
-import { Trigger } from '../src/database/entities/Trigger'; // import the ChatFlow entity
-import { Automation } from './database/entities/Automation'; // import the ChatFlow entity
-import { AutomationHandler } from './database/entities/AutomationHandler'; // import the ChatFlow entity
+import { User } from '../src/database/entities/User' // import the ChatFlow entity
+import { ChatFlow } from '../src/database/entities/ChatFlow' // import the ChatFlow entity
+import { ChatMessage } from '../src/database/entities/ChatMessage' // import the ChatFlow entity
+import { Credential } from '../src/database/entities/Credential' // import the ChatFlow entity
+import { Tool } from '../src/database/entities/Tool' // import the ChatFlow entity
+// import the ChatFlow entity
+import { Automation } from './database/entities/Automation' // import the ChatFlow entity
+// import the ChatFlow entity
 
 export type MessageType = 'apiMessage' | 'userMessage'
 
@@ -80,7 +80,6 @@ export interface IAutomation {
 export interface ITrigger {
     id: string
     name: string
-    type:string
     description: string
     color: string
     iconSrc?: string

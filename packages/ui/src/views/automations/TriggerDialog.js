@@ -69,7 +69,6 @@ const TriggerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
 
     const [triggerId, setTriggerId] = useState('')
     const [triggerName, setTriggerName] = useState('')
-    const [triggerType, setTriggerType] = useState('')
     const [triggerDesc, setTriggerDesc] = useState('')
     const [triggerIcon, setTriggerIcon] = useState('')
     const [triggerFunc, setTriggerFunc] = useState('')
@@ -100,7 +99,6 @@ const TriggerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
         if (dialogProps.type === 'EDIT' && dialogProps.data) {
             // When trigger dialog is opened from Triggers dashboard
             setTriggerId(dialogProps.data.id)
-            setTriggerType(dialogProps.data.type)
             setTriggerName(dialogProps.data.name)
             setTriggerDesc(dialogProps.data.description)
             setTriggerIcon(dialogProps.data.iconSrc)
@@ -109,7 +107,6 @@ const TriggerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
         } else if (dialogProps.type === 'IMPORT' && dialogProps.data) {
             // When trigger dialog is to import existing trigger
             setTriggerName(dialogProps.data.name)
-            setTriggerType(dialogProps.data.type)
             setTriggerDesc(dialogProps.data.description)
             setTriggerIcon(dialogProps.data.iconSrc)
             if (dialogProps.data.func) setTriggerFunc(dialogProps.data.func)
@@ -117,7 +114,6 @@ const TriggerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
         } else if (dialogProps.type === 'TEMPLATE' && dialogProps.data) {
             // When trigger dialog is a template
             setTriggerName(dialogProps.data.name)
-            setTriggerType(dialogProps.data.type)
             setTriggerDesc(dialogProps.data.description)
             setTriggerIcon(dialogProps.data.iconSrc)
             if (dialogProps.data.func) setTriggerFunc(dialogProps.data.func)
@@ -125,7 +121,6 @@ const TriggerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
         } else if (dialogProps.type === 'ADD') {
             // When trigger dialog is to add a new trigger
             setTriggerId('')
-            setTriggerType('')
             setTriggerName('')
             setTriggerDesc('')
             setTriggerIcon('')
@@ -182,7 +177,6 @@ const TriggerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
         try {
             const obj = {
                 name: triggerName,
-                type: triggerType,
                 description: triggerDesc,
                 color: generateRandomGradient(),
                 func: triggerFunc,
@@ -228,7 +222,6 @@ const TriggerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
         try {
             const saveResp = await triggerApi.updateTrigger(triggerId, {
                 name: triggerName,
-                type: triggerType,
                 description: triggerDesc,
                 func: triggerFunc,
                 iconSrc: triggerIcon
@@ -316,10 +309,6 @@ const TriggerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
         }
     }
 
-    const updateTriggerType = (type) => {
-        setTriggerType(type)
-    }
-
     const component = show ? (
         <Dialog
             fullWidth
@@ -362,21 +351,6 @@ const TriggerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
                         name='triggerName'
                         onChange={(e) => setTriggerName(e.target.value)}
                     />
-                </Box>
-                <Box sx={{ p: 2 }}>
-                    <Stack sx={{ position: 'relative' }} direction='row'>
-                        <Typography variant='overline'>
-                            Trigger Type
-                            <span style={{ color: 'red' }}>&nbsp;*</span>
-                            <TooltipWithParser
-                                style={{ marginLeft: 10 }}
-                                title={
-                                    'Triggers can be of type Interval or Webhook. Interval triggers are executed at a fixed interval. Webhook triggers are executed when a webhook is received.'
-                                }
-                            />
-                        </Typography>
-                    </Stack>
-                    <Dropdown name={'Drop'} value={triggerType} options={triggerOptions} onSelect={updateTriggerType} disable={false} />
                 </Box>
                 <Box sx={{ p: 2 }}>
                     <Stack sx={{ position: 'relative' }} direction='row'>
@@ -470,7 +444,7 @@ const TriggerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
                 )}
                 {dialogProps.type !== 'TEMPLATE' && (
                     <StyledButton
-                        disabled={!(triggerName && triggerDesc && triggerType)}
+                        disabled={!(triggerName && triggerDesc)}
                         variant='contained'
                         onClick={() => (dialogProps.type === 'ADD' || dialogProps.type === 'IMPORT' ? addNewTrigger() : saveTrigger())}
                     >
