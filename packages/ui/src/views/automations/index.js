@@ -6,7 +6,7 @@ import PropTypes from 'prop-types'
 // material-ui
 import { Grid, Box, Stack, Tabs, Tab, Button } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
-import { IconHierarchy, IconTool, IconPlus, IconFileImport } from '@tabler/icons'
+import { IconArrowBigRightLines, IconArrowBearRight2, IconPlus, IconFileImport } from '@tabler/icons'
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard'
@@ -229,7 +229,7 @@ const Automations = () => {
                     {tabItems.map((item, index) => (
                         <Tab
                             key={index}
-                            icon={index === 0 ? <IconHierarchy /> : <IconTool />}
+                            icon={index === 0 ? <IconArrowBigRightLines /> : <IconArrowBearRight2 />}
                             iconPosition='start'
                             label={<span style={{ fontSize: '1.1rem' }}>{item}</span>}
                         />

@@ -25,7 +25,7 @@ class Automation implements INode {
     outputs: INodeOutputsValue[]
 
     constructor() {
-        this.label = 'LLM Automations'
+        this.label = 'Automation'
         this.name = 'modelAutomation'
         this.version = 1.0
         this.type = 'Automation'

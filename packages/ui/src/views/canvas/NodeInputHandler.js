@@ -20,7 +20,7 @@ import { isValidConnection } from 'utils/genericHelper'
 import { JsonEditorInput } from 'ui-component/json/JsonEditor'
 import { TooltipWithParser } from 'ui-component/tooltip/TooltipWithParser'
 import ToolDialog from 'views/tools/ToolDialog'
-import CollectionDialog from 'views/vectorstores/CollectionDialog'
+import CollectionDialog from 'views/collections/CollectionDialog'
 import FormatPromptValuesDialog from 'ui-component/dialog/FormatPromptValuesDialog'
 import CredentialInputHandler from './CredentialInputHandler'
 

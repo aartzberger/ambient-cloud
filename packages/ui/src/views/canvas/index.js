@@ -329,7 +329,7 @@ const Canvas = () => {
     const saveChatflowSuccess = () => {
         dispatch({ type: REMOVE_DIRTY })
         enqueueSnackbar({
-            message: 'Chatflow saved',
+            message: 'Model saved',
             options: {
                 key: new Date().getTime() + Math.random(),
                 variant: 'success',

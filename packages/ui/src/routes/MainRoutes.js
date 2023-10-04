@@ -20,7 +20,7 @@ const Tools = Loadable(lazy(() => import('views/tools')))
 const Credentials = Loadable(lazy(() => import('views/credentials')))
 
 // vectorstore routing
-const Stores = Loadable(lazy(() => import('views/vectorstores')))
+const Stores = Loadable(lazy(() => import('views/collections')))
 
 // automations routing
 const Automations = Loadable(lazy(() => import('views/automations')))
