@@ -1,12 +1,14 @@
-import { ICommonObject, INode, INodeData, INodeOutputsValue, INodeParams, IDatabaseEntity, INodeOptionsValue } from '../../../src/Interface'
+import { ICommonObject, INode, INodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
 import { DataType, ErrorCode, MetricType, IndexType, MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { MilvusLibArgs, Milvus } from 'langchain/vectorstores/milvus'
 import { HuggingFaceInferenceEmbeddings } from 'langchain/embeddings/hf'
 import { Document } from 'langchain/document'
 import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
 import { flatten } from 'lodash'
-import { DataSource } from 'typeorm'
 import { RecursiveCharacterTextSplitter, RecursiveCharacterTextSplitterParams } from 'langchain/text_splitter'
+import { DynamicTool } from 'langchain/tools'
+import { createRetrieverTool } from 'langchain/agents/toolkits'
+import { BaseRetriever } from 'langchain/schema/retriever'
 
 class Milvus_Upsert_VectorStores implements INode {
     label: string
@@ -51,7 +53,7 @@ class Milvus_Upsert_VectorStores implements INode {
                 optional: true
             },
             {
-                label: 'Milvus Server URL',
+                label: 'Server URL',
                 name: 'milvusServerUrl',
                 type: 'string',
                 placeholder: 'http://localhost:19530'
@@ -60,16 +62,37 @@ class Milvus_Upsert_VectorStores implements INode {
                 label: 'Name of Collection to Create',
                 name: 'milvusCollection',
                 type: 'string'
+            },
+            {
+                label: 'Drop Old Collection?',
+                name: 'dropOld',
+                type: 'boolean',
+                default: false
+            },
+            {
+                label: 'Retriever Tool Description',
+                name: 'description',
+                optional: true,
+                type: 'string',
+                description: 'When should agent use this tool to retrieve documents',
+                rows: 3,
+                default: 'Searches and returns information essential to answering the question. Always use this tool to stay well informed',
+                additionalParams: true
             }
         ]
         this.outputs = [
             {
-                label: 'Milvus Retriever',
+                label: 'Retriever Tool',
+                name: 'retrieverTool',
+                baseClasses: ['DynamicTool', ...getBaseClasses(DynamicTool)]
+            },
+            {
+                label: 'Retriever',
                 name: 'retriever',
                 baseClasses: this.baseClasses
             },
             {
-                label: 'Milvus Vector Store',
+                label: 'Vector Store',
                 name: 'vectorStore',
                 baseClasses: [this.type, ...getBaseClasses(Milvus)]
             }
@@ -80,6 +103,8 @@ class Milvus_Upsert_VectorStores implements INode {
         // server setup
         const address = nodeData.inputs?.milvusServerUrl as string
         const collectionName = nodeData.inputs?.milvusCollection as string
+        const dropOld = nodeData.inputs?.dropOld as boolean
+        const retrieverToolDescription = nodeData.inputs?.description as string
 
         // embeddings
         const docs = nodeData.inputs?.document as Document[]
@@ -126,8 +151,14 @@ class Milvus_Upsert_VectorStores implements INode {
         let finalDocs = []
         // TOTO CMAN - this should update with actual name of file
         for (let doc of splitDocs) {
-            doc.metadata = {fileName: 'external_uploaded_file'}
+            doc.metadata = { fileName: 'upsert_document_' + Date.now().toString() }
             finalDocs.push(doc)
+        }
+
+        // if we want to reload for automation purposes, delete old collection then create new one
+        if (dropOld) {
+            const client = new MilvusClient({ address: address })
+            await client.dropCollection({ collection_name: collectionName })
         }
 
         const vectorStore = await MilvusUpsert.fromDocuments(finalDocs, embeddings, milVusArgs)
@@ -202,8 +233,17 @@ class Milvus_Upsert_VectorStores implements INode {
         } else if (output === 'vectorStore') {
             ;(vectorStore as any).k = k
             return vectorStore
+        } else if (output === 'retrieverTool') {
+            // TODO CMAN - should default to a collection description
+            const name = collectionName + '_collection_retriever_tool'
+            const description = retrieverToolDescription
+            const retriever = vectorStore.asRetriever(k)
+            const tool = createRetrieverTool(retriever as BaseRetriever, {
+                name,
+                description
+            })
+            return tool
         }
-        return vectorStore
     }
 }
 

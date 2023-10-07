@@ -7,6 +7,9 @@ import { Document } from 'langchain/document'
 import { DataSource } from 'typeorm'
 import { Request } from 'express'
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
+import { DynamicTool } from 'langchain/tools'
+import { createRetrieverTool } from 'langchain/agents/toolkits'
+import { BaseRetriever } from 'langchain/schema/retriever'
 
 // TODO CMAN - chang this for input
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
@@ -25,7 +28,7 @@ class Milvus_Existing_VectorStores implements INode {
     outputs: INodeOutputsValue[]
 
     constructor() {
-        this.label = 'Load Existing collection'
+        this.label = 'Load Existing Collection'
         this.name = 'milvusExistingCollection'
         this.version = 2.0
         this.type = 'Milvus'
@@ -48,10 +51,10 @@ class Milvus_Existing_VectorStores implements INode {
             //     optional: true
             // },
             {
-                label: 'Milvus Server URL',
+                label: 'Server URL',
                 name: 'milvusServerUrl',
                 type: 'string',
-                placeholder: 'http://localhost:19530'
+                placeholder: 'http://localhost:19530',
             },
             {
                 label: 'Collection Name',
@@ -60,7 +63,17 @@ class Milvus_Existing_VectorStores implements INode {
                 loadMethod: 'listCollections'
             },
             {
-                label: 'Milvus Filter',
+                label: 'Retriever Tool Description',
+                name: 'description',
+                optional: true,
+                type: 'string',
+                description: 'When should agent use this tool to retrieve documents',
+                rows: 3,
+                default: 'Searches and returns information essential to answering the question. Always use this tool to stay well informed',
+                additionalParams: true
+            },
+            {
+                label: 'Filter',
                 name: 'milvusFilter',
                 type: 'string',
                 optional: true,
@@ -81,12 +94,17 @@ class Milvus_Existing_VectorStores implements INode {
         ]
         this.outputs = [
             {
-                label: 'Milvus Retriever',
+                label: 'Retriever Tool',
+                name: 'retrieverTool',
+                baseClasses: ['DynamicTool', ...getBaseClasses(DynamicTool)]
+            },
+            {
+                label: 'Retriever',
                 name: 'retriever',
                 baseClasses: this.baseClasses
             },
             {
-                label: 'Milvus Vector Store',
+                label: 'Vector Store',
                 name: 'vectorStore',
                 baseClasses: [this.type, ...getBaseClasses(Milvus)]
             }
@@ -113,7 +131,8 @@ class Milvus_Existing_VectorStores implements INode {
             for (let collection of collectionData.data) {
                 const data = {
                     label: collection.name,
-                    name: collection.name
+                    name: collection.name,
+                    // description: collection.description
                 } as INodeOptionsValue
                 returnData.push(data)
             }
@@ -126,6 +145,8 @@ class Milvus_Existing_VectorStores implements INode {
         const address = nodeData.inputs?.milvusServerUrl as string
         const collectionName = nodeData.inputs?.selectedCollection as string
         const milvusFilter = nodeData.inputs?.milvusFilter as string
+        const retrieverToolDescription = nodeData.inputs?.description as string
+
         // embeddings
         // const embeddings = nodeData.inputs?.embeddings
         //     ? nodeData.inputs?.embeddings
@@ -218,8 +239,17 @@ class Milvus_Existing_VectorStores implements INode {
         } else if (output === 'vectorStore') {
             ;(vectorStore as any).k = k
             return vectorStore
+        } else if (output === 'retrieverTool') {
+            // TODO CMAN - should default to a collection description
+            const name = collectionName + '_retriever_tool'
+            const description = retrieverToolDescription
+            const retriever = vectorStore.asRetriever(k)
+            const tool = createRetrieverTool(retriever as BaseRetriever, {
+                name,
+                description
+            })
+            return tool
         }
-        return vectorStore
     }
 }
 
