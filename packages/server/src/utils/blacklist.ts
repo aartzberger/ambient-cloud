@@ -1,9 +1,17 @@
 const blacklistNodes = [
+    'awsBedrock',
+    'azureOpenAI',
     'chromaExistingIndex',
     'chromaUpsert',
+    'cohere',
     'faissExistingIndex',
     'faissUpsert',
+    'GooglePaLM',
+    'googlevertexai',
+    'huggingFaceInference_LLMs',
     'memoryVectorStore',
+    'NIBittensorLLM',
+    'openAI',
     'openSearchExistingIndex',
     'openSearchUpsertDocument',
     'pineconeExistingIndex',
@@ -12,6 +20,7 @@ const blacklistNodes = [
     'postgresUpsert',
     'qdrantExistingIndex',
     'qdrantUpsert',
+    'replicate',
     'singlestoreExisting',
     'singlestoreUpsert',
     'supabaseExistingIndex',
@@ -22,7 +31,7 @@ const blacklistNodes = [
     'weaviateExistingIndex',
     'weaviateUpsert',
     'zepExistingIndex',
-    'zepUpsert'
+    'zepUpsert',
 ]
 
 export default blacklistNodes;
