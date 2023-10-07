@@ -2,7 +2,7 @@ import { ICommonObject, INode, INodeData, INodeParams } from '../../../src/Inter
 import { ConversationChain } from 'langchain/chains'
 import { getBaseClasses, mapChatHistory } from '../../../src/utils'
 import { ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate } from 'langchain/prompts'
-import { BufferMemory } from 'langchain/memory'
+import { BufferMemory, BufferMemoryInput } from 'langchain/memory'
 import { BaseChatModel } from 'langchain/chat_models/base'
 import { ConsoleCallbackHandler, CustomChainHandler, additionalCallbacks } from '../../../src/handler'
 import { flatten } from 'lodash'
@@ -39,7 +39,9 @@ class ConversationChain_Chains implements INode {
             {
                 label: 'Memory',
                 name: 'memory',
-                type: 'BaseMemory'
+                type: 'BaseMemory',
+                optional: true,
+                description: 'If left empty, a default BufferMemory will be used'
             },
             {
                 label: 'Document',
@@ -64,7 +66,7 @@ class ConversationChain_Chains implements INode {
 
     async init(nodeData: INodeData): Promise<any> {
         const model = nodeData.inputs?.model as BaseChatModel
-        const memory = nodeData.inputs?.memory as BufferMemory
+        const externalMemory = nodeData.inputs?.memory as BufferMemory
         const prompt = nodeData.inputs?.systemMessagePrompt as string
         const docs = nodeData.inputs?.document as Document[]
 
@@ -84,13 +86,30 @@ class ConversationChain_Chains implements INode {
 
         if (finalText) systemMessage = `${systemMessage}\nThe AI has the following context:\n${finalText}`
 
+        let memory
+        if (externalMemory) {
+            externalMemory.memoryKey = 'chat_history'
+            externalMemory.inputKey = 'question'
+            externalMemory.outputKey = 'text'
+            externalMemory.returnMessages = true
+            memory = externalMemory
+        } else {
+            const fields: BufferMemoryInput = {
+                memoryKey: 'chat_history',
+                inputKey: 'question',
+                outputKey: 'text',
+                returnMessages: true
+            }
+            memory = new BufferMemory(fields)
+        }
+
         const obj: any = {
             llm: model,
             memory,
             verbose: process.env.DEBUG === 'true' ? true : false
         }
 
-        const chatPrompt = ChatPromptTemplate.fromPromptMessages([
+        const chatPrompt = ChatPromptTemplate.fromMessages([
             SystemMessagePromptTemplate.fromTemplate(prompt ? `${prompt}\n${systemMessage}` : systemMessage),
             new MessagesPlaceholder(memory.memoryKey ?? 'chat_history'),
             HumanMessagePromptTemplate.fromTemplate('{input}')
@@ -103,11 +122,9 @@ class ConversationChain_Chains implements INode {
 
     async run(nodeData: INodeData, input: string, options: ICommonObject): Promise<string> {
         const chain = nodeData.instance as ConversationChain
-        const memory = nodeData.inputs?.memory as BufferMemory
 
         if (options && options.chatHistory) {
-            memory.chatHistory = mapChatHistory(options)
-            chain.memory = memory
+            ;(chain.memory as any).chatHistory = mapChatHistory(options)
         }
 
         const loggerHandler = new ConsoleCallbackHandler(options.logger)

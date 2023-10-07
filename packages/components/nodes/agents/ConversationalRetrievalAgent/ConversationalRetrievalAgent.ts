@@ -2,7 +2,7 @@ import { ICommonObject, INode, INodeData, INodeParams } from '../../../src/Inter
 import { initializeAgentExecutorWithOptions, AgentExecutor } from 'langchain/agents'
 import { getBaseClasses, mapChatHistory } from '../../../src/utils'
 import { flatten } from 'lodash'
-import { BaseChatMemory } from 'langchain/memory'
+import { BufferMemory, BufferMemoryInput } from 'langchain/memory'
 import { ConsoleCallbackHandler, CustomChainHandler, additionalCallbacks } from '../../../src/handler'
 
 const defaultMessage = `Do your best to answer the questions. Feel free to use any tools available to look up relevant information, only if necessary.`
@@ -35,14 +35,16 @@ class ConversationalRetrievalAgent_Agents implements INode {
                 list: true
             },
             {
-                label: 'Memory',
-                name: 'memory',
-                type: 'BaseChatMemory'
-            },
-            {
                 label: 'OpenAI Chat Model',
                 name: 'model',
                 type: 'ChatOpenAI'
+            },
+            {
+                label: 'Memory',
+                name: 'memory',
+                type: 'BaseMemory',
+                optional: true,
+                description: 'If left empty, a default BufferMemory will be used'
             },
             {
                 label: 'System Message',
@@ -58,7 +60,7 @@ class ConversationalRetrievalAgent_Agents implements INode {
 
     async init(nodeData: INodeData): Promise<any> {
         const model = nodeData.inputs?.model
-        const memory = nodeData.inputs?.memory as BaseChatMemory
+        const externalMemory = nodeData.inputs?.memory as BufferMemory
         const systemMessage = nodeData.inputs?.systemMessage as string
 
         let tools = nodeData.inputs?.tools
@@ -72,6 +74,24 @@ class ConversationalRetrievalAgent_Agents implements INode {
             },
             returnIntermediateSteps: true
         })
+
+        let memory;
+        if (externalMemory) {
+            externalMemory.memoryKey = 'chat_history'
+            externalMemory.inputKey = 'input'
+            externalMemory.outputKey = 'output'
+            externalMemory.returnMessages = true
+            memory = externalMemory
+        } else {
+            const fields: BufferMemoryInput = {
+                memoryKey: 'chat_history',
+                inputKey: 'input',
+                outputKey: 'output',
+                returnMessages: true
+            }
+            memory = new BufferMemory(fields)
+        }
+
         executor.memory = memory
         return executor
     }
@@ -82,6 +102,7 @@ class ConversationalRetrievalAgent_Agents implements INode {
         if (executor.memory) {
             ;(executor.memory as any).memoryKey = 'chat_history'
             ;(executor.memory as any).outputKey = 'output'
+            ;(executor.memory as any).inputKey = 'input'
             ;(executor.memory as any).chatHistory = mapChatHistory(options)
         }
 
