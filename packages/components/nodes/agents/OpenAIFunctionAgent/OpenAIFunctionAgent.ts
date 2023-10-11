@@ -3,7 +3,7 @@ import { initializeAgentExecutorWithOptions, AgentExecutor } from 'langchain/age
 import { getBaseClasses, mapChatHistory } from '../../../src/utils'
 import { BaseLanguageModel } from 'langchain/base_language'
 import { flatten } from 'lodash'
-import { BaseChatMemory } from 'langchain/memory'
+import { BufferMemory, BufferMemoryInput } from 'langchain/memory'
 import { ConsoleCallbackHandler, CustomChainHandler, additionalCallbacks } from '../../../src/handler'
 
 class OpenAIFunctionAgent_Agents implements INode {
@@ -34,16 +34,17 @@ class OpenAIFunctionAgent_Agents implements INode {
                 list: true
             },
             {
-                label: 'Memory',
-                name: 'memory',
-                type: 'BaseChatMemory'
-            },
-            {
                 label: 'OpenAI Chat Model',
                 name: 'model',
                 description:
                     'Only works with gpt-3.5-turbo-0613 and gpt-4-0613. Refer <a target="_blank" href="https://platform.openai.com/docs/guides/gpt/function-calling">docs</a> for more info',
                 type: 'BaseChatModel'
+            },
+            {
+                label: 'Memory',
+                name: 'memory',
+                type: 'BaseChatMemory',
+                optional: true
             },
             {
                 label: 'System Message',
@@ -58,7 +59,7 @@ class OpenAIFunctionAgent_Agents implements INode {
 
     async init(nodeData: INodeData): Promise<any> {
         const model = nodeData.inputs?.model as BaseLanguageModel
-        const memory = nodeData.inputs?.memory as BaseChatMemory
+        const externalMemory = nodeData.inputs?.memory as BufferMemory
         const systemMessage = nodeData.inputs?.systemMessage as string
 
         let tools = nodeData.inputs?.tools
@@ -71,18 +72,35 @@ class OpenAIFunctionAgent_Agents implements INode {
                 prefix: systemMessage ?? `You are a helpful AI assistant.`
             }
         })
-        if (memory) executor.memory = memory
+
+        let memory;
+        if (externalMemory) {
+            externalMemory.memoryKey = 'chat_history'
+            externalMemory.inputKey = 'input'
+            externalMemory.outputKey = 'output'
+            externalMemory.returnMessages = true
+            memory = externalMemory
+        } else {
+            const fields: BufferMemoryInput = {
+                memoryKey: 'chat_history',
+                inputKey: 'input',
+                outputKey: 'output',
+                returnMessages: true
+            }
+            memory = new BufferMemory(fields)
+        }
 
         return executor
     }
 
     async run(nodeData: INodeData, input: string, options: ICommonObject): Promise<string> {
         const executor = nodeData.instance as AgentExecutor
-        const memory = nodeData.inputs?.memory as BaseChatMemory
 
-        if (options && options.chatHistory) {
-            memory.chatHistory = mapChatHistory(options)
-            executor.memory = memory
+        if (options && options.chatHistory && executor.memory) {
+            ;(executor.memory as any).memoryKey = 'chat_history'
+            ;(executor.memory as any).outputKey = 'output'
+            ;(executor.memory as any).inputKey = 'input'
+            ;(executor.memory as any).chatHistory = mapChatHistory(options)
         }
 
         const loggerHandler = new ConsoleCallbackHandler(options.logger)
