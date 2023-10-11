@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback, useContext } from 'react'
-import ReactFlow, { addEdge, Controls, Background, useNodesState, useEdgesState } from 'reactflow'
+import ReactFlow, { addEdge, Controls, Background, BackgroundVariant, useNodesState, useEdgesState } from 'reactflow'
 import 'reactflow/dist/style.css'
 
 import { useDispatch, useSelector } from 'react-redux'
@@ -562,7 +562,7 @@ const Canvas = () => {
                                         transform: 'translate(-50%, -50%)'
                                     }}
                                 />
-                                <Background color='#aaa' gap={16} />
+                                <Background color='#aaa' gap={15} size={3} variant={BackgroundVariant.Dots} />
                                 <AddNodes nodesData={getNodesApi.data} node={selectedNode} />
                                 <ChatPopUp chatflowid={chatflowId} />
                             </ReactFlow>

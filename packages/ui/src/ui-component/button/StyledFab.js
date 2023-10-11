@@ -3,6 +3,7 @@ import { Fab } from '@mui/material'
 
 export const StyledFab = styled(Fab)(({ theme, color = 'primary' }) => ({
     color: 'white',
+    borderRadius: '10px',
     backgroundColor: theme.palette[color].main,
     '&:hover': {
         backgroundColor: theme.palette[color].main,

@@ -21,7 +21,7 @@ import { flowContext } from 'store/context/ReactFlowContext'
 
 const CardWrapper = styled(MainCard)(({ theme }) => ({
     background: theme.palette.card.main,
-    borderRadius: '20px',
+    borderRadius: '10px',
     color: theme.darkTextPrimary,
     border: 'solid 3px',
     borderColor: theme.palette.primary[200] + 75,
@@ -156,7 +156,7 @@ const CanvasNode = ({ data }) => {
                                     style={{
                                         ...theme.typography.commonAvatar,
                                         ...theme.typography.largeAvatar,
-                                        borderRadius: '50%',
+                                        borderRadius: '15%',
                                         backgroundColor: 'white',
                                         cursor: 'grab'
                                     }}
@@ -197,10 +197,10 @@ const CanvasNode = ({ data }) => {
                                     <Typography
                                         sx={{
                                             fontWeight: 500,
-                                            textAlign: 'center'
+                                            textAlign: 'left'
                                         }}
                                     >
-                                        Inputs
+                                        Component Inputs
                                     </Typography>
                                 </Box>
                                 <Divider />
@@ -223,8 +223,8 @@ const CanvasNode = ({ data }) => {
                                             : 0
                                 }}
                             >
-                                <Button sx={{ borderRadius: 25, width: '90%', mb: 2 }} variant='outlined' onClick={onDialogClicked}>
-                                    {data.type === 'Automation' ? 'Configure Automation' : 'Additional Parameters'}
+                                <Button sx={{ borderRadius: '10px', width: '90%', mb: 2 }} variant='outlined' onClick={onDialogClicked}>
+                                    {data.type === 'Automation' ? 'Configure Automation' : 'Configure Parameters'}
                                 </Button>
                             </div>
                         )}
@@ -233,10 +233,10 @@ const CanvasNode = ({ data }) => {
                             <Typography
                                 sx={{
                                     fontWeight: 500,
-                                    textAlign: 'center'
+                                    textAlign: 'right'
                                 }}
                             >
-                                Output
+                                Component Output
                             </Typography>
                         </Box>
                         <Divider />
