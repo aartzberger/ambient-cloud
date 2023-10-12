@@ -6,7 +6,7 @@ import PropTypes from 'prop-types'
 // material-ui
 import { Grid, Box, Stack, Tabs, Tab } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
-import { IconHierarchy, IconTool } from '@tabler/icons'
+import { IconHierarchy, IconTool, IconArrowBigRightLines, IconArrowBearRight2 } from '@tabler/icons'
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard'
@@ -14,6 +14,8 @@ import ItemCard from 'ui-component/cards/ItemCard'
 import { gridSpacing } from 'store/constant'
 import WorkflowEmptySVG from 'assets/images/workflow_empty.svg'
 import ToolDialog from 'views/tools/ToolDialog'
+import TriggerDialog from 'views/automations/TriggerDialog'
+import HandlerDialog from 'views/automations/HandlerDialog'
 
 // API
 import marketplacesApi from 'api/marketplaces'
@@ -55,25 +57,43 @@ const Marketplace = () => {
 
     const [isChatflowsLoading, setChatflowsLoading] = useState(true)
     const [isToolsLoading, setToolsLoading] = useState(true)
+    const [isTriggersLoading, setTriggersLoading] = useState(true)
+    const [isHandlersLoading, setHandlersLoading] = useState(true)
     const [images, setImages] = useState({})
-    const tabItems = ['Models', 'Tools']
+    const tabItems = ['Models', 'Tools', 'Triggers', 'Handlers']
     const [value, setValue] = useState(0)
     const [showToolDialog, setShowToolDialog] = useState(false)
     const [toolDialogProps, setToolDialogProps] = useState({})
 
+    const [showTriggerDialog, setShowTriggerDialog] = useState(false)
+    const [triggerDialogProps, setTriggerDialogProps] = useState({})
+
+    const [showHandlerDialog, setShowHandlerDialog] = useState(false)
+    const [handlerDialogProps, setHandlerDialogProps] = useState({})
+
     const getAllChatflowsMarketplacesApi = useApi(marketplacesApi.getAllChatflowsMarketplaces)
     const getAllToolsMarketplacesApi = useApi(marketplacesApi.getAllToolsMarketplaces)
+    const getAllTriggersMarketplacesApi = useApi(marketplacesApi.getAllTriggersMarketplaces)
+    const getAllHandlersMarketplacesApi = useApi(marketplacesApi.getAllHandlersMarketplaces)
 
-    const onUseTemplate = (selectedTool) => {
+    const onUseTemplate = (selected, type) => {
         const dialogProp = {
-            title: 'Add New Tool',
+            title: `Add New ${type}`,
             type: 'IMPORT',
             cancelButtonName: 'Cancel',
             confirmButtonName: 'Add',
-            data: selectedTool
+            data: selected
         }
-        setToolDialogProps(dialogProp)
-        setShowToolDialog(true)
+        if (type === 'Tool') {
+            setToolDialogProps(dialogProp)
+            setShowToolDialog(true)
+        } else if (type === 'Trigger') {
+            setTriggerDialogProps(dialogProp)
+            setShowTriggerDialog(true)
+        } else if (type === 'Handler') {
+            setHandlerDialogProps(dialogProp)
+            setShowHandlerDialog(true)
+        }
     }
 
     const goToTool = (selectedTool) => {
@@ -86,6 +106,26 @@ const Marketplace = () => {
         setShowToolDialog(true)
     }
 
+    const goToTrigger = (selectedTrigger) => {
+        const dialogProp = {
+            title: selectedTrigger.templateName,
+            type: 'TEMPLATE',
+            data: selectedTrigger
+        }
+        setTriggerDialogProps(dialogProp)
+        setShowTriggerDialog(true)
+    }
+
+    const goToHandler = (selectedHandler) => {
+        const dialogProp = {
+            title: selectedHandler.templateName,
+            type: 'TEMPLATE',
+            data: selectedHandler
+        }
+        setHandlerDialogProps(dialogProp)
+        setShowHandlerDialog(true)
+    }
+
     const goToCanvas = (selectedChatflow) => {
         navigate(`/marketplace/${selectedChatflow.id}`, { state: selectedChatflow })
     }
@@ -94,9 +134,23 @@ const Marketplace = () => {
         setValue(newValue)
     }
 
+    const getIcon = (index) => {
+        if (index === 0) {
+            return <IconHierarchy />
+        } else if (index === 1) {
+            return <IconTool />
+        } else if (index === 2) {
+            return <IconArrowBigRightLines />
+        } else if (index === 3) {
+            return <IconArrowBearRight2 />
+        }
+    }
+
     useEffect(() => {
         getAllChatflowsMarketplacesApi.request()
         getAllToolsMarketplacesApi.request()
+        getAllTriggersMarketplacesApi.request()
+        getAllHandlersMarketplacesApi.request()
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
@@ -108,6 +162,14 @@ const Marketplace = () => {
     useEffect(() => {
         setToolsLoading(getAllToolsMarketplacesApi.loading)
     }, [getAllToolsMarketplacesApi.loading])
+
+    useEffect(() => {
+        setTriggersLoading(getAllTriggersMarketplacesApi.loading)
+    }, [getAllTriggersMarketplacesApi.loading])
+
+    useEffect(() => {
+        setHandlersLoading(getAllHandlersMarketplacesApi.loading)
+    }, [getAllHandlersMarketplacesApi.loading])
 
     useEffect(() => {
         if (getAllChatflowsMarketplacesApi.data) {
@@ -143,7 +205,7 @@ const Marketplace = () => {
                     {tabItems.map((item, index) => (
                         <Tab
                             key={index}
-                            icon={index === 0 ? <IconHierarchy /> : <IconTool />}
+                            icon={getIcon(index)}
                             iconPosition='start'
                             label={<span style={{ fontSize: '1.1rem' }}>{item}</span>}
                         />
@@ -169,6 +231,28 @@ const Marketplace = () => {
                                     getAllToolsMarketplacesApi.data.map((data, index) => (
                                         <Grid key={index} item lg={3} md={4} sm={6} xs={12}>
                                             <ItemCard data={data} onClick={() => goToTool(data)} />
+                                        </Grid>
+                                    ))}
+                            </Grid>
+                        )}
+                        {item === 'Triggers' && (
+                            <Grid container spacing={gridSpacing}>
+                                {!isTriggersLoading &&
+                                    getAllTriggersMarketplacesApi.data &&
+                                    getAllTriggersMarketplacesApi.data.map((data, index) => (
+                                        <Grid key={index} item lg={3} md={4} sm={6} xs={12}>
+                                            <ItemCard data={data} onClick={() => goToTrigger(data)} />
+                                        </Grid>
+                                    ))}
+                            </Grid>
+                        )}
+                        {item === 'Handlers' && (
+                            <Grid container spacing={gridSpacing}>
+                                {!isHandlersLoading &&
+                                    getAllHandlersMarketplacesApi.data &&
+                                    getAllHandlersMarketplacesApi.data.map((data, index) => (
+                                        <Grid key={index} item lg={3} md={4} sm={6} xs={12}>
+                                            <ItemCard data={data} onClick={() => goToHandler(data)} />
                                         </Grid>
                                     ))}
                             </Grid>
@@ -205,8 +289,22 @@ const Marketplace = () => {
                 dialogProps={toolDialogProps}
                 onCancel={() => setShowToolDialog(false)}
                 onConfirm={() => setShowToolDialog(false)}
-                onUseTemplate={(tool) => onUseTemplate(tool)}
+                onUseTemplate={(tool) => onUseTemplate(tool, 'Tool')}
             ></ToolDialog>
+            <TriggerDialog
+                show={showTriggerDialog}
+                dialogProps={triggerDialogProps}
+                onCancel={() => setShowTriggerDialog(false)}
+                onConfirm={() => setShowTriggerDialog(false)}
+                onUseTemplate={(trigger) => onUseTemplate(trigger, 'Trigger')}
+            ></TriggerDialog>
+            <HandlerDialog
+                show={showHandlerDialog}
+                dialogProps={handlerDialogProps}
+                onCancel={() => setShowHandlerDialog(false)}
+                onConfirm={() => setShowHandlerDialog(false)}
+                onUseTemplate={(handler) => onUseTemplate(handler, 'Handler')}
+            ></HandlerDialog>
         </>
     )
 }

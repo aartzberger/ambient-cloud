@@ -1363,6 +1363,44 @@ export class App {
             return res.json(templates)
         })
 
+        // Get all triggers for marketplaces
+        this.app.get('/api/v1/marketplaces/triggers', ensureAuthenticated, async (req: Request, res: Response) => {
+            const marketplaceDir = path.join(__dirname, '..', 'marketplaces', 'triggers')
+            const jsonsInDir = fs.readdirSync(marketplaceDir).filter((file) => path.extname(file) === '.json')
+            const templates: any[] = []
+            jsonsInDir.forEach((file, index) => {
+                const filePath = path.join(__dirname, '..', 'marketplaces', 'triggers', file)
+                const fileData = fs.readFileSync(filePath)
+                const fileDataObj = JSON.parse(fileData.toString())
+                const template = {
+                    ...fileDataObj,
+                    id: index,
+                    templateName: file.split('.json')[0]
+                }
+                templates.push(template)
+            })
+            return res.json(templates)
+        })
+
+        // Get all handlers for marketplaces
+        this.app.get('/api/v1/marketplaces/handlers', ensureAuthenticated, async (req: Request, res: Response) => {
+            const marketplaceDir = path.join(__dirname, '..', 'marketplaces', 'handlers')
+            const jsonsInDir = fs.readdirSync(marketplaceDir).filter((file) => path.extname(file) === '.json')
+            const templates: any[] = []
+            jsonsInDir.forEach((file, index) => {
+                const filePath = path.join(__dirname, '..', 'marketplaces', 'handlers', file)
+                const fileData = fs.readFileSync(filePath)
+                const fileDataObj = JSON.parse(fileData.toString())
+                const template = {
+                    ...fileDataObj,
+                    id: index,
+                    templateName: file.split('.json')[0]
+                }
+                templates.push(template)
+            })
+            return res.json(templates)
+        })
+
         // ----------------------------------------
         // API Keys
         // ----------------------------------------
