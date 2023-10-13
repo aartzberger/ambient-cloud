@@ -77,6 +77,11 @@ import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
 // TODO CMAN - chang this for input
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
+// used for testing and development - dev user login creds are used
+const DEV_MODE = process.env.NODE_ENV === 'dev'
+// TODO CMAN - in future add dev mode to ambient-local
+const DEV_MILVUS_PORT = process.env.DEV_MILVUS_PORT
+
 export class App {
     app: express.Application
     nodesPool: NodesPool
@@ -177,7 +182,8 @@ export class App {
             if (req.isAuthenticated()) {
                 return next()
             }
-            res.redirect('/login')
+
+            res.redirect('/')
         }
 
         passport.serializeUser((user: any, done) => {
@@ -193,6 +199,26 @@ export class App {
 
         const DEPLOYED_URL = process.env.DEPLOYED_URL
 
+        // function for loging in a user or creating a new one
+        const loginOrCreateUser = async (profile: any) => {
+            const existingUser = await this.AppDataSource.getRepository(User).findOneBy({
+                id: profile.id
+            })
+
+            if (existingUser) {
+                // Existing user, use this user
+                return existingUser
+            }
+            // New user, create a new user and then use that user
+            const newUser = await this.AppDataSource.getRepository(User).save({
+                id: profile.id,
+                name: profile.displayName,
+                email: profile.emails[0].value
+            })
+
+            return newUser
+        }
+
         passport.use(
             new Strategy(
                 {
@@ -202,22 +228,9 @@ export class App {
                 },
                 async (accessToken: any, refreshToken: any, profile: any, done: any) => {
                     // Check if user exists in the database
-                    const existingUser = await this.AppDataSource.getRepository(User).findOneBy({
-                        id: profile.id
-                    })
+                    const user = await loginOrCreateUser(profile)
 
-                    if (existingUser) {
-                        // Existing user, use this user
-                        return done(null, existingUser)
-                    }
-                    // New user, create a new user and then use that user
-                    const newUser = await this.AppDataSource.getRepository(User).save({
-                        id: profile.id,
-                        name: profile.displayName,
-                        email: profile.emails[0].value
-                    })
-
-                    return done(null, newUser)
+                    return done(null, user)
                 }
             )
         )
@@ -225,18 +238,64 @@ export class App {
         // ----------------------------------------
         // Login
         // ----------------------------------------
-        this.app.get(
-            '/auth/google',
+        this.app.get('/auth/google', (req, res, next) => {
+            if (DEV_MODE) {
+                // Redirect directly to the callback with default user values if in dev mode
+                if (!DEV_MILVUS_PORT) {
+                    throw new Error('DEV_MILVUS_PORT must be set in server .env for DEV_MODE to work')
+                }
+
+                return res.redirect('/api/v1/auth/google/callback')
+            }
             passport.authenticate('google', {
                 scope: ['profile', 'email'],
                 prompt: 'select_account'
-            })
-        )
-
-        this.app.get('/api/v1/auth/google/callback', passport.authenticate('google', { failureRedirect: '/login' }), (req, res) => {
-            // Successful authentication, redirect home.
-            res.redirect('/chatflows')
+            })(req, res, next)
         })
+
+        this.app.get(
+            '/api/v1/auth/google/callback',
+            async (req, res, next) => {
+                if (DEV_MODE) {
+                    // Simulate a successful authentication with default user values
+                    const defaultUser = {
+                        id: '123456789',
+                        displayName: 'Dev User',
+                        emails: [{ value: 'devuser@example.com' }]
+                    }
+                    const user = await loginOrCreateUser(defaultUser)
+                    // Manually log the user in
+                    req.logIn(user, async (err) => {
+                        if (err) {
+                            return next(err)
+                        }
+
+                        // Directly call to add the milvus and client url to the database (these are from ENV)
+                        try {
+                            const result = await handleRemoteDb({
+                                id: user.id,
+                                milvusUrl: `http://server.ambientware.co:${DEV_MILVUS_PORT}`,
+                                clientUrl: 'foobar'
+                            })
+                        } catch (error) {
+                            console.error('Error in handleRemoteDb:', error)
+                        }
+
+                        return res.redirect('/chatflows')
+                    })
+                    // Prevent further execution
+                    return
+                }
+                passport.authenticate('google', { failureRedirect: '/' })(req, res, next)
+            },
+            (req, res) => {
+                // If in DEV_MODE, this middleware should not be reached.
+                if (!DEV_MODE) {
+                    // Successful authentication, redirect home.
+                    res.redirect('/chatflows')
+                }
+            }
+        )
 
         // ----------------------------------------
         // Configure number of proxies in Host Environment
@@ -933,45 +992,46 @@ export class App {
         // ----------------------------------------
         // RemoteDb
         // ----------------------------------------
-        // create or update remotedb
-        this.app.post('/api/v1/remotedb', async (req: Request, res: Response) => {
-            const body = req.body
 
-            // check if there is already a db for a given user
+        // handle create or update remotedb
+        const handleRemoteDb = async (reqBody: any) => {
             const user = await this.AppDataSource.getRepository(User).findOneBy({
-                id: body.id
+                id: reqBody.id
             })
 
-            // no user found in database
             if (!user) {
-                return res.status(404).send(`User ${body.id} not found`)
+                throw new Error(`User ${reqBody.id} not found`)
             }
 
             const currentdb = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
                 user: user
             })
 
-            const endpointData = { milvusUrl: body.milvusUrl, clientUrl: body.clientUrl }
+            const endpointData = { milvusUrl: reqBody.milvusUrl, clientUrl: reqBody.clientUrl }
 
-            // if there is already a db, update the endpoint. otherwise, create a new one
             if (currentdb) {
-                // if there is already a db, update the endpoint
                 const updateRemoteDb = new RemoteDb()
                 Object.assign(updateRemoteDb, endpointData)
 
                 this.AppDataSource.getRepository(RemoteDb).merge(currentdb, updateRemoteDb)
-                const results = await this.AppDataSource.getRepository(RemoteDb).save(currentdb)
-                return res.json(results)
+                return await this.AppDataSource.getRepository(RemoteDb).save(currentdb)
             } else if (!currentdb && user) {
-                // if there is no db associated with user, create a new one
                 const newRemoteDb = new RemoteDb()
                 Object.assign(newRemoteDb, endpointData)
                 newRemoteDb.user = user
 
                 const remotedb = this.AppDataSource.getRepository(RemoteDb).create(newRemoteDb)
-                const results = await this.AppDataSource.getRepository(RemoteDb).save(remotedb)
-                return res.json(results)
+                return await this.AppDataSource.getRepository(RemoteDb).save(remotedb)
             }
+        }
+
+        // create or update remotedb
+        this.app.post('/api/v1/remotedb', async (req: Request, res: Response) => {
+            const body = req.body
+
+            const result = await handleRemoteDb(body)
+
+            return res.json(result)
         })
 
         // return the remote client endpoint for a given user
