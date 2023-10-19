@@ -71,6 +71,7 @@ const HandlerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
     const [handlerDesc, setHandlerDesc] = useState('')
     const [handlerIcon, setHandlerIcon] = useState('')
     const [handlerFunc, setHandlerFunc] = useState('')
+    const [handlerType, setHandlerType] = useState('')
 
     useEffect(() => {
         if (show) dispatch({ type: SHOW_CANVAS_DIALOG })
@@ -83,6 +84,7 @@ const HandlerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
             setHandlerId(getSpecificHandlerApi.data.id)
             setHandlerName(getSpecificHandlerApi.data.name)
             setHandlerDesc(getSpecificHandlerApi.data.description)
+            setHandlerType(getSpecificHandlerApi.data.type)
             if (getSpecificHandlerApi.data.func) setHandlerFunc(getSpecificHandlerApi.data.func)
             else setHandlerFunc('')
         }
@@ -94,6 +96,7 @@ const HandlerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
             setHandlerId(dialogProps.data.id)
             setHandlerName(dialogProps.data.name)
             setHandlerDesc(dialogProps.data.description)
+            setHandlerType(dialogProps.data.type)
             setHandlerIcon(dialogProps.data.iconSrc)
             if (dialogProps.data.func) setHandlerFunc(dialogProps.data.func)
             else setHandlerFunc('')
@@ -101,6 +104,7 @@ const HandlerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
             // When handler dialog is to import existing handler
             setHandlerName(dialogProps.data.name)
             setHandlerDesc(dialogProps.data.description)
+            setHandlerType(dialogProps.data.type)
             setHandlerIcon(dialogProps.data.iconSrc)
             if (dialogProps.data.func) setHandlerFunc(dialogProps.data.func)
             else setHandlerFunc('')
@@ -108,6 +112,7 @@ const HandlerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
             // When handler dialog is a template
             setHandlerName(dialogProps.data.name)
             setHandlerDesc(dialogProps.data.description)
+            setHandlerType(dialogProps.data.type)
             setHandlerIcon(dialogProps.data.iconSrc)
             if (dialogProps.data.func) setHandlerFunc(dialogProps.data.func)
             else setHandlerFunc('')
@@ -116,6 +121,7 @@ const HandlerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
             setHandlerId('')
             setHandlerName('')
             setHandlerDesc('')
+            setHandlerType('')
             setHandlerIcon('')
             setHandlerFunc('')
         }
@@ -171,6 +177,7 @@ const HandlerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
             const obj = {
                 name: handlerName,
                 description: handlerDesc,
+                type: handlerType,
                 color: generateRandomGradient(),
                 func: handlerFunc,
                 iconSrc: handlerIcon
@@ -216,6 +223,7 @@ const HandlerDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }
             const saveResp = await handlerApi.updateAutomationHandler(handlerId, {
                 name: handlerName,
                 description: handlerDesc,
+                type: handlerType,
                 func: handlerFunc,
                 iconSrc: handlerIcon
             })

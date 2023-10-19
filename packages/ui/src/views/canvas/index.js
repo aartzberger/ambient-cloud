@@ -198,11 +198,12 @@ const Canvas = () => {
             const nodeAutomations = []
             const nodes = reactFlowInstance.getNodes().map((node) => {
                 // keep track of automations for the chatflow
-                if (node.data.type === 'Automation') {
+                if (node.data.category === 'Automations') {
                     const automation_data = {
                         name: node.data.inputs.automationName,
                         triggerid: node.data.inputs.selectedTrigger,
                         handlerid: node.data.inputs.selectedHandler,
+                        definedQuestions: node.data.inputs.definedQuestions,
                         enabled: node.data.inputs.automationEnabled,
                         interval: node.data.inputs.triggerInterval,
                         url: node.data.inputs.automationUrl.split('/').pop() // only take the url id from the full url

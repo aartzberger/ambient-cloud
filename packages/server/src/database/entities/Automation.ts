@@ -33,6 +33,9 @@ triggerid: string
 @Column()
 handlerid: string
 
+@Column()
+definedQuestions: string
+
 @Column({ nullable: true })
 interval: string
 

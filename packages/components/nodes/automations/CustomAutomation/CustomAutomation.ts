@@ -11,7 +11,7 @@ const makeUniqueUrl = () => {
     return url
 }
 
-class Automation implements INode {
+class CustomAutomation implements INode {
     label: string
     name: string
     version: number
@@ -25,10 +25,10 @@ class Automation implements INode {
     outputs: INodeOutputsValue[]
 
     constructor() {
-        this.label = 'Automation'
-        this.name = 'modelAutomation'
+        this.label = 'Custom Automation'
+        this.name = 'customAutomation'
         this.version = 1.0
-        this.type = 'Automation'
+        this.type = 'CustomAutomation'
         this.icon = 'automation.svg'
         this.category = 'Automations'
         this.description = 'Automate when and how your model runs. Simply place on canvas and "Configure" to get started.'
@@ -70,6 +70,13 @@ class Automation implements INode {
                 default: 0,
                 additionalParams: true,
                 optional: true
+            },{
+                label: 'Pre-Defined Questions',
+                name: 'definedQuestions',
+                type: 'string',
+                rows: 6,
+                placeholder: `start each question with "-" and a space. For example: - What is 1 + 1?`,
+                additionalParams: true,
             },
             {
                 label: 'Automation URL - make POST requets to this URL to trigger the automation',
@@ -134,4 +141,4 @@ class Automation implements INode {
     }
 }
 
-module.exports = { nodeClass: Automation }
+module.exports = { nodeClass: CustomAutomation }

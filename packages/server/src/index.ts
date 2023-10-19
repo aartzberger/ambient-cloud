@@ -72,6 +72,7 @@ import { createRateLimiter, getRateLimiter, initializeRateLimiter } from './util
 
 import { RecursiveCharacterTextSplitter, RecursiveCharacterTextSplitterParams } from 'langchain/text_splitter'
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
+import PredictionHandler from './PredictionHandler'
 // import { HuggingFaceInferenceEmbeddings } from 'langchain/embeddings/hf'
 
 // TODO CMAN - chang this for input
@@ -694,7 +695,7 @@ export class App {
         // Automations
         // ----------------------------------------
 
-        // process for making automatoin prediction
+        // process for making automation prediction
         this.app.post(
             '/api/v1/automations/run/:id',
             upload.array('files'),
@@ -1724,8 +1725,6 @@ export class App {
         }
     }
 
-    // TODO - this should be incorperated into the processPrediction function
-    // I just don't have time to do it right now
     /**
      * Process Automation
      * @param {Request} req
@@ -1766,23 +1765,20 @@ export class App {
             if (trigger.func) {
                 try {
                     input = await JsRunner(trigger.func, input, body, res)
-                    if (res.headersSent) return
                 } catch (e) {
                     return res.status(404).send('Failed to run trigger function')
                 }
+            } else {
+                if (automation.definedQuestions) {
+                    return res
+                        .status(404)
+                        .send('No trigger fuction found and no predefined defined questions given. Please provide one or the other')
+                }
             }
-            if (!input) return res.status(404).send('Failed to run trigger function')
-
-            // chat flow can take a while to process. this makes it so that the request doesn't timeout
-            res.status(200).send()
 
             // next, handle the prediction with the chatflow
-            let incomingInput: IncomingInput = {
-                question: input,
-                history: []
-            }
+            let incomingInput: IncomingInput
 
-            let nodeToExecuteData: INodeData
             const chatflowid = automation.chatflowid
 
             const chatflow = await this.AppDataSource.getRepository(ChatFlow).findOneBy({
@@ -1790,171 +1786,64 @@ export class App {
             })
             if (!chatflow) return res.status(404).send(`Chatflow ${chatflowid} not found`)
 
-            let chatId = await getChatId(chatflow.id)
-            if (!chatId) chatId = chatflowid
-
-            if (!isInternal) {
-                await this.validateKey(req, res, chatflow)
-            }
-
-            let isStreamValid = false
-
-            const files = (req.files as any[]) || []
-
-            if (files.length) {
-                const overrideConfig: ICommonObject = { ...req.body }
-                for (const file of files) {
-                    const fileData = fs.readFileSync(file.path, { encoding: 'base64' })
-                    const dataBase64String = `data:${file.mimetype};base64,${fileData},filename:${file.filename}`
-
-                    const fileInputField = mapMimeTypeToInputField(file.mimetype)
-                    if (overrideConfig[fileInputField]) {
-                        overrideConfig[fileInputField] = JSON.stringify([...JSON.parse(overrideConfig[fileInputField]), dataBase64String])
-                    } else {
-                        overrideConfig[fileInputField] = JSON.stringify([dataBase64String])
+            let inputs = []
+            if (automation.definedQuestions) {
+                // if there is a list of predefined questions, loop through them
+                // and add them to the inputs that will be asked
+                for (const question of automation.definedQuestions.split('-')) {
+                    incomingInput = {
+                        question: question,
+                        history: []
                     }
+                    inputs.push(incomingInput)
                 }
-                incomingInput = {
-                    question: req.body.question ?? 'hello',
-                    overrideConfig,
-                    history: [],
-                    socketIOClientId: req.body.socketIOClientId
-                }
-            }
-
-            /*** Get chatflows and prepare data  ***/
-            const flowData = chatflow.flowData
-            const parsedFlowData: IReactFlowObject = JSON.parse(flowData)
-            const nodes = parsedFlowData.nodes
-            const edges = parsedFlowData.edges
-
-            /*   Reuse the flow without having to rebuild (to avoid duplicated upsert, recomputation) when all these conditions met:
-             * - Node Data already exists in pool
-             * - Still in sync (i.e the flow has not been modified since)
-             * - Existing overrideConfig and new overrideConfig are the same
-             * - Flow doesn't start with/contain nodes that depend on incomingInput.question
-             ***/
-            const isFlowReusable = () => {
-                return (
-                    Object.prototype.hasOwnProperty.call(this.chatflowPool.activeChatflows, chatflowid) &&
-                    this.chatflowPool.activeChatflows[chatflowid].inSync &&
-                    isSameOverrideConfig(
-                        isInternal,
-                        this.chatflowPool.activeChatflows[chatflowid].overrideConfig,
-                        incomingInput.overrideConfig
-                    ) &&
-                    !isStartNodeDependOnInput(this.chatflowPool.activeChatflows[chatflowid].startingNodes, nodes)
-                )
-            }
-
-            if (isFlowReusable()) {
-                nodeToExecuteData = this.chatflowPool.activeChatflows[chatflowid].endingNodeData
-                isStreamValid = isFlowValidForStream(nodes, nodeToExecuteData)
-                logger.debug(
-                    `[server]: Reuse existing chatflow ${chatflowid} with ending node ${nodeToExecuteData.label} (${nodeToExecuteData.id})`
-                )
             } else {
-                /*** Get Ending Node with Directed Graph  ***/
-                const { graph, nodeDependencies } = constructGraphs(nodes, edges)
-                const directedGraph = graph
-                const endingNodeId = getEndingNode(nodeDependencies, directedGraph)
-                if (!endingNodeId) return res.status(500).send(`Ending node ${endingNodeId} not found`)
-
-                const endingNodeData = nodes.find((nd) => nd.id === endingNodeId)?.data
-                if (!endingNodeData) return res.status(500).send(`Ending node ${endingNodeId} data not found`)
-
-                if (endingNodeData && endingNodeData.category !== 'Chains' && endingNodeData.category !== 'Agents') {
-                    return res.status(500).send(`Ending node must be either a Chain or Agent`)
+                incomingInput = {
+                    question: input,
+                    history: []
                 }
-
-                if (
-                    endingNodeData.outputs &&
-                    Object.keys(endingNodeData.outputs).length &&
-                    !Object.values(endingNodeData.outputs).includes(endingNodeData.name)
-                ) {
-                    return res
-                        .status(500)
-                        .send(
-                            `Output of ${endingNodeData.label} (${endingNodeData.id}) must be ${endingNodeData.label}, can't be an Output Prediction`
-                        )
-                }
-
-                isStreamValid = isFlowValidForStream(nodes, endingNodeData)
-
-                /*** Get Starting Nodes with Non-Directed Graph ***/
-                const constructedObj = constructGraphs(nodes, edges, true)
-                const nonDirectedGraph = constructedObj.graph
-                const { startingNodeIds, depthQueue } = getStartingNodes(nonDirectedGraph, endingNodeId)
-
-                logger.debug(`[server]: Start building chatflow ${chatflowid}`)
-                /*** BFS to traverse from Starting Nodes to Ending Node ***/
-                const reactFlowNodes = await buildLangchain(
-                    startingNodeIds,
-                    nodes,
-                    graph,
-                    depthQueue,
-                    this.nodesPool.componentNodes,
-                    incomingInput.question,
-                    incomingInput.history,
-                    chatId,
-                    chatflowid,
-                    this.AppDataSource,
-                    incomingInput?.overrideConfig
-                )
-
-                const nodeToExecute = reactFlowNodes.find((node: IReactFlowNode) => node.id === endingNodeId)
-                if (!nodeToExecute) return res.status(404).send(`Node ${endingNodeId} not found`)
-
-                if (incomingInput.overrideConfig)
-                    nodeToExecute.data = replaceInputsWithConfig(nodeToExecute.data, incomingInput.overrideConfig)
-                const reactFlowNodeData: INodeData = resolveVariables(
-                    nodeToExecute.data,
-                    reactFlowNodes,
-                    incomingInput.question,
-                    incomingInput.history
-                )
-                nodeToExecuteData = reactFlowNodeData
-
-                const startingNodes = nodes.filter((nd) => startingNodeIds.includes(nd.id))
-                this.chatflowPool.add(chatflowid, nodeToExecuteData, startingNodes, incomingInput?.overrideConfig)
+                inputs.push(incomingInput)
             }
 
-            const nodeInstanceFilePath = this.nodesPool.componentNodes[nodeToExecuteData.name].filePath as string
-            const nodeModule = await import(nodeInstanceFilePath)
-            const nodeInstance = new nodeModule.nodeClass()
+            const combinedOutupts = ''
+            // loop though all the inputs and run the prediction. combine them into single output
+            for (const input of inputs) {
+                // TODO CMAN - this should be incorperated into the processPrediction function
+                // doing so will ensure consistency between the two
+                // I just don't have time to do it right now
+                let { status, result } = await PredictionHandler(
+                    input,
+                    chatflow,
+                    isInternal,
+                    chatflowid,
+                    this.chatflowPool,
+                    this.nodesPool,
+                    this.AppDataSource,
+                    this.cachePool,
+                    socketIO
+                )
 
-            logger.debug(`[server]: Running ${nodeToExecuteData.label} (${nodeToExecuteData.id})`)
+                if (status === false) {
+                    return res.status(404).send(result)
+                } else {
+                    // combine the outputs
+                    combinedOutupts.concat(result + '\n')
+                }
+            }
 
-            if (nodeToExecuteData.instance) checkMemorySessionId(nodeToExecuteData.instance, chatId)
-
-            let result = isStreamValid
-                ? await nodeInstance.run(nodeToExecuteData, incomingInput.question, {
-                      chatHistory: incomingInput.history,
-                      socketIO,
-                      socketIOClientId: incomingInput.socketIOClientId,
-                      logger,
-                      appDataSource: this.AppDataSource,
-                      databaseEntities,
-                      analytic: chatflow.analytic
-                  })
-                : await nodeInstance.run(nodeToExecuteData, incomingInput.question, {
-                      chatHistory: incomingInput.history,
-                      logger,
-                      appDataSource: this.AppDataSource,
-                      databaseEntities,
-                      analytic: chatflow.analytic
-                  })
-
-            logger.debug(`[server]: Finished running ${nodeToExecuteData.label} (${nodeToExecuteData.id})`)
-
-            // finally, if there is a handler function, run it on the output
+            // finally, use the handler
             if (handler.func) {
                 try {
-                    result = await JsRunner(handler.func, result, body)
+                    let output = await JsRunner(handler.func, combinedOutupts, body, res)
+                    if (output) {
+                        return res.status(200).send(output)
+                    }
                 } catch (e) {
                     logger.error('[server]: Error:', e)
-                    // return res.status(404).send('Failed to run handler function')
+                    return res.status(404).send('Failed to run handler function')
                 }
+            } else {
+                return res.status(404).send('No handler fuction found')
             }
         } catch (e: any) {
             logger.error('[server]: Error:', e)

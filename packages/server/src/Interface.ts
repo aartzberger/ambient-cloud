@@ -69,6 +69,7 @@ export interface IAutomation {
     chatflowid: string
     triggerid: string
     handlerid: string
+    definedQuestions: string
     interval: string
     url: string
     name: string
