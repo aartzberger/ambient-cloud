@@ -1,8 +1,8 @@
 {
     "name": "Slack Slash Command Trigger",
     "description": "handles POST from slack /command api",
-    "color": "linear-gradient(rgb(41,74,138), rgb(130,195,18))",
+    "color": "linear-gradient(rgb(251,175,19), rgb(139,140,87))",
     "iconSrc": "https://cdn.worldvectorlogo.com/logos/slack-1.svg",
     "schema": null,
-    "func": "// return the user message\nreturn body.text"
+    "func": "// let slack know the response was obtained \nres.status(200).send();\n\n// return the user message\nreturn body.text"
 }

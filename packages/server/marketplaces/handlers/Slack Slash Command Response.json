@@ -1,7 +1,7 @@
 {
     "name": "Slack Slash Command Response",
     "description": "handles returning model input to a /command return url from slack",
-    "color": "linear-gradient(rgb(96,239,184), rgb(93,111,160))",
+    "color": "linear-gradient(rgb(155,232,223), rgb(245,17,49))",
     "iconSrc": "https://cdn.worldvectorlogo.com/logos/slack-1.svg",
-    "func": "// import required lib for sending url response\nconst axios = require('axios')\n\n// parse the url that we want to respond to\nconst url = body.response_url\n\n// create data to send to url and forward it\nconst out = await axios.post(url, {text: input})\n"
+    "func": "// import required lib for sending url response\nconst axios = require('axios')\n\n// parse the url that we want to respond to\nconst url = body.response_url\n\n// create data to send to url and forward it\nconst out = await axios.post(url, {text: input})"
 }
