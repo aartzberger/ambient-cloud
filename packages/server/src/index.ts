@@ -1753,6 +1753,13 @@ export class App {
             })
             if (!handler) return res.status(404).send(`Handler ${automation.handlerid} not found for automation`)
 
+            const chatflowid = automation.chatflowid
+
+            const chatflow = await this.AppDataSource.getRepository(ChatFlow).findOneBy({
+                id: chatflowid
+            })
+            if (!chatflow) return res.status(404).send(`Chatflow ${chatflowid} not found`)
+
             // first handle the case where the automation is an interval
             if (Number(automation.interval) > 0) {
                 // TODO - need to implament this with celery
@@ -1779,20 +1786,13 @@ export class App {
             // next, handle the prediction with the chatflow
             let incomingInput: IncomingInput
 
-            const chatflowid = automation.chatflowid
-
-            const chatflow = await this.AppDataSource.getRepository(ChatFlow).findOneBy({
-                id: chatflowid
-            })
-            if (!chatflow) return res.status(404).send(`Chatflow ${chatflowid} not found`)
-
             let inputs = []
             if (automation.definedQuestions) {
                 // if there is a list of predefined questions, loop through them
                 // and add them to the inputs that will be asked
                 for (const question of automation.definedQuestions.split('-')) {
                     incomingInput = {
-                        question: question,
+                        question: question.trim(),
                         history: []
                     }
                     inputs.push(incomingInput)
@@ -1805,12 +1805,16 @@ export class App {
                 inputs.push(incomingInput)
             }
 
-            const combinedOutupts = ''
+            let combinedOutupts = ''
             // loop though all the inputs and run the prediction. combine them into single output
             for (const input of inputs) {
                 // TODO CMAN - this should be incorperated into the processPrediction function
                 // doing so will ensure consistency between the two
                 // I just don't have time to do it right now
+                if (input.question === '' || input.question === null) {
+                    continue
+                }
+
                 let { status, result } = await PredictionHandler(
                     input,
                     chatflow,
@@ -1827,17 +1831,14 @@ export class App {
                     return res.status(404).send(result)
                 } else {
                     // combine the outputs
-                    combinedOutupts.concat(result + '\n')
+                    combinedOutupts = combinedOutupts + '\n\n' + input.question + ':' + '\n' + result
                 }
             }
 
             // finally, use the handler
             if (handler.func) {
                 try {
-                    let output = await JsRunner(handler.func, combinedOutupts, body, res)
-                    if (output) {
-                        return res.status(200).send(output)
-                    }
+                    await JsRunner(handler.func, combinedOutupts, body, null)
                 } catch (e) {
                     logger.error('[server]: Error:', e)
                     return res.status(404).send('Failed to run handler function')
