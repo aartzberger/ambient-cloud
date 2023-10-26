@@ -1746,12 +1746,10 @@ export class App {
             const trigger = await this.AppDataSource.getRepository(Trigger).findOneBy({
                 id: automation.triggerid
             })
-            if (!trigger) return res.status(404).send(`Trigger ${automation.triggerid} not found for automation`)
             // get the coorelating trigger
             const handler = await this.AppDataSource.getRepository(AutomationHandler).findOneBy({
                 id: automation.handlerid
             })
-            if (!handler) return res.status(404).send(`Handler ${automation.handlerid} not found for automation`)
 
             const chatflowid = automation.chatflowid
 
@@ -1769,17 +1767,19 @@ export class App {
             // next, if there is a trigger function, run it on the input
             let input = null
             const body = req.body
-            if (trigger.func) {
+            if (trigger && trigger.func) {
                 try {
                     input = await JsRunner(trigger.func, input, body, res)
                 } catch (e) {
                     return res.status(404).send('Failed to run trigger function')
                 }
+            } else if (req.body.input) {
+                input = req.body.input
             } else {
-                if (automation.definedQuestions) {
+                if (!automation.definedQuestions) {
                     return res
                         .status(404)
-                        .send('No trigger fuction found and no predefined defined questions given. Please provide one or the other')
+                        .send('No input method (trigger, input request body) found and no predefined defined questions given. Please provide one or the other')
                 }
             }
 
@@ -1831,12 +1831,17 @@ export class App {
                     return res.status(404).send(result)
                 } else {
                     // combine the outputs
-                    combinedOutupts = combinedOutupts + '\n\n' + input.question + ':' + '\n' + result
+                    if (automation.definedQuestions) {
+                        combinedOutupts = combinedOutupts + '\n\n' + input.question + ':' + '\n' + result
+                    } else {
+                        combinedOutupts = combinedOutupts + result
+                    }
+
                 }
             }
 
             // finally, use the handler
-            if (handler.func) {
+            if (handler && handler.func) {
                 try {
                     await JsRunner(handler.func, combinedOutupts, body, null)
                 } catch (e) {
@@ -1844,7 +1849,7 @@ export class App {
                     return res.status(404).send('Failed to run handler function')
                 }
             } else {
-                return res.status(404).send('No handler fuction found')
+                return res.status(200).send({'output': combinedOutupts})
             }
         } catch (e: any) {
             logger.error('[server]: Error:', e)
