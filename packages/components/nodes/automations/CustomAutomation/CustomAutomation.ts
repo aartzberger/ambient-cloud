@@ -70,13 +70,14 @@ class CustomAutomation implements INode {
                 default: 0,
                 additionalParams: true,
                 optional: true
-            },{
+            },
+            {
                 label: 'Pre-Defined Questions',
                 name: 'definedQuestions',
                 type: 'string',
                 rows: 6,
                 placeholder: `start each question with "-" and a space. For example: - What is 1 + 1?`,
-                additionalParams: true,
+                additionalParams: true
             },
             {
                 label: 'Automation URL - make POST requets to this URL to trigger the automation',

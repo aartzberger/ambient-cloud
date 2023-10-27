@@ -1,8 +1,3 @@
-import PropTypes from 'prop-types'
-import { useNavigate } from 'react-router-dom'
-import { useSelector, useDispatch } from 'react-redux'
-import { useEffect, useRef, useState } from 'react'
-
 // material-ui
 import { useTheme } from '@mui/material/styles'
 import { Avatar, Box, ButtonBase } from '@mui/material'

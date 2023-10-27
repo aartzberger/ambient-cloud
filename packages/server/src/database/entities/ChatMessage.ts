@@ -1,14 +1,7 @@
 /* eslint-disable */
-import { Entity, 
-         Column, 
-         CreateDateColumn, 
-         PrimaryGeneratedColumn, 
-         Index,
-         ManyToOne, 
-         JoinColumn  
-        } from 'typeorm'
+import { Entity, Column, CreateDateColumn, PrimaryGeneratedColumn, Index, ManyToOne, JoinColumn } from 'typeorm'
 import { IChatMessage, MessageType } from '../../Interface'
-import { User } from './User'; // import the User entity
+import { User } from './User' // import the User entity
 
 @Entity()
 export class ChatMessage implements IChatMessage {
@@ -31,6 +24,6 @@ export class ChatMessage implements IChatMessage {
     @CreateDateColumn()
     createdDate: Date
 
-    @ManyToOne(type => User, user => user.chatmessages)
-    user: User;
+    @ManyToOne((type) => User, (user) => user.chatmessages)
+    user: User
 }

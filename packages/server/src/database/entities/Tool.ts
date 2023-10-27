@@ -1,14 +1,7 @@
 /* eslint-disable */
-import { Entity, 
-         Column, 
-         CreateDateColumn, 
-         UpdateDateColumn, 
-         PrimaryGeneratedColumn,
-         ManyToOne, 
-         JoinColumn
-        } from 'typeorm'
+import { Entity, Column, CreateDateColumn, UpdateDateColumn, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm'
 import { ITool } from '../../Interface'
-import { User } from './User'; // import the User entity
+import { User } from './User' // import the User entity
 
 @Entity()
 export class Tool implements ITool {
@@ -39,6 +32,6 @@ export class Tool implements ITool {
     @UpdateDateColumn()
     updatedDate: Date
 
-    @ManyToOne(type => User, user => user.tools)
-    user: User;
+    @ManyToOne((type) => User, (user) => user.tools)
+    user: User
 }

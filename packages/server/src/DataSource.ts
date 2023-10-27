@@ -59,7 +59,7 @@ export const init = async (): Promise<void> => {
                 database: path.resolve(homePath, 'database.sqlite'),
                 synchronize: true,
                 migrationsRun: false,
-                entities: Object.values(entities),
+                entities: Object.values(entities)
                 // migrations: sqliteMigrations
             })
             break

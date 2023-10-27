@@ -38,7 +38,7 @@ const blacklistNodes = [
     'weaviateExistingIndex',
     'weaviateUpsert',
     'zepExistingIndex',
-    'zepUpsert',
+    'zepUpsert'
 ]
 
-export default blacklistNodes;
+export default blacklistNodes

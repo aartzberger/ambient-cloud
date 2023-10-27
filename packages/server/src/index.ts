@@ -1,7 +1,9 @@
+import axios from 'axios'
+import querystring from 'querystring'
 import express, { Request, Response, NextFunction } from 'express'
 import session from 'express-session'
 import passport from 'passport'
-import { Strategy } from 'passport-google-oauth20'
+const GoogleStrategy = require('passport-google-oauth20').Strategy
 import multer from 'multer'
 import path from 'path'
 import cors from 'cors'
@@ -82,6 +84,11 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 const DEV_MODE = process.env.NODE_ENV === 'dev'
 // TODO CMAN - in future add dev mode to ambient-local
 const DEV_MILVUS_PORT = process.env.DEV_MILVUS_PORT
+
+const DEPLOYED_URL = process.env.DEPLOYED_URL
+const GOOGLE_CLIENT_ID = '530294522870-o17j0nite5q2tcslg0tsn1li9bh4rtv3.apps.googleusercontent.com'
+const GOOGLE_CLIENT_SECRET = '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'
+const DEFAULT_GOOGLE_CALLBACK = `https://${DEPLOYED_URL}/api/v1/auth/google/callback`
 
 export class App {
     app: express.Application
@@ -198,8 +205,6 @@ export class App {
             done(null, user)
         })
 
-        const DEPLOYED_URL = process.env.DEPLOYED_URL
-
         // function for loging in a user or creating a new one
         const loginOrCreateUser = async (profile: any) => {
             const existingUser = await this.AppDataSource.getRepository(User).findOneBy({
@@ -221,11 +226,11 @@ export class App {
         }
 
         passport.use(
-            new Strategy(
+            new GoogleStrategy(
                 {
-                    clientID: '530294522870-o17j0nite5q2tcslg0tsn1li9bh4rtv3.apps.googleusercontent.com',
-                    clientSecret: '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',
-                    callbackURL: `https://${DEPLOYED_URL}/api/v1/auth/google/callback`
+                    clientID: GOOGLE_CLIENT_ID,
+                    clientSecret: GOOGLE_CLIENT_SECRET,
+                    callbackURL: DEFAULT_GOOGLE_CALLBACK
                 },
                 async (accessToken: any, refreshToken: any, profile: any, done: any) => {
                     // Check if user exists in the database
@@ -239,6 +244,7 @@ export class App {
         // ----------------------------------------
         // Login
         // ----------------------------------------
+
         this.app.get('/auth/google', (req, res, next) => {
             if (DEV_MODE) {
                 // Redirect directly to the callback with default user values if in dev mode
@@ -250,7 +256,7 @@ export class App {
             }
             passport.authenticate('google', {
                 scope: ['profile', 'email'],
-                prompt: 'select_account'
+                prompt: 'consent'
             })(req, res, next)
         })
 
@@ -297,6 +303,25 @@ export class App {
                 }
             }
         )
+
+        // ----------------------------------------
+        // Oauth for various services
+        // ----------------------------------------
+
+        // initical oauth handler for google
+        this.app.get('/api/v1/oauth/google', (req, res) => {
+            const CLIENT_ID = GOOGLE_CLIENT_ID
+            const redirectUrl = `https://${DEPLOYED_URL}/api/v1/credentials/from-google-oauth`
+
+            const googleAuthURL = 'https://accounts.google.com/o/oauth2/v2/auth'
+            const scope = ['https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email'].join(' ')
+
+            // Construct the Google URL to which we'll redirect the user
+            // must be offline mode to get the refresh token
+            const authURL = `${googleAuthURL}?client_id=${CLIENT_ID}&redirect_uri=${redirectUrl}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`
+
+            res.redirect(authURL)
+        })
 
         // ----------------------------------------
         // Configure number of proxies in Host Environment
@@ -613,6 +638,85 @@ export class App {
             const credential = this.AppDataSource.getRepository(Credential).create(newCredential)
             const results = await this.AppDataSource.getRepository(Credential).save(credential)
             return res.json(results)
+        })
+
+        // Create new credential from oauth data
+        this.app.get('/api/v1/credentials/from-google-oauth', async (req: Request, res: Response) => {
+            let accessToken = null
+            let refreshToken = null
+            let userProfile = null
+
+            try {
+                const redirectUri = `https://${DEPLOYED_URL}/api/v1/credentials/from-google-oauth`
+                // This is where Google sends the authorization code after user consent
+                const code = req.query.code as string
+
+                const tokenURL = 'https://oauth2.googleapis.com/token'
+
+                const response = await axios.post(
+                    tokenURL,
+                    querystring.stringify({
+                        code: code,
+                        client_id: GOOGLE_CLIENT_ID,
+                        client_secret: GOOGLE_CLIENT_SECRET,
+                        redirect_uri: redirectUri,
+                        grant_type: 'authorization_code'
+                    }),
+                    {
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        }
+                    }
+                )
+
+                const { access_token, refresh_token } = response.data
+
+                // Fetch the user's profile data using the access token
+                const profileResponse = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: {
+                        Authorization: `Bearer ${access_token}`
+                    }
+                })
+
+                userProfile = profileResponse.data
+
+                // assign the tokens
+                accessToken = access_token
+                refreshToken = refresh_token
+            } catch (error) {
+                console.error('Error in Google OAuth callback', error)
+                res.status(500).send('Authentication failed.')
+            }
+
+            if (accessToken && refreshToken) {
+                const obj = {
+                    name: userProfile.email,
+                    credentialName: 'googleApi',
+                    plainDataObj: { googleApiKey: { accessToken: accessToken, refreshToken: refreshToken } }
+                }
+
+                const newCredential = await transformToCredentialEntity(obj)
+                newCredential.user = req.user as User
+
+                // check to see if credential already exists
+                const existingCredential = await this.AppDataSource.getRepository(Credential).findOneBy({
+                    name: userProfile.email,
+                    credentialName: obj.credentialName
+                })
+
+                // if we have a credential already, just update it
+                if (existingCredential) {
+                    this.AppDataSource.getRepository(Credential).merge(existingCredential, newCredential)
+                    const result = await this.AppDataSource.getRepository(Credential).save(existingCredential)
+                } else {
+                    const credential = this.AppDataSource.getRepository(Credential).create(newCredential)
+                    const results = await this.AppDataSource.getRepository(Credential).save(credential)
+                }
+
+                return res.redirect('/oauth-complete')
+            } else {
+                return res.status(500).send('Authentication failed. No values for access token and refresh token')
+            }
         })
 
         // Get all credentials
@@ -1779,7 +1883,9 @@ export class App {
                 if (!automation.definedQuestions) {
                     return res
                         .status(404)
-                        .send('No input method (trigger, input request body) found and no predefined defined questions given. Please provide one or the other')
+                        .send(
+                            'No input method (trigger, input request body) found and no predefined defined questions given. Please provide one or the other'
+                        )
                 }
             }
 
@@ -1836,7 +1942,6 @@ export class App {
                     } else {
                         combinedOutupts = combinedOutupts + result
                     }
-
                 }
             }
 
@@ -1849,7 +1954,7 @@ export class App {
                     return res.status(404).send('Failed to run handler function')
                 }
             } else {
-                return res.status(200).send({'output': combinedOutupts})
+                return res.status(200).send({ output: combinedOutupts })
             }
         } catch (e: any) {
             logger.error('[server]: Error:', e)

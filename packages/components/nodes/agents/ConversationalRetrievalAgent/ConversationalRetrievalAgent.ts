@@ -75,7 +75,7 @@ class ConversationalRetrievalAgent_Agents implements INode {
             returnIntermediateSteps: true
         })
 
-        let memory;
+        let memory
         if (externalMemory) {
             externalMemory.memoryKey = 'chat_history'
             externalMemory.inputKey = 'input'

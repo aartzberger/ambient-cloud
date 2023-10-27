@@ -51,7 +51,8 @@ export const initNode = (nodeData, newNodeId) => {
         'code',
         'date',
         'file',
-        'folder'
+        'folder',
+        'googleOauth2'
     ]
 
     // Inputs

@@ -1,13 +1,7 @@
 /* eslint-disable */
-import { Entity, 
-    Column, 
-    CreateDateColumn, 
-    UpdateDateColumn, 
-    PrimaryGeneratedColumn,
-    ManyToOne
-   } from 'typeorm'
+import { Entity, Column, CreateDateColumn, UpdateDateColumn, PrimaryGeneratedColumn, ManyToOne } from 'typeorm'
 import { IAutomationHandler } from '../../Interface'
-import { User } from './User'; // import the User entity
+import { User } from './User' // import the User entity
 
 @Entity()
 export class AutomationHandler implements IAutomationHandler {
@@ -35,7 +29,6 @@ export class AutomationHandler implements IAutomationHandler {
     @UpdateDateColumn()
     updatedDate: Date
 
-    @ManyToOne(type => User, user => user.triggers)
-    user: User;
-    
+    @ManyToOne((type) => User, (user) => user.triggers)
+    user: User
 }

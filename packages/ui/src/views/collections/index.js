@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useSelector } from 'react-redux'
 
 // material-ui
-import { Grid, Box, Stack, Button } from '@mui/material'
+import { Grid, Box, Stack } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
 
 // project imports
@@ -20,7 +20,7 @@ import remotesApi from 'api/remotes'
 import useApi from 'hooks/useApi'
 
 // icons
-import { IconPlus, IconFileImport } from '@tabler/icons'
+import { IconPlus } from '@tabler/icons'
 
 // ==============================|| CHATFLOWS ||============================== //
 

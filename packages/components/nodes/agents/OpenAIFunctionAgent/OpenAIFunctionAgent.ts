@@ -73,7 +73,7 @@ class OpenAIFunctionAgent_Agents implements INode {
             }
         })
 
-        let memory;
+        let memory
         if (externalMemory) {
             externalMemory.memoryKey = 'chat_history'
             externalMemory.inputKey = 'input'

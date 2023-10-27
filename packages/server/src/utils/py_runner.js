@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { exec } from 'child_process'
 
 // TODO can implement docker container for running env for python
 
@@ -10,27 +10,27 @@ import { exec } from 'child_process';
 
 function runPythonScript(scriptContent, callback) {
     // Save the Python code to a temporary file
-    const tempFilePath = 'file.py'; // Choose an appropriate path
-    require('fs').writeFileSync(tempFilePath, scriptContent);
+    const tempFilePath = 'file.py' // Choose an appropriate path
+    require('fs').writeFileSync(tempFilePath, scriptContent)
 
     // Run the Docker container to execute the Python script
     exec(`docker run --rm -v ${tempFilePath}:/app/script.py python-sandbox python /app/script.py`, (error, stdout, stderr) => {
         if (error) {
-            callback(error, null);
-            return;
+            callback(error, null)
+            return
         }
-        callback(null, stdout);
-    });
+        callback(null, stdout)
+    })
 }
 
 const pythonCode = `
 print("Hello from Python!")
-`;
+`
 
 runPythonScript(pythonCode, (err, result) => {
     if (err) {
-        console.error("Error:", err);
+        console.error('Error:', err)
     } else {
-        console.log("Result:", result);
+        console.log('Result:', result)
     }
-});
+})

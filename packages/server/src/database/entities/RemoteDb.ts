@@ -1,31 +1,25 @@
 /* eslint-disable */
-import { Entity, 
-    Column, 
-    CreateDateColumn, 
-    UpdateDateColumn, 
-    PrimaryGeneratedColumn,
-    ManyToOne, 
-   } from 'typeorm'
+import { Entity, Column, CreateDateColumn, UpdateDateColumn, PrimaryGeneratedColumn, ManyToOne } from 'typeorm'
 import { IRemoteDb } from '../../Interface'
-import { User } from './User'; // import the User entity
+import { User } from './User' // import the User entity
 
 @Entity()
 export class RemoteDb implements IRemoteDb {
-@PrimaryGeneratedColumn('uuid')
-id: string
+    @PrimaryGeneratedColumn('uuid')
+    id: string
 
-@Column()
-milvusUrl: string
+    @Column()
+    milvusUrl: string
 
-@Column()
-clientUrl: string
+    @Column()
+    clientUrl: string
 
-@CreateDateColumn()
-createdDate: Date
+    @CreateDateColumn()
+    createdDate: Date
 
-@UpdateDateColumn()
-updatedDate: Date
+    @UpdateDateColumn()
+    updatedDate: Date
 
-@ManyToOne(type => User, user => user.remotedb)
-user: User;
+    @ManyToOne((type) => User, (user) => user.remotedb)
+    user: User
 }

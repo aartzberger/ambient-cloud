@@ -25,7 +25,6 @@ import chatflowApi from 'api/chatflows'
 
 // Hooks
 import useApi from 'hooks/useApi'
-import { set } from 'lodash'
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props

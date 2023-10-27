@@ -87,7 +87,7 @@ class ConversationalAgent_Agents implements INode {
 
         const executor = await initializeAgentExecutorWithOptions(tools, model, obj)
 
-        let memory;
+        let memory
         if (externalMemory) {
             externalMemory.memoryKey = 'chat_history'
             externalMemory.inputKey = 'input'

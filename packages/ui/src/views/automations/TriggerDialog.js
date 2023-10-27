@@ -7,7 +7,6 @@ import { enqueueSnackbar as enqueueSnackbarAction, closeSnackbar as closeSnackba
 import { Box, Typography, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, OutlinedInput } from '@mui/material'
 import { StyledButton } from 'ui-component/button/StyledButton'
 import { TooltipWithParser } from 'ui-component/tooltip/TooltipWithParser'
-import { Dropdown } from 'ui-component/dropdown/AutomationsDropdown'
 import ConfirmDialog from 'ui-component/dialog/ConfirmDialog'
 import { DarkCodeEditor } from 'ui-component/editor/DarkCodeEditor'
 import { LightCodeEditor } from 'ui-component/editor/LightCodeEditor'

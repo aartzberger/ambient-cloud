@@ -17,5 +17,5 @@ export const entities = {
     ChatMessage,
     Credential,
     Tool,
-    RemoteDb,
+    RemoteDb
 }

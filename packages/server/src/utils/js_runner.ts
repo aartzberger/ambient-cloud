@@ -1,5 +1,5 @@
 import { NodeVM } from 'vm2'
-import { Request, Response } from 'express'
+import { Response } from 'express'
 
 /*
  * List of dependencies allowed to be import in vm2
@@ -48,7 +48,7 @@ const defaultAllowBuiltInDep = [
     'zlib'
 ]
 
-async function JsRunner(code: string, input: any, body: any, res: Response | null=null) {
+async function JsRunner(code: string, input: any, body: any, res: Response | null = null) {
     const vm = new NodeVM({
         console: 'inherit',
         sandbox: {},

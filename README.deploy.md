@@ -2,9 +2,10 @@
 
 This assums you already have a domain with proper forwarded DNS settings forwarded to elastic ipv4 and ipv6 addresses.s
 
-1. Set up EC2 instance with http, https, ssh ports exposed. 
+1. Set up EC2 instance with http, https, ssh ports exposed.
 
 2. Connect to EC2 and install some dependencies:
+
     ```
     sudo apt update
     sudo snap install docker
@@ -14,6 +15,7 @@ This assums you already have a domain with proper forwarded DNS settings forward
     ```
 
 3. Open nginx site config (/etc/nginx/sites-available/default) and change to the following. if your gitting file size issue theck the client max body:
+
     ```
     server {
         listen 80;
@@ -32,11 +34,13 @@ This assums you already have a domain with proper forwarded DNS settings forward
     ```
 
 4. User certbot to configure ssl cert/keys and automatically update nginx file
+
     ```
     sudo certbot --nginx
     ```
 
 5. Start Nginx and check that it is working
+
     ```
     sudo sytemctl start nginx
     sudo systemctl status nginx
@@ -49,5 +53,3 @@ This assums you already have a domain with proper forwarded DNS settings forward
     sudo docker-compose up -d
     sudo docker logs {container name}
     ```
-
-

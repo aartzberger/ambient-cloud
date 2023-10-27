@@ -9,7 +9,6 @@ import { Avatar, Box, ButtonBase, Switch } from '@mui/material'
 import { styled } from '@mui/material/styles'
 
 // project imports
-import LogoSection from '../LogoSection'
 import ProfileSection from './ProfileSection'
 
 // assets

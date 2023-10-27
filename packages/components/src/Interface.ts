@@ -3,6 +3,8 @@
  */
 
 export type NodeParamsType =
+    | 'asyncButton'
+    | 'button'
     | 'asyncOptions'
     | 'options'
     | 'multiOptions'

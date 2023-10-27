@@ -1,8 +1,7 @@
 import { ICommonObject, IDatabaseEntity, INode, INodeData, INodeOutputsValue, INodeOptionsValue, INodeParams } from '../../../src/Interface'
 import { DataType, ErrorCode, MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { MilvusLibArgs, Milvus } from 'langchain/vectorstores/milvus'
-import { HuggingFaceInferenceEmbeddings } from 'langchain/embeddings/hf'
-import { getBaseClasses, getCredentialData } from '../../../src/utils'
+import { getBaseClasses } from '../../../src/utils'
 import { Document } from 'langchain/document'
 import { DataSource } from 'typeorm'
 import { Request } from 'express'
@@ -54,7 +53,7 @@ class Milvus_Existing_VectorStores implements INode {
                 label: 'Server URL',
                 name: 'milvusServerUrl',
                 type: 'string',
-                placeholder: 'http://localhost:19530',
+                placeholder: 'http://localhost:19530'
             },
             {
                 label: 'Collection Name',
@@ -131,7 +130,7 @@ class Milvus_Existing_VectorStores implements INode {
             for (let collection of collectionData.data) {
                 const data = {
                     label: collection.name,
-                    name: collection.name,
+                    name: collection.name
                     // description: collection.description
                 } as INodeOptionsValue
                 returnData.push(data)

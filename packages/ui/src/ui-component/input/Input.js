@@ -33,7 +33,7 @@ export const Input = ({
         }
     }
 
-    // TODO: ideally we should spin milvus url into ints own ui component
+    // TODO CMAN: ideally we should spin milvus url into ints own ui component
     useEffect(() => {
         const getUrl = async () => {
             try {

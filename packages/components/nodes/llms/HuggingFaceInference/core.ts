@@ -90,23 +90,19 @@ export class HuggingFaceInference extends LLM implements HFInput {
             },
             inputs: prompt
         }
-        let target;
+        let target
 
         if (this.endpoint) {
-            target = hf.endpoint(this.endpoint);
+            target = hf.endpoint(this.endpoint)
         } else {
-            obj.model = this.model;
-            target = hf;
+            obj.model = this.model
+            target = hf
         }
 
-        console.log('obj', obj);
-        const res = await this.caller.callWithOptions(
-            { signal: options.signal },
-            target.textGeneration.bind(target),
-            obj
-        );
+        console.log('obj', obj)
+        const res = await this.caller.callWithOptions({ signal: options.signal }, target.textGeneration.bind(target), obj)
 
-        return res.generated_text;
+        return res.generated_text
     }
 
     /** @ignore */

@@ -86,13 +86,13 @@ export async function PredictionHandler(
         const { graph, nodeDependencies } = constructGraphs(nodes, edges)
         const directedGraph = graph
         const endingNodeId = getEndingNode(nodeDependencies, directedGraph)
-        if (!endingNodeId) return {status: false, result: `Sorry, there was an error, Ending node ${endingNodeId} not found`}
+        if (!endingNodeId) return { status: false, result: `Sorry, there was an error, Ending node ${endingNodeId} not found` }
 
         const endingNodeData = nodes.find((nd) => nd.id === endingNodeId)?.data
-        if (!endingNodeData) return {status: false, result: `Ending node ${endingNodeId} data not found`}
+        if (!endingNodeData) return { status: false, result: `Ending node ${endingNodeId} data not found` }
 
         if (endingNodeData && endingNodeData.category !== 'Chains' && endingNodeData.category !== 'Agents') {
-            return {status: false, result: `Sorry, there was en error. Ending node must be either a Chain or Agent`}
+            return { status: false, result: `Sorry, there was en error. Ending node must be either a Chain or Agent` }
         }
 
         if (
@@ -131,7 +131,7 @@ export async function PredictionHandler(
         )
 
         const nodeToExecute = reactFlowNodes.find((node: IReactFlowNode) => node.id === endingNodeId)
-        if (!nodeToExecute) return {status: false, result: `Sorry, there was an error. Node ${endingNodeId} not found`}
+        if (!nodeToExecute) return { status: false, result: `Sorry, there was an error. Node ${endingNodeId} not found` }
 
         if (incomingInput.overrideConfig) nodeToExecute.data = replaceInputsWithConfig(nodeToExecute.data, incomingInput.overrideConfig)
         const reactFlowNodeData: INodeData = resolveVariables(
@@ -174,7 +174,7 @@ export async function PredictionHandler(
 
     logger.debug(`[server]: Finished running ${nodeToExecuteData.label} (${nodeToExecuteData.id})`)
 
-    return {status: true, result: result}
+    return { status: true, result: result }
 }
 
 export default PredictionHandler
