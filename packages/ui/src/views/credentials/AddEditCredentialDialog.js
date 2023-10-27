@@ -241,40 +241,48 @@ const AddEditCredentialDialog = ({ show, dialogProps, onCancel, onConfirm }) => 
                         </div>
                     </Box>
                 )}
-                {componentCredential && componentCredential.label && (
-                    <Box sx={{ p: 2 }}>
-                        <Stack sx={{ position: 'relative' }} direction='row'>
-                            <Typography variant='overline'>
-                                Credential Name
-                                <span style={{ color: 'red' }}>&nbsp;*</span>
-                            </Typography>
-                        </Stack>
-                        <OutlinedInput
-                            id='credName'
-                            type='string'
-                            fullWidth
-                            placeholder={componentCredential.label}
-                            value={name}
-                            name='name'
-                            onChange={(e) => setName(e.target.value)}
-                        />
-                    </Box>
-                )}
+                {
+                    // TODO CMAN: update condition below to account for more api not just google
+                    componentCredential && componentCredential.label && componentCredential.name !== 'googleApi' && (
+                        <Box sx={{ p: 2 }}>
+                            <Stack sx={{ position: 'relative' }} direction='row'>
+                                <Typography variant='overline'>
+                                    Credential Name
+                                    <span style={{ color: 'red' }}>&nbsp;*</span>
+                                </Typography>
+                            </Stack>
+                            <OutlinedInput
+                                id='credName'
+                                type='string'
+                                fullWidth
+                                placeholder={componentCredential.label}
+                                value={name}
+                                name='name'
+                                onChange={(e) => setName(e.target.value)}
+                            />
+                        </Box>
+                    )
+                }
                 {componentCredential &&
                     componentCredential.inputs &&
                     componentCredential.inputs.map((inputParam, index) => (
-                        <CredentialInputHandler key={index} inputParam={inputParam} data={credentialData} />
+                        <CredentialInputHandler key={index} inputParam={inputParam} onConfirm={onConfirm} data={credentialData} />
                     ))}
             </DialogContent>
-            <DialogActions>
-                <StyledButton
-                    disabled={!name}
-                    variant='contained'
-                    onClick={() => (dialogProps.type === 'ADD' ? addNewCredential() : saveCredential())}
-                >
-                    {dialogProps.confirmButtonName}
-                </StyledButton>
-            </DialogActions>
+            {
+                // TODO CMAN: Remove this condition when we have a proper way to handle multiple api credentials
+                componentCredential.name !== 'googleApi' && (
+                    <DialogActions>
+                        <StyledButton
+                            disabled={!name}
+                            variant='contained'
+                            onClick={() => (dialogProps.type === 'ADD' ? addNewCredential() : saveCredential())}
+                        >
+                            {dialogProps.confirmButtonName}
+                        </StyledButton>
+                    </DialogActions>
+                )
+            }
             <ConfirmDialog />
         </Dialog>
     ) : null

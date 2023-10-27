@@ -12,10 +12,11 @@ import { Input } from 'ui-component/input/Input'
 import { SwitchInput } from 'ui-component/switch/Switch'
 import { JsonEditorInput } from 'ui-component/json/JsonEditor'
 import { TooltipWithParser } from 'ui-component/tooltip/TooltipWithParser'
+import GoogleOauth2 from './OauthMethods'
 
 // ===========================|| NodeInputHandler ||=========================== //
 
-const CredentialInputHandler = ({ inputParam, data, disabled = false }) => {
+const CredentialInputHandler = ({ inputParam, data, onConfirm, disabled = false }) => {
     const customization = useSelector((state) => state.customization)
     const ref = useRef(null)
 
@@ -111,6 +112,7 @@ const CredentialInputHandler = ({ inputParam, data, disabled = false }) => {
                                 isDarkMode={customization.isDarkMode}
                             />
                         )}
+                        {inputParam.type === 'googleOauth2' && <GoogleOauth2 onConfirm={onConfirm} />}
                         {inputParam.type === 'options' && (
                             <Dropdown
                                 disabled={disabled}
@@ -130,6 +132,7 @@ const CredentialInputHandler = ({ inputParam, data, disabled = false }) => {
 CredentialInputHandler.propTypes = {
     inputAnchor: PropTypes.object,
     inputParam: PropTypes.object,
+    onConfirm: PropTypes.func,
     data: PropTypes.object,
     disabled: PropTypes.bool
 }

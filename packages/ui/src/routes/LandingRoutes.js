@@ -7,6 +7,9 @@ import Loadable from 'ui-component/loading/Loadable'
 // login routing
 const Landing = Loadable(lazy(() => import('views/landing')))
 
+// oauth-complete routing
+const OauthComplete = Loadable(lazy(() => import('views/oauth')))
+
 const LandingRoutes = {
     path: '/',
     element: <MinimalLayout />,
@@ -18,6 +21,10 @@ const LandingRoutes = {
         {
             path: '/login',
             element: <Landing />
+        },
+        {
+            path: '/oauth-complete',
+            element: <OauthComplete />
         }
     ]
 }
