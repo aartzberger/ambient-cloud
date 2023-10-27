@@ -15,28 +15,19 @@ export class Automation implements IAutomation {
     id: string
 
     @Column()
+    name: string
+
+    @Column()
     enabled: boolean
 
     @Column()
     chatflowid: string
 
-    @Column()
-    triggerid: string
-
-    @Column()
-    handlerid: string
-
-    @Column()
-    definedQuestions: string
-
     @Column({ nullable: true })
     interval: string
 
-    @Column({ nullable: true })
-    url: string
-
     @Column()
-    name: string
+    url: string
 
     @CreateDateColumn()
     createdDate: Date

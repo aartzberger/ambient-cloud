@@ -65,16 +65,13 @@ export interface ITool {
 
 export interface IAutomation {
     id: string
+    name: string
     enabled: boolean
     chatflowid: string
-    triggerid: string
-    handlerid: string
-    definedQuestions: string
-    interval: string
     url: string
-    name: string
     updatedDate: Date
     createdDate: Date
+    interval?: string
     user: User
 }
 

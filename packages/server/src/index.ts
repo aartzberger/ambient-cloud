@@ -54,7 +54,6 @@ import {
 import MilvusUpsert from './utils/Upsert'
 import blacklistNodes from './utils/blacklist'
 import { DocumentLoaders, getFileName } from './utils/DocsLoader'
-import JsRunner from './utils/js_runner.js'
 import { cloneDeep, omit } from 'lodash'
 import { getDataSource } from './DataSource'
 import { NodesPool } from './NodesPool'
@@ -825,30 +824,17 @@ export class App {
             return res.json(automatin)
         })
 
-        // // Add automation
-        // this.app.post('/api/v1/automations', async (req: Request, res: Response) => {
-        //     const body = req.body
-        //     const automationList = body.automations
-
-        //     try {
-        //         for (let auto of automationList) {
-        //             // create the automation trigger
-        //             const newAutomation = new Automation()
-        //             Object.assign(newAutomation, auto)
-        //             newAutomation.user = req.user as User
-        //             const automation = this.AppDataSource.getRepository(Automation).create(newAutomation)
-        //             const results = await this.AppDataSource.getRepository(Automation).save(automation)
-        //             if (!results) return res.status(500).send(`Error when creating automation`)
-        //         }
-
-        //         return res.json('success')
-        //     } catch (err) {
-        //         return res.status(500).send(`Error when creating automation`)
-        //     }
-        // })
-
         // Update or add automation
         this.app.post('/api/v1/automations/:chatflowid', async (req: Request, res: Response) => {
+
+            const handleAutomationInterval: any = (auto: Automation) => {
+                if (Number(auto.interval) > 0 && auto.enabled) {
+                    console.log(`Starting interval for automation ${auto.id}`)
+                } else {
+                    console.log(`Stopping interval for automation ${auto.id}`)
+                }
+            }
+
             // get the chatflowid from the url
             const chatflowid = req.params.chatflowid
 
@@ -886,6 +872,10 @@ export class App {
                         const results = await this.AppDataSource.getRepository(Automation).save(automation)
                         if (!results) return res.status(500).send(`Error when updating automation`)
                     }
+
+                    // handle starting/stopping the automation inverval if it is enabled/specified
+                    handleAutomationInterval(automation)
+
                 }
             }
 
@@ -1836,6 +1826,18 @@ export class App {
      * @param {string} method
      */
     async processAutomation(req: Request, res: Response, isInternal = false, socketIO?: Server) {
+        const getAutomationNode = (nodes: any, automation: Automation) => {
+            for (const node of nodes) {
+                if (
+                    node.data.category === 'Automations' &&
+                    node.data.inputs.automationName === automation.name &&
+                    node.data.inputs.automationUrl.split('/').pop() === automation.url
+                ) {
+                    return node.data
+                }
+            }
+        }
+
         try {
             // first parse the information from the request
             const automationUrlId = req.params.id
@@ -1843,60 +1845,43 @@ export class App {
             const automation = await this.AppDataSource.getRepository(Automation).findOneBy({
                 url: automationUrlId
             })
+            // make sure the automation exists
             if (!automation) return res.status(404).send(`Automation ${automationUrlId} not found`)
+
+            // only run the automation if it is enabled
             if (!automation.enabled) return res.status(404).send(`Automation ${automationUrlId} is not enabled`)
 
-            // get the coorelating trigger
-            const trigger = await this.AppDataSource.getRepository(Trigger).findOneBy({
-                id: automation.triggerid
-            })
-            // get the coorelating trigger
-            const handler = await this.AppDataSource.getRepository(AutomationHandler).findOneBy({
-                id: automation.handlerid
-            })
-
+            // get chaflow associated with the automation
             const chatflowid = automation.chatflowid
-
             const chatflow = await this.AppDataSource.getRepository(ChatFlow).findOneBy({
                 id: chatflowid
             })
             if (!chatflow) return res.status(404).send(`Chatflow ${chatflowid} not found`)
 
-            // first handle the case where the automation is an interval
-            if (Number(automation.interval) > 0) {
-                // TODO - need to implament this with celery
-                console.log('interval automation')
-            }
+            const flowData = chatflow.flowData
+            const parsedFlowData: IReactFlowObject = JSON.parse(flowData)
+            const nodes = parsedFlowData.nodes
 
-            // next, if there is a trigger function, run it on the input
-            let input = null
-            const body = req.body
-            if (trigger && trigger.func) {
-                try {
-                    input = await JsRunner(trigger.func, input, body, res)
-                } catch (e) {
-                    return res.status(404).send('Failed to run trigger function')
-                }
-            } else if (req.body.input) {
-                input = req.body.input
-            } else {
-                if (!automation.definedQuestions) {
-                    return res
-                        .status(404)
-                        .send(
-                            'No input method (trigger, input request body) found and no predefined defined questions given. Please provide one or the other'
-                        )
-                }
-            }
+            // first make a node instance for the automation
+            const automationNode = getAutomationNode(nodes, automation)
+            const automationInstanceFilePath = this.nodesPool.componentNodes[automationNode.name].filePath as string
+            const automationModule = await import(automationInstanceFilePath)
+            const automationInstance = new automationModule.nodeClass()
+
+            // get some of the required information from the automation
+            const definedQuestions = automationNode.inputs.definedQuestions || null
+
+            // first run the trigger for the automation
+            let input = await automationInstance.runTrigger(req.body, res)
 
             // next, handle the prediction with the chatflow
             let incomingInput: IncomingInput
 
             let inputs = []
-            if (automation.definedQuestions) {
+            if (definedQuestions) {
                 // if there is a list of predefined questions, loop through them
                 // and add them to the inputs that will be asked
-                for (const question of automation.definedQuestions.split('-')) {
+                for (const question of definedQuestions.split('-')) {
                     incomingInput = {
                         question: question.trim(),
                         history: []
@@ -1937,7 +1922,7 @@ export class App {
                     return res.status(404).send(result)
                 } else {
                     // combine the outputs
-                    if (automation.definedQuestions) {
+                    if (definedQuestions) {
                         combinedOutupts = combinedOutupts + '\n\n' + input.question + ':' + '\n' + result
                     } else {
                         combinedOutupts = combinedOutupts + result
@@ -1946,15 +1931,11 @@ export class App {
             }
 
             // finally, use the handler
-            if (handler && handler.func) {
-                try {
-                    await JsRunner(handler.func, combinedOutupts, body, null)
-                } catch (e) {
-                    logger.error('[server]: Error:', e)
-                    return res.status(404).send('Failed to run handler function')
-                }
-            } else {
-                return res.status(200).send({ output: combinedOutupts })
+            try {
+                await automationInstance.runHandler(combinedOutupts, req.body, res)
+            } catch (e) {
+                logger.error('[server]: Error:', e)
+                return res.status(404).send('Failed to run handler function')
             }
         } catch (e: any) {
             logger.error('[server]: Error:', e)

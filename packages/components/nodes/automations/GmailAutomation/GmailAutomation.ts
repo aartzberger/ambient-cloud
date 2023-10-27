@@ -2,6 +2,7 @@ import { ICommonObject, IDatabaseEntity, INode, INodeData, INodeOutputsValue, IN
 import { DataSource } from 'typeorm'
 import { Request } from 'express'
 import { nanoid } from 'nanoid'
+import { Response } from 'express'
 
 const BASE_URL = process.env.BASE_URL || 'https://flow-ambient.ngrok.app'
 
@@ -133,7 +134,15 @@ class GmailAutomation implements INode {
     }
 
     async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
-        // nothing to do. this is handled by automation trigger/handler
+        // nothing to do here
+    }
+
+    async runTrigger( body: any, res: Response) {
+        return 'trigger'
+    }
+
+    async runHandler(output: string, body: any, res: Response) {
+        return 'handler'
     }
 }
 

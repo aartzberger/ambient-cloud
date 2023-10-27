@@ -201,11 +201,8 @@ const Canvas = () => {
                 if (node.data.category === 'Automations') {
                     const automation_data = {
                         name: node.data.inputs.automationName,
-                        triggerid: node.data.inputs.selectedTrigger,
-                        handlerid: node.data.inputs.selectedHandler,
-                        definedQuestions: node.data.inputs.definedQuestions,
                         enabled: node.data.inputs.automationEnabled,
-                        interval: node.data.inputs.triggerInterval,
+                        interval: node.data.inputs.triggerInterval || '',
                         url: node.data.inputs.automationUrl.split('/').pop() // only take the url id from the full url
                     }
                     nodeAutomations.push(automation_data)
