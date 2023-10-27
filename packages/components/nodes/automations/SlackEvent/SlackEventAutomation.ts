@@ -1,8 +1,8 @@
 import { ICommonObject, INode, INodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
+import { getCredentialData, getCredentialParam } from '../../../src/utils'
 import { nanoid } from 'nanoid'
 import { Response } from 'express'
 import { WebClient } from '@slack/web-api'
-
 
 const BASE_URL = process.env.BASE_URL || 'https://flow-ambient.ngrok.app'
 
@@ -34,6 +34,12 @@ class SlackEventAutomation implements INode {
         this.category = 'Automations'
         this.description = 'Handles responses to a Slack Event. Make sure to configure the event and add automation URL to Slack app.'
         this.baseClasses = [this.type]
+        this.credential = {
+            label: 'Slack Bot Token',
+            name: 'credential',
+            type: 'credential',
+            credentialNames: ['slackBotToken']
+        }
         this.inputs = [
             {
                 label: 'Automation Enabled',
@@ -45,12 +51,6 @@ class SlackEventAutomation implements INode {
             {
                 label: 'Automation Name',
                 name: 'automationName',
-                type: 'string',
-                optional: false
-            },
-            {
-                label: 'Slack Bot Auto Token',
-                name: 'authToken',
                 type: 'string',
                 optional: false
             },
@@ -78,22 +78,29 @@ class SlackEventAutomation implements INode {
         // nothing to do here
     }
 
-    async runTrigger(nodeData: INodeData, body: any, res: Response) {
+    async runTrigger(nodeData: INodeData, body: any, res: Response, options: ICommonObject) {
         const challenge = body.challenge || null
 
-        if (challenge) {
-            res.status(200).send({ challenge: challenge })
-        } else {
-            res.status(200).send('ok')
-        }
+        try {
+            if (challenge) {
+                res.status(200).send({ challenge: challenge })
+            } else {
+                res.status(200).send('ok')
+            }
 
-        // return the base input
-        return body.event.text
+            // return the base input
+            return body.event.text
+        } catch (error) {
+            console.error(error)
+            return 'error'
+        }
     }
 
-    async runHandler(nodeData: INodeData, output: string, body: any, res: Response) {
-        const token = nodeData.inputs?.authToken as string
-        const client = new WebClient(token);
+    async runHandler(nodeData: INodeData, output: string, body: any, res: Response, options: ICommonObject) {
+        const credentialData = await getCredentialData(nodeData.credential ?? '', options)
+        const token = getCredentialParam('slackBotToken', credentialData, nodeData)
+
+        const client = new WebClient(token)
 
         try {
             // Call the chat.postMessage method using the WebClient
@@ -102,7 +109,6 @@ class SlackEventAutomation implements INode {
                 text: output,
                 thread_ts: body.event.ts
             })
-
         } catch (error) {
             console.error(error)
         }

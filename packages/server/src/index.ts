@@ -826,7 +826,6 @@ export class App {
 
         // Update or add automation
         this.app.post('/api/v1/automations/:chatflowid', async (req: Request, res: Response) => {
-
             const handleAutomationInterval: any = (auto: Automation) => {
                 if (Number(auto.interval) > 0 && auto.enabled) {
                     console.log(`Starting interval for automation ${auto.id}`)
@@ -853,13 +852,14 @@ export class App {
                         url: url
                     })
 
+                    let automationOutput
                     if (!automation) {
                         // no automation so we have to make a new one
                         const newAutomation = new Automation()
                         Object.assign(newAutomation, auto)
                         newAutomation.user = req.user as User
-                        const automation = this.AppDataSource.getRepository(Automation).create(newAutomation)
-                        const results = await this.AppDataSource.getRepository(Automation).save(automation)
+                        automationOutput = this.AppDataSource.getRepository(Automation).create(newAutomation)
+                        const results = await this.AppDataSource.getRepository(Automation).save(automationOutput)
                         if (!results) return res.status(500).send(`Error when creating automation`)
                     } else {
                         // automation exists so we update it
@@ -868,14 +868,14 @@ export class App {
                         updatedAutomation.user = req.user as User
 
                         // update the automation
+                        automationOutput = automation
                         this.AppDataSource.getRepository(Automation).merge(automation, updatedAutomation)
                         const results = await this.AppDataSource.getRepository(Automation).save(automation)
                         if (!results) return res.status(500).send(`Error when updating automation`)
                     }
 
                     // handle starting/stopping the automation inverval if it is enabled/specified
-                    handleAutomationInterval(automation)
-
+                    handleAutomationInterval(automationOutput)
                 }
             }
 
@@ -1838,6 +1838,11 @@ export class App {
             }
         }
 
+        const options = {
+            appDataSource: this.AppDataSource,
+            databaseEntities: databaseEntities
+        }
+
         try {
             // first parse the information from the request
             const automationUrlId = req.params.id
@@ -1872,7 +1877,7 @@ export class App {
             const definedQuestions = automationNode.inputs.definedQuestions || null
 
             // first run the trigger for the automation
-            let input = await automationInstance.runTrigger(automationNode, req.body, res)
+            let input = await automationInstance.runTrigger(automationNode, req.body, res, options)
 
             // next, handle the prediction with the chatflow
             let incomingInput: IncomingInput
@@ -1932,7 +1937,7 @@ export class App {
 
             // finally, use the handler
             try {
-                await automationInstance.runHandler(automationNode, combinedOutupts, req.body, res)
+                await automationInstance.runHandler(automationNode, combinedOutupts, req.body, res, options)
             } catch (e) {
                 logger.error('[server]: Error:', e)
                 return res.status(404).send('Failed to run handler function')
