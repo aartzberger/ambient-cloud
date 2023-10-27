@@ -1,6 +1,8 @@
 import { ICommonObject, INode, INodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
 import { nanoid } from 'nanoid'
 import { Response } from 'express'
+import { WebClient } from '@slack/web-api'
+
 
 const BASE_URL = process.env.BASE_URL || 'https://flow-ambient.ngrok.app'
 
@@ -10,7 +12,7 @@ const makeUniqueUrl = () => {
     return url
 }
 
-class SlackCommandAutomation implements INode {
+class SlackEventAutomation implements INode {
     label: string
     name: string
     version: number
@@ -24,13 +26,13 @@ class SlackCommandAutomation implements INode {
     outputs: INodeOutputsValue[]
 
     constructor() {
-        this.label = 'Slack Command Automation'
-        this.name = 'slackCommandAutomation'
+        this.label = 'Slack Event Automation'
+        this.name = 'slackEventAutomation'
         this.version = 1.0
-        this.type = 'SlackCommandAutomation'
+        this.type = 'SlackEventAutomation'
         this.icon = 'slack.svg'
         this.category = 'Automations'
-        this.description = 'Handles responses to a Slack /Command. Add the automation URL to your Slack /command app.'
+        this.description = 'Handles responses to a Slack Event. Make sure to configure the event and add automation URL to Slack app.'
         this.baseClasses = [this.type]
         this.inputs = [
             {
@@ -43,6 +45,12 @@ class SlackCommandAutomation implements INode {
             {
                 label: 'Automation Name',
                 name: 'automationName',
+                type: 'string',
+                optional: false
+            },
+            {
+                label: 'Slack Bot Auto Token',
+                name: 'authToken',
                 type: 'string',
                 optional: false
             },
@@ -71,25 +79,36 @@ class SlackCommandAutomation implements INode {
     }
 
     async runTrigger(nodeData: INodeData, body: any, res: Response) {
-        // let slack know the request was received
-        res.status(200).send()
+        const challenge = body.challenge || null
+
+        if (challenge) {
+            res.status(200).send({ challenge: challenge })
+        } else {
+            res.status(200).send('ok')
+        }
 
         // return the base input
-        return body.text as string
+        return body.event.text
     }
 
     async runHandler(nodeData: INodeData, output: string, body: any, res: Response) {
-        // import required lib for sending url response
-        const axios = require('axios')
+        const token = nodeData.inputs?.authToken as string
+        const client = new WebClient(token);
 
-        // parse the url that we want to respond to
-        const url = body.response_url
+        try {
+            // Call the chat.postMessage method using the WebClient
+            const result = await client.chat.postMessage({
+                channel: body.event.channel,
+                text: output,
+                thread_ts: body.event.ts
+            })
 
-        // create data to send to url and forward it
-        const out = await axios.post(url, { text: output })
+        } catch (error) {
+            console.error(error)
+        }
 
-        return out as string
+        return 'ok'
     }
 }
 
-module.exports = { nodeClass: SlackCommandAutomation }
+module.exports = { nodeClass: SlackEventAutomation }

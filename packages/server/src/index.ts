@@ -1872,7 +1872,7 @@ export class App {
             const definedQuestions = automationNode.inputs.definedQuestions || null
 
             // first run the trigger for the automation
-            let input = await automationInstance.runTrigger(req.body, res)
+            let input = await automationInstance.runTrigger(automationNode, req.body, res)
 
             // next, handle the prediction with the chatflow
             let incomingInput: IncomingInput
@@ -1932,7 +1932,7 @@ export class App {
 
             // finally, use the handler
             try {
-                await automationInstance.runHandler(combinedOutupts, req.body, res)
+                await automationInstance.runHandler(automationNode, combinedOutupts, req.body, res)
             } catch (e) {
                 logger.error('[server]: Error:', e)
                 return res.status(404).send('Failed to run handler function')

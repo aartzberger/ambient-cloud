@@ -137,11 +137,11 @@ class GmailAutomation implements INode {
         // nothing to do here
     }
 
-    async runTrigger( body: any, res: Response) {
+    async runTrigger(nodeData: INodeData, body: any, res: Response) {
         return 'trigger'
     }
 
-    async runHandler(output: string, body: any, res: Response) {
+    async runHandler(nodeData: INodeData, output: string, body: any, res: Response) {
         return 'handler'
     }
 }

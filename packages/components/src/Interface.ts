@@ -104,8 +104,8 @@ export interface INode extends INodeProperties {
     }
     init?(nodeData: INodeData, input: string, options?: ICommonObject): Promise<any>
     run?(nodeData: INodeData, input: string, options?: ICommonObject): Promise<string | ICommonObject>
-    runTrigger?(body: any, res: Response): Promise<string>
-    runHandler?(output: string, body: any, res: Response): Promise<string>
+    runTrigger?(nodeData: INodeData, body: any, res: Response): Promise<string>
+    runHandler?(nodeData: INodeData, output: string, body: any, res: Response): Promise<string>
     clearSessionMemory?(nodeData: INodeData, options?: ICommonObject): Promise<void>
 }
 

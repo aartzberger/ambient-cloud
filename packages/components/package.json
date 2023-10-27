@@ -29,6 +29,7 @@
         "@opensearch-project/opensearch": "^1.2.0",
         "@pinecone-database/pinecone": "^1.1.1",
         "@qdrant/js-client-rest": "^1.2.2",
+        "@slack/web-api": "^6.9.0",
         "@supabase/supabase-js": "^2.29.0",
         "@types/js-yaml": "^4.0.5",
         "@types/jsdom": "^21.1.1",
