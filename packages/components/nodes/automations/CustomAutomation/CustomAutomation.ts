@@ -1,4 +1,4 @@
-import { ICommonObject, IDatabaseEntity, INode, INodeData, INodeOutputsValue, INodeOptionsValue, INodeParams } from '../../../src/Interface'
+import { ICommonObject, IDatabaseEntity, IAutomationNode, IAutomationNodeData, INodeOutputsValue, INodeOptionsValue, INodeParams } from '../../../src/Interface'
 import { DataSource } from 'typeorm'
 import { Request } from 'express'
 import { nanoid } from 'nanoid'
@@ -11,7 +11,7 @@ const makeUniqueUrl = () => {
     return url
 }
 
-class CustomAutomation implements INode {
+class CustomAutomation implements IAutomationNode {
     label: string
     name: string
     version: number
@@ -93,7 +93,7 @@ class CustomAutomation implements INode {
 
     //@ts-ignore
     loadMethods = {
-        async listTriggers(_: INodeData, options: ICommonObject, req: Request): Promise<INodeOptionsValue[]> {
+        async listTriggers(_: IAutomationNodeData, options: ICommonObject, req: Request): Promise<INodeOptionsValue[]> {
             const returnData: INodeOptionsValue[] = []
 
             const appDataSource = options.appDataSource as DataSource
@@ -114,7 +114,7 @@ class CustomAutomation implements INode {
             }
             return returnData
         },
-        async listHandlers(_: INodeData, options: ICommonObject, req: Request): Promise<INodeOptionsValue[]> {
+        async listHandlers(_: IAutomationNodeData, options: ICommonObject, req: Request): Promise<INodeOptionsValue[]> {
             const returnData: INodeOptionsValue[] = []
 
             const appDataSource = options.appDataSource as DataSource
@@ -137,7 +137,7 @@ class CustomAutomation implements INode {
         }
     }
 
-    async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
+    async init(nodeData: IAutomationNodeData, _: string, options: ICommonObject): Promise<any> {
         // nothing to do. this is handled by automation trigger/handler
     }
 }

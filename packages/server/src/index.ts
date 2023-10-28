@@ -313,7 +313,13 @@ export class App {
             const redirectUrl = `https://${DEPLOYED_URL}/api/v1/credentials/from-google-oauth`
 
             const googleAuthURL = 'https://accounts.google.com/o/oauth2/v2/auth'
-            const scope = ['https://www.googleapis.com/auth/userinfo.profile', 'https://www.googleapis.com/auth/userinfo.email'].join(' ')
+            const scope = [
+                'https://www.googleapis.com/auth/userinfo.profile',
+                'https://www.googleapis.com/auth/userinfo.email',
+                'https://www.googleapis.com/auth/gmail.modify',
+                'https://www.googleapis.com/auth/gmail.compose', // For sending emails
+                'https://www.googleapis.com/auth/drive' // For full access to Google Drive
+            ].join(' ')
 
             // Construct the Google URL to which we'll redirect the user
             // must be offline mode to get the refresh token
@@ -786,6 +792,46 @@ export class App {
             const result = await this.AppDataSource.getRepository(Credential).save(credential)
 
             return res.json(result)
+        })
+
+        // Refresh credential based on refresh token
+        this.app.post('/api/v1/credentials/refresh-token', async (req: Request, res: Response) => {
+            const credential = await this.AppDataSource.getRepository(Credential).findOneBy({
+                id: req.body.id
+            })
+
+            if (!credential) return res.status(404).send(`Credential ${req.params.id} not found`)
+
+            const decryptedCredentialData = await decryptCredentialData(
+                credential.encryptedData,
+                credential.credentialName,
+                this.nodesPool.componentCredentials
+            )
+
+            const refreshToken = (decryptedCredentialData as any).googleApiKey.refreshToken
+
+            const CLIENT_ID = GOOGLE_CLIENT_ID
+            const CLIENT_SECRET = GOOGLE_CLIENT_SECRET
+            const REFRESH_URL = 'https://oauth2.googleapis.com/token'
+
+            const updateResponse = await axios.post(REFRESH_URL, {
+                client_id: CLIENT_ID,
+                client_secret: CLIENT_SECRET,
+                refresh_token: refreshToken,
+                grant_type: 'refresh_token'
+            })
+
+            const refreshedInformation = {
+                name: credential.name,
+                credentialName: credential.credentialName,
+                plainDataObj: { googleApiKey: { accessToken: updateResponse.data.access_token, refreshToken: refreshToken } }
+            }
+
+            const updateCredential = await transformToCredentialEntity(refreshedInformation)
+            this.AppDataSource.getRepository(Credential).merge(credential, updateCredential)
+            const result = await this.AppDataSource.getRepository(Credential).save(credential)
+
+            return res.json({ token: updateResponse.data.access_token })
         })
 
         // Delete all chatmessages from chatflowid
@@ -1869,6 +1915,10 @@ export class App {
 
             // first make a node instance for the automation
             const automationNode = getAutomationNode(nodes, automation)
+            // add the additionl information to the automation node
+            automationNode.automationData = automation
+
+            // create an instance of the automation node
             const automationInstanceFilePath = this.nodesPool.componentNodes[automationNode.name].filePath as string
             const automationModule = await import(automationInstanceFilePath)
             const automationInstance = new automationModule.nodeClass()
@@ -1877,70 +1927,99 @@ export class App {
             const definedQuestions = automationNode.inputs.definedQuestions || null
 
             // first run the trigger for the automation
-            let input = await automationInstance.runTrigger(automationNode, req.body, res, options)
+            // the input from the trigger can be a list of inputs to run multiple times
+            // or just a string to run one time
+            // auxData should be of same length of triggerInputs and coorelat to each input
+            let { status: triggerStatus, output: triggerInputs, auxData: auxData } = await automationInstance.runTrigger(automationNode, req.body, res, options)
 
-            // next, handle the prediction with the chatflow
-            let incomingInput: IncomingInput
+            // if the trigger fails, return the error
+            if (triggerStatus === false) {
+                return res.status(404).send(triggerInputs)
+            }
 
-            let inputs = []
-            if (definedQuestions) {
-                // if there is a list of predefined questions, loop through them
-                // and add them to the inputs that will be asked
-                for (const question of definedQuestions.split('-')) {
+            // Ensure that input is always a list
+            if (!Array.isArray(triggerInputs)) {
+                triggerInputs = [triggerInputs]
+            }
+
+            // Ensure that auxData is always a list
+            if (!Array.isArray(auxData)) {
+                auxData = [auxData]
+            }
+
+            for (let i = 0; i < triggerInputs.length; i++) {
+                let input = triggerInputs[i]
+                let aux = auxData[i]
+
+                // next, handle the prediction with the chatflow
+                let incomingInput: IncomingInput
+                let inputs = []
+                if (definedQuestions) {
+                    // if there is a list of predefined questions, loop through them
+                    // and add them to the inputs that will be asked
+                    for (const question of definedQuestions.split('-')) {
+                        incomingInput = {
+                            question: question.trim(),
+                            history: []
+                        }
+                        inputs.push(incomingInput)
+                    }
+                } else {
                     incomingInput = {
-                        question: question.trim(),
+                        question: input,
                         history: []
                     }
                     inputs.push(incomingInput)
                 }
-            } else {
-                incomingInput = {
-                    question: input,
-                    history: []
-                }
-                inputs.push(incomingInput)
-            }
 
-            let combinedOutupts = ''
-            // loop though all the inputs and run the prediction. combine them into single output
-            for (const input of inputs) {
-                // TODO CMAN - this should be incorperated into the processPrediction function
-                // doing so will ensure consistency between the two
-                // I just don't have time to do it right now
-                if (input.question === '' || input.question === null) {
-                    continue
-                }
+                let combinedOutupts = ''
+                // loop though all the inputs and run the prediction. combine them into single output
+                for (const input of inputs) {
+                    // TODO CMAN - this should be incorperated into the processPrediction function
+                    // doing so will ensure consistency between the two
+                    // I just don't have time to do it right now
+                    if (input.question === '' || input.question === null) {
+                        continue
+                    }
 
-                let { status, result } = await PredictionHandler(
-                    input,
-                    chatflow,
-                    isInternal,
-                    chatflowid,
-                    this.chatflowPool,
-                    this.nodesPool,
-                    this.AppDataSource,
-                    this.cachePool,
-                    socketIO
-                )
+                    let { status, result } = await PredictionHandler(
+                        input,
+                        chatflow,
+                        isInternal,
+                        chatflowid,
+                        this.chatflowPool,
+                        this.nodesPool,
+                        this.AppDataSource,
+                        this.cachePool,
+                        socketIO
+                    )
 
-                if (status === false) {
-                    return res.status(404).send(result)
-                } else {
-                    // combine the outputs
-                    if (definedQuestions) {
-                        combinedOutupts = combinedOutupts + '\n\n' + input.question + ':' + '\n' + result
+                    if (status === false) {
+                        return res.status(404).send(result)
                     } else {
-                        combinedOutupts = combinedOutupts + result
+                        // combine the outputs
+                        if (definedQuestions) {
+                            combinedOutupts = combinedOutupts + '\n\n' + input.question + ':' + '\n' + result
+                        } else {
+                            combinedOutupts = combinedOutupts + result
+                        }
                     }
                 }
-            }
 
-            // finally, use the handler
-            try {
-                await automationInstance.runHandler(automationNode, combinedOutupts, req.body, res, options)
-            } catch (e) {
-                logger.error('[server]: Error:', e)
-                return res.status(404).send('Failed to run handler function')
+                // finally, use the handler
+                try {
+                    const { status: handlerStatus, output: handlerOutput } = await automationInstance.runHandler(
+                        automationNode,
+                        combinedOutupts,
+                        req.body,
+                        res,
+                        options,
+                        aux
+                    )
+                } catch (e) {
+                    logger.error('[server]: Error:', e)
+                    return res.status(404).send('Failed to run handler function')
+                }
             }
         } catch (e: any) {
             logger.error('[server]: Error:', e)

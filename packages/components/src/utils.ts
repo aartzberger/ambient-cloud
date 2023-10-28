@@ -12,6 +12,8 @@ import { AIMessage, HumanMessage } from 'langchain/schema'
 export const numberOrExpressionRegex = '^(\\d+\\.?\\d*|{{.*}})$' //return true if string consists only numbers OR expression {{}}
 export const notEmptyRegex = '(.|\\s)*\\S(.|\\s)*' //return true if string is not empty or blank
 
+const BASE_URL = process.env.BASE_URL || 'https://flow-ambient.ngrok.app'
+
 /**
  * Get base classes of components
  *
@@ -385,6 +387,33 @@ const getEncryptionKeyFilePath = (): string => {
         }
     }
     return ''
+}
+/**
+ * Returns the encryption key
+ * @returns {Promise<string>}
+ */
+export const refreshAccessToken = async (credentialId: string): Promise<string> => {
+    try {
+        const response = await axios.post(BASE_URL + '/api/v1/credentials/refresh-token', { id: credentialId })
+        return response.data.token
+    } catch (error) {
+        console.error('The API returned an error:', error.response.data)
+        return ''
+    }
+}
+
+/**
+ * Returns the status
+ * @returns {Promise<string>}
+ */
+export const updateAutomation = async (automationData: any): Promise<string> => {
+    try {
+        const response = await axios.post(BASE_URL + `/api/v1/automations/${automationData.chatflowid}`, { automations: [automationData] })
+        return response.data
+    } catch (error) {
+        console.error('The API returned an error:', error.response.data)
+        return ''
+    }
 }
 
 const getEncryptionKeyPath = (): string => {

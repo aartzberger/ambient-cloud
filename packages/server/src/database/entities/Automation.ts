@@ -24,10 +24,13 @@ export class Automation implements IAutomation {
     chatflowid: string
 
     @Column({ nullable: true })
-    interval: string
+    interval?: string
 
     @Column()
     url: string
+
+    @Column()
+    cache?: string
 
     @CreateDateColumn()
     createdDate: Date

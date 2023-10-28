@@ -203,7 +203,8 @@ const Canvas = () => {
                         name: node.data.inputs.automationName,
                         enabled: node.data.inputs.automationEnabled,
                         interval: node.data.inputs.triggerInterval || '',
-                        url: node.data.inputs.automationUrl.split('/').pop() // only take the url id from the full url
+                        url: node.data.inputs.automationUrl.split('/').pop(), // only take the url id from the full url
+                        cache: JSON.stringify({})
                     }
                     nodeAutomations.push(automation_data)
                 }

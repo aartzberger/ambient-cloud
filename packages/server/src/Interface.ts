@@ -69,6 +69,7 @@ export interface IAutomation {
     enabled: boolean
     chatflowid: string
     url: string
+    cache?: string
     updatedDate: Date
     createdDate: Date
     interval?: string

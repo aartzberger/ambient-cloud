@@ -1,4 +1,4 @@
-import { ICommonObject, INode, INodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
+import { ICommonObject, IAutomationNode, IAutomationNodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
 import { getCredentialData, getCredentialParam } from '../../../src/utils'
 import { nanoid } from 'nanoid'
 import { Response } from 'express'
@@ -12,7 +12,7 @@ const makeUniqueUrl = () => {
     return url
 }
 
-class SlackEventAutomation implements INode {
+class SlackEventAutomation implements IAutomationNode {
     label: string
     name: string
     version: number
@@ -74,11 +74,11 @@ class SlackEventAutomation implements INode {
         ]
     }
 
-    async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
+    async init(nodeData: IAutomationNodeData, _: string, options: ICommonObject): Promise<any> {
         // nothing to do here
     }
 
-    async runTrigger(nodeData: INodeData, body: any, res: Response, options: ICommonObject) {
+    async runTrigger(nodeData: IAutomationNodeData, body: any, res: Response, options: ICommonObject) {
         const challenge = body.challenge || null
 
         try {
@@ -89,14 +89,13 @@ class SlackEventAutomation implements INode {
             }
 
             // return the base input
-            return body.event.text
+            return { status: true, output: body.event.text, auxData: null }
         } catch (error) {
-            console.error(error)
-            return 'error'
+            return { status: false, output: error, auxData: null }
         }
     }
 
-    async runHandler(nodeData: INodeData, output: string, body: any, res: Response, options: ICommonObject) {
+    async runHandler(nodeData: IAutomationNodeData, output: string, body: any, res: Response, options: ICommonObject, auxData: any) {
         const credentialData = await getCredentialData(nodeData.credential ?? '', options)
         const token = getCredentialParam('slackBotToken', credentialData, nodeData)
 
@@ -113,7 +112,7 @@ class SlackEventAutomation implements INode {
             console.error(error)
         }
 
-        return 'ok'
+        return { status: true, output: 'ok' }
     }
 }
 

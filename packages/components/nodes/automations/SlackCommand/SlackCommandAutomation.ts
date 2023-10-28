@@ -1,4 +1,4 @@
-import { ICommonObject, INode, INodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
+import { ICommonObject, IAutomationNode, IAutomationNodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
 import { nanoid } from 'nanoid'
 import { Response } from 'express'
 
@@ -10,7 +10,7 @@ const makeUniqueUrl = () => {
     return url
 }
 
-class SlackCommandAutomation implements INode {
+class SlackCommandAutomation implements IAutomationNode {
     label: string
     name: string
     version: number
@@ -66,19 +66,19 @@ class SlackCommandAutomation implements INode {
         ]
     }
 
-    async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
+    async init(nodeData: IAutomationNodeData, _: string, options: ICommonObject): Promise<any> {
         // nothing to do here
     }
 
-    async runTrigger(nodeData: INodeData, body: any, res: Response) {
+    async runTrigger(nodeData: IAutomationNodeData, body: any, res: Response, options: ICommonObject) {
         // let slack know the request was received
         res.status(200).send()
 
         // return the base input
-        return body.text as string
+        return { status: true, output: body.text as string, auxData: null }
     }
 
-    async runHandler(nodeData: INodeData, output: string, body: any, res: Response) {
+    async runHandler(nodeData: IAutomationNodeData, output: string, body: any, res: Response, options: ICommonObject, auxData: any) {
         // import required lib for sending url response
         const axios = require('axios')
 
@@ -88,7 +88,7 @@ class SlackCommandAutomation implements INode {
         // create data to send to url and forward it
         const out = await axios.post(url, { text: output })
 
-        return out as string
+        return { status: true, output: out as string }
     }
 }
 

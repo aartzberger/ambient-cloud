@@ -1,4 +1,4 @@
-import { ICommonObject, INode, INodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
+import { ICommonObject, IAutomationNode, IAutomationNodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
 import { nanoid } from 'nanoid'
 import { Response } from 'express'
 
@@ -10,7 +10,7 @@ const makeUniqueUrl = () => {
     return url
 }
 
-class ZapierAutomation implements INode {
+class ZapierAutomation implements IAutomationNode {
     label: string
     name: string
     version: number
@@ -66,21 +66,21 @@ class ZapierAutomation implements INode {
         ]
     }
 
-    async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
+    async init(nodeData: IAutomationNodeData, _: string, options: ICommonObject): Promise<any> {
         // nothing to do here
     }
 
-    async runTrigger(nodeData: INodeData, body: any, res: Response) {
+    async runTrigger(nodeData: IAutomationNodeData, body: any, res: Response) {
 
         // return the base input
-        return body.input as string
+        return { status: true, output: body.input as string, auxData:null }
     }
 
-    async runHandler(nodeData: INodeData, output: string, body: any, res: Response) {
+    async runHandler(nodeData: IAutomationNodeData, output: string, body: any, res: Response, auxData: any) {
         // return the output to zapier
         res.status(200).send({output: output})
 
-        return ''
+        return { status: true, output:'ok' }
     }
 }
 

@@ -1,6 +1,7 @@
 /**
  * Types
  */
+import { AnyNode } from 'cheerio'
 import { Response } from 'express'
 
 export type NodeParamsType =
@@ -104,8 +105,31 @@ export interface INode extends INodeProperties {
     }
     init?(nodeData: INodeData, input: string, options?: ICommonObject): Promise<any>
     run?(nodeData: INodeData, input: string, options?: ICommonObject): Promise<string | ICommonObject>
-    runTrigger?(nodeData: INodeData, body: any, res: Response, options: ICommonObject): Promise<string>
-    runHandler?(nodeData: INodeData, output: string, body: any, res: Response, options: ICommonObject): Promise<string>
+    clearSessionMemory?(nodeData: INodeData, options?: ICommonObject): Promise<void>
+}
+
+export interface IAutomationNode extends INodeProperties {
+    inputs?: INodeParams[]
+    output?: INodeOutputsValue[]
+    loadMethods?: {
+        [key: string]: (nodeData: INodeData, options?: ICommonObject) => Promise<INodeOptionsValue[]>
+    }
+    init?(nodeData: INodeData, input: string, options?: ICommonObject): Promise<any>
+    run?(nodeData: INodeData, input: string, options?: ICommonObject): Promise<string | ICommonObject>
+    runTrigger?(
+        nodeData: INodeData,
+        body: any,
+        res: Response,
+        options: ICommonObject
+    ): Promise<{ status: boolean; output: string | string[], auxData: any }>
+    runHandler?(
+        nodeData: INodeData,
+        output: string,
+        body: any,
+        res: Response,
+        options: ICommonObject,
+        auxData: any
+    ): Promise<{ status: boolean; output: string }>
     clearSessionMemory?(nodeData: INodeData, options?: ICommonObject): Promise<void>
 }
 
@@ -116,6 +140,27 @@ export interface INodeData extends INodeProperties {
     credential?: string
     instance?: any
     loadMethod?: string // method to load async options
+}
+
+export interface IAutomationNodeData extends INodeProperties {
+    id: string
+    inputs?: ICommonObject
+    outputs?: ICommonObject
+    credential?: string
+    instance?: any
+    loadMethod?: string // method to load async options
+    automationData: {
+        id: string
+        name: string
+        enabled: boolean
+        chatflowid: string
+        url: string
+        cache?: string
+        updatedDate: Date
+        createdDate: Date
+        interval?: string
+        user: any
+    }
 }
 
 export interface INodeCredential {
