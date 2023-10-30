@@ -73,6 +73,7 @@ export interface IAutomation {
     updatedDate: Date
     createdDate: Date
     interval?: string
+    timeZone: string
     user: User
 }
 

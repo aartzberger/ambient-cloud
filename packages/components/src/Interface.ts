@@ -1,7 +1,6 @@
 /**
  * Types
  */
-import { AnyNode } from 'cheerio'
 import { Response } from 'express'
 
 export type NodeParamsType =
@@ -121,7 +120,7 @@ export interface IAutomationNode extends INodeProperties {
         body: any,
         res: Response,
         options: ICommonObject
-    ): Promise<{ status: boolean; output: string | string[], auxData: any }>
+    ): Promise<{ status: boolean; output: string | string[]; auxData: any }>
     runHandler?(
         nodeData: INodeData,
         output: string,
@@ -141,11 +140,7 @@ export interface IHandlerNode extends INodeProperties {
     }
     init?(nodeData: INodeData, input: string, options?: ICommonObject): Promise<any>
     run?(nodeData: INodeData, input: string, options?: ICommonObject): Promise<string | ICommonObject>
-    runHandler?(
-        nodeData: INodeData,
-        output: string,
-        options: ICommonObject,
-    ): Promise<{ status: boolean; output: string }>
+    runHandler?(nodeData: INodeData, output: string, options: ICommonObject): Promise<{ status: boolean; output: string }>
     clearSessionMemory?(nodeData: INodeData, options?: ICommonObject): Promise<void>
 }
 

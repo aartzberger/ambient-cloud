@@ -1,16 +1,9 @@
 import { IAutomationNode, ICommonObject, IAutomationNodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
 import { getCredentialData, getCredentialParam, updateAutomation } from '../../../src/utils'
-import { nanoid } from 'nanoid'
 import { Response } from 'express'
 import { getUnreadMessages, getMessageDetails, findPlainTextPart, getSenderAddress, sendEmail } from './core'
 
 const BASE_URL = process.env.BASE_URL || 'https://flow-ambient.ngrok.app'
-
-const makeUniqueUrl = () => {
-    const uniqueId = nanoid()
-    const url = uniqueId
-    return url
-}
 
 type Email = {
     id: string
@@ -61,10 +54,10 @@ class GmailAutomation implements IAutomationNode {
             },
             {
                 label: 'Fetch Interval',
+                description: 'Interval (minutes) or time of day (HH:MM military) to run the automation.',
                 name: 'triggerInterval',
-                type: 'number',
-                default: 0,
-                optional: true
+                type: 'string',
+                optional: false
             },
             {
                 label: 'Monitored Mailbox',
@@ -90,8 +83,8 @@ class GmailAutomation implements IAutomationNode {
             {
                 label: 'Automation URL - make POST requets to this URL to trigger the automation',
                 name: 'automationUrl',
-                type: 'string',
-                default: BASE_URL + '/api/v1/automations/run/' + makeUniqueUrl(),
+                type: 'uniqueUrl',
+                default: BASE_URL + '/api/v1/automations/run/',
                 additionalParams: true,
                 optional: true,
                 disabled: true

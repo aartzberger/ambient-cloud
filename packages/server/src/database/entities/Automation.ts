@@ -27,6 +27,9 @@ export class Automation implements IAutomation {
     interval?: string
 
     @Column()
+    timeZone: string
+
+    @Column()
     url: string
 
     @Column()

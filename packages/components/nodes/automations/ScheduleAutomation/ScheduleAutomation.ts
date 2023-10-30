@@ -3,7 +3,7 @@ import { Response } from 'express'
 
 const BASE_URL = process.env.BASE_URL || 'https://flow-ambient.ngrok.app'
 
-class SlackCommandAutomation implements IAutomationNode {
+class ScheduleAutomation implements IAutomationNode {
     label: string
     name: string
     version: number
@@ -17,14 +17,13 @@ class SlackCommandAutomation implements IAutomationNode {
     outputs: INodeOutputsValue[]
 
     constructor() {
-        this.label = 'Slack Command Automation'
-        this.name = 'slackCommandAutomation'
+        this.label = 'Schedule Automation'
+        this.name = 'scheduleAutomation'
         this.version = 1.0
         this.type = 'Automation'
-        this.icon = 'slack.svg'
+        this.icon = 'schedule.svg'
         this.category = 'Automations'
-        this.description =
-            'Handles responses to a Slack /Command. The default handler replies to the command URL provided by slack. Make sure to add the automation URL to your Slack /command app.'
+        this.description = 'Runs the automation at a defined interval or time of day. There is no default handler so make sure to add one.'
         this.baseClasses = [this.type]
         this.inputs = [
             {
@@ -41,12 +40,19 @@ class SlackCommandAutomation implements IAutomationNode {
                 optional: false
             },
             {
+                label: 'Fetch Interval',
+                description: 'Interval (minutes) or time of day (HH:MM military) to run the automation.',
+                name: 'triggerInterval',
+                type: 'string',
+                optional: false
+            },
+            {
                 label: 'Pre-Defined Questions',
                 name: 'definedQuestions',
                 type: 'string',
                 rows: 6,
                 placeholder: `start each question with "-" and a space. For example: - What is 1 + 1?`,
-                additionalParams: true
+                optional: false
             },
             {
                 label: 'Automation URL - make POST requets to this URL to trigger the automation',
@@ -64,26 +70,16 @@ class SlackCommandAutomation implements IAutomationNode {
         // nothing to do here
     }
 
-    async runTrigger(nodeData: IAutomationNodeData, body: any, res: Response, options: ICommonObject) {
-        // let slack know the request was received
-        res.status(200).send()
-
-        // return the base input
-        return { status: true, output: body.text as string, auxData: null }
+    async runTrigger(nodeData: IAutomationNodeData, body: any, res: Response) {
+        // we will return a single string to force the automation to run. it will use the definedQuestions to run the automation
+        return { status: true, output: [''], auxData: null }
     }
 
-    async runHandler(nodeData: IAutomationNodeData, output: string, body: any, res: Response, options: ICommonObject, auxData: any) {
-        // import required lib for sending url response
-        const axios = require('axios')
+    async runHandler(nodeData: IAutomationNodeData, output: string, body: any, res: Response, auxData: any) {
+        // nothing to do here. there is no default handler
 
-        // parse the url that we want to respond to
-        const url = body.response_url
-
-        // create data to send to url and forward it
-        const out = await axios.post(url, { text: output })
-
-        return { status: true, output: out as string }
+        return { status: true, output: 'ok' }
     }
 }
 
-module.exports = { nodeClass: SlackCommandAutomation }
+module.exports = { nodeClass: ScheduleAutomation }

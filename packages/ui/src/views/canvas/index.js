@@ -204,7 +204,8 @@ const Canvas = () => {
                         enabled: node.data.inputs.automationEnabled,
                         interval: node.data.inputs.triggerInterval || '',
                         url: node.data.inputs.automationUrl.split('/').pop(), // only take the url id from the full url
-                        cache: JSON.stringify({})
+                        cache: JSON.stringify({}),
+                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone // need to keep track of the timezone for the automation
                     }
                     nodeAutomations.push(automation_data)
                 }

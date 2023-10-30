@@ -1,16 +1,9 @@
 import { ICommonObject, IAutomationNode, IAutomationNodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
 import { getCredentialData, getCredentialParam } from '../../../src/utils'
-import { nanoid } from 'nanoid'
 import { Response } from 'express'
 import { WebClient } from '@slack/web-api'
 
 const BASE_URL = process.env.BASE_URL || 'https://flow-ambient.ngrok.app'
-
-const makeUniqueUrl = () => {
-    const uniqueId = nanoid()
-    const url = uniqueId
-    return url
-}
 
 class SlackEventAutomation implements IAutomationNode {
     label: string
@@ -66,8 +59,8 @@ class SlackEventAutomation implements IAutomationNode {
             {
                 label: 'Automation URL - make POST requets to this URL to trigger the automation',
                 name: 'automationUrl',
-                type: 'string',
-                default: BASE_URL + '/api/v1/automations/run/' + makeUniqueUrl(),
+                type: 'uniqueUrl',
+                default: BASE_URL + '/api/v1/automations/run/',
                 additionalParams: true,
                 optional: true,
                 disabled: true

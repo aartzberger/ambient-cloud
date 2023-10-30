@@ -1,15 +1,16 @@
-import { ICommonObject, IDatabaseEntity, IAutomationNode, IAutomationNodeData, INodeOutputsValue, INodeOptionsValue, INodeParams } from '../../../src/Interface'
+import {
+    ICommonObject,
+    IDatabaseEntity,
+    IAutomationNode,
+    IAutomationNodeData,
+    INodeOutputsValue,
+    INodeOptionsValue,
+    INodeParams
+} from '../../../src/Interface'
 import { DataSource } from 'typeorm'
 import { Request } from 'express'
-import { nanoid } from 'nanoid'
 
 const BASE_URL = process.env.BASE_URL || 'https://flow-ambient.ngrok.app'
-
-const makeUniqueUrl = () => {
-    const uniqueId = nanoid()
-    const url = uniqueId
-    return url
-}
 
 class CustomAutomation implements IAutomationNode {
     label: string
@@ -82,8 +83,8 @@ class CustomAutomation implements IAutomationNode {
             {
                 label: 'Automation URL - make POST requets to this URL to trigger the automation',
                 name: 'automationUrl',
-                type: 'string',
-                default: BASE_URL + '/api/v1/automations/run/' + makeUniqueUrl(),
+                type: 'uniqueUrl',
+                default: BASE_URL + '/api/v1/automations/run/',
                 additionalParams: true,
                 optional: true,
                 disabled: true

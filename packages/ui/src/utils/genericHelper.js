@@ -1,4 +1,11 @@
 import moment from 'moment'
+import { nanoid } from 'nanoid'
+
+export const makeUniqueUrl = (baseUrl, idLength = 10) => {
+    const uniqueId = nanoid(idLength)
+
+    return baseUrl + uniqueId
+}
 
 export const getUniqueNodeId = (nodeData, nodes) => {
     // Get amount of same nodes
@@ -52,7 +59,8 @@ export const initNode = (nodeData, newNodeId) => {
         'date',
         'file',
         'folder',
-        'googleOauth2'
+        'googleOauth2',
+        'uniqueUrl'
     ]
 
     // Inputs

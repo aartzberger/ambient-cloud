@@ -70,7 +70,7 @@ import { ChatflowPool } from './ChatflowPool'
 import { CachePool } from './CachePool'
 import { ICommonObject, INodeOptionsValue } from 'flowise-components'
 import { createRateLimiter, getRateLimiter, initializeRateLimiter } from './utils/rateLimit'
-import { handleAutomationInterval, shouldUpdateInterval } from './utils/scheduler'
+import { handleAutomationInterval, removeAutomationInterval } from './utils/scheduler'
 import { RecursiveCharacterTextSplitter, RecursiveCharacterTextSplitterParams } from 'langchain/text_splitter'
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
 import PredictionHandler from './PredictionHandler'
@@ -895,7 +895,11 @@ export class App {
                     })
 
                     let automationOutput
+                    let updateInterval
                     if (!automation) {
+                        // always update interval if automation does not exist
+                        updateInterval = true
+
                         // no automation so we have to make a new one
                         const newAutomation = new Automation()
                         Object.assign(newAutomation, auto)
@@ -909,6 +913,12 @@ export class App {
                         Object.assign(updatedAutomation, auto)
                         updatedAutomation.user = req.user as User
 
+                        // update interval if its enabled status has changed or if the interval has changed when enabled
+                        updateInterval = auto.enabled === automation.enabled ? false : true
+                        if (auto.enabled && auto.enabled === automation.enabled) {
+                            updateInterval = auto.interval === automation.interval ? false : true
+                        }
+
                         // update the automation
                         automationOutput = automation
                         this.AppDataSource.getRepository(Automation).merge(automation, updatedAutomation)
@@ -916,11 +926,9 @@ export class App {
                         if (!results) return res.status(500).send(`Error when updating automation`)
                     }
 
+                    // always update the automation interval if it is disabled
                     // update the automation interval if needed
-                    if (Number(automationOutput.interval) > 0) {
-                        const updateInterval = await shouldUpdateInterval(automationOutput)
-                        updateInterval && handleAutomationInterval(automationOutput)
-                    }
+                    updateInterval && handleAutomationInterval(automationOutput)
                 }
             }
 
@@ -933,6 +941,8 @@ export class App {
                 if (!flowUrls.includes(auto.url)) {
                     // this automation is not in the automationList so we delete it
                     await this.AppDataSource.getRepository(Automation).delete({ id: auto.id })
+                    // make sure to clear the interval if it is running
+                    removeAutomationInterval(auto)
                 }
             }
 

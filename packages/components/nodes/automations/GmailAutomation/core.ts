@@ -1,7 +1,6 @@
 import axios from 'axios'
 import { refreshAccessToken } from '../../../src/utils'
 
-
 // -----------------------------------
 // TRIGGER METHODS
 // -----------------------------------
@@ -72,12 +71,12 @@ export function findPlainTextPart(message: any): string | null {
 
 export function getSenderAddress(message: any): string | null {
     const headers = message.payload.headers
-    const emailRegex = /<([^>]+)>/;
+    const emailRegex = /<([^>]+)>/
     for (const header of headers) {
         if (header.name === 'From') {
             const fromValue = header.value
-            const match = fromValue.match(emailRegex);
-            const emailAddress = match ? match[1] : null;
+            const match = fromValue.match(emailRegex)
+            const emailAddress = match ? match[1] : null
             return emailAddress
         }
     }
@@ -88,21 +87,32 @@ export function getSenderAddress(message: any): string | null {
 // HANDLER METHODS
 // -----------------------------------
 
-export async function sendEmail(credential: string, accessToken: string, to:string, subject: string, body: string, threadId?: string): Promise<any> {
-    const rawEmail = `To: ${to}\nSubject: ${subject}\nContent-Type: text/plain; charset="UTF-8"\n\n${body}`;
-    const encodedEmail = base64UrlSafeEncode(rawEmail);
+export async function sendEmail(
+    credential: string,
+    accessToken: string,
+    to: string,
+    subject: string,
+    body: string,
+    threadId?: string
+): Promise<any> {
+    const rawEmail = `To: ${to}\nSubject: ${subject}\nContent-Type: text/plain; charset="UTF-8"\n\n${body}`
+    const encodedEmail = base64UrlSafeEncode(rawEmail)
 
     try {
-        const response = await axios.post('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
-            raw: encodedEmail,
-            threadId: threadId || ''
-        }, {
-            headers: {
-                Authorization: `Bearer ${accessToken}`
+        const response = await axios.post(
+            'https://www.googleapis.com/gmail/v1/users/me/messages/send',
+            {
+                raw: encodedEmail,
+                threadId: threadId || ''
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
             }
-        });
+        )
 
-        return response.data;
+        return response.data
     } catch (error) {
         const accessToken = await refreshAccessToken(credential)
         if (!accessToken) {
@@ -114,6 +124,6 @@ export async function sendEmail(credential: string, accessToken: string, to:stri
 }
 
 function base64UrlSafeEncode(str: string) {
-    let base64 = btoa(unescape(encodeURIComponent(str)));
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    let base64 = btoa(unescape(encodeURIComponent(str)))
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }

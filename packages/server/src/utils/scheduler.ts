@@ -5,9 +5,10 @@ const WORKER_URL = process.env.WORKER_URL as string
 const DEPLOYED_URL = process.env.DEPLOYED_URL as string
 
 interface ScheduleArgs {
-    interval: number
+    interval: string
     url: string
     data?: {}
+    timezone?: string
 }
 
 const scheduleInterval = async (data: ScheduleArgs) => {
@@ -23,32 +24,25 @@ const scheduleInterval = async (data: ScheduleArgs) => {
 }
 
 export const handleAutomationInterval: any = async (auto: Automation) => {
-    if (Number(auto.interval) > 0 && auto.enabled) {
-        const args: ScheduleArgs = {
-            url: `${DEPLOYED_URL}/api/v1/automations/run/${auto.url}`,
-            interval: Number(auto.interval),
-            data: {}
-        }
-        await scheduleInterval(args)
+    // if disabled, setting interval to 0 will revoke the schedule
+    const interval = auto.enabled ? auto.interval : ''
+
+    const args: ScheduleArgs = {
+        url: `${DEPLOYED_URL}/api/v1/automations/run/${auto.url}`,
+        interval: interval as string,
+        data: {},
+        timezone: auto.timeZone as string
     }
+    await scheduleInterval(args)
 }
 
-export const shouldUpdateInterval = async (auto: Automation) => {
-    // this url is used to check if the automation is running. it serves an id
-    const url = `${DEPLOYED_URL}/api/v1/automations/run/${auto.url}`
+export const removeAutomationInterval: any = async (auto: Automation) => {
 
-    try {
-        const response = await axios.get(`${WORKER_URL}/status`, { params: { url: url } })
-        if (response.data?.status) {
-            // if the automation is running, don't update the interval
-            // the interval automation will be blocked in processAutomation function if disabled
-            return false
-        } else {
-            // if it is not running, update the interval
-            return true
-        }
-    } catch (error) {
-        console.log(error)
-        return false
+    const args: ScheduleArgs = {
+        url: `${DEPLOYED_URL}/api/v1/automations/run/${auto.url}`,
+        interval: '',
+        data: {},
+        timezone: auto.timeZone as string
     }
+    await scheduleInterval(args)
 }
