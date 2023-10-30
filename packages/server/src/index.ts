@@ -70,7 +70,7 @@ import { ChatflowPool } from './ChatflowPool'
 import { CachePool } from './CachePool'
 import { ICommonObject, INodeOptionsValue } from 'flowise-components'
 import { createRateLimiter, getRateLimiter, initializeRateLimiter } from './utils/rateLimit'
-
+import { handleAutomationInterval, shouldUpdateInterval } from './utils/scheduler'
 import { RecursiveCharacterTextSplitter, RecursiveCharacterTextSplitterParams } from 'langchain/text_splitter'
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
 import PredictionHandler from './PredictionHandler'
@@ -87,7 +87,7 @@ const DEV_MILVUS_PORT = process.env.DEV_MILVUS_PORT
 const DEPLOYED_URL = process.env.DEPLOYED_URL
 const GOOGLE_CLIENT_ID = '530294522870-o17j0nite5q2tcslg0tsn1li9bh4rtv3.apps.googleusercontent.com'
 const GOOGLE_CLIENT_SECRET = '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'
-const DEFAULT_GOOGLE_CALLBACK = `https://${DEPLOYED_URL}/api/v1/auth/google/callback`
+const DEFAULT_GOOGLE_CALLBACK = `${DEPLOYED_URL}/api/v1/auth/google/callback`
 
 export class App {
     app: express.Application
@@ -851,6 +851,10 @@ export class App {
             (req: Request, res: Response, next: NextFunction) => getRateLimiter(req, res, next),
             async (req: Request, res: Response) => {
                 await this.processAutomation(req, res)
+                const automation = await this.AppDataSource.getRepository(Automation).findOneBy({
+                    url: req.params.id
+                })
+                handleAutomationInterval(automation)
             }
         )
 
@@ -864,22 +868,14 @@ export class App {
 
         // Get specific automation
         this.app.get('/api/v1/automations/:id', async (req: Request, res: Response) => {
-            const automatin = await this.AppDataSource.getRepository(Automation).findOneBy({
+            const automation = await this.AppDataSource.getRepository(Automation).findOneBy({
                 id: req.params.id
             })
-            return res.json(automatin)
+            return res.json(automation)
         })
 
         // Update or add automation
         this.app.post('/api/v1/automations/:chatflowid', async (req: Request, res: Response) => {
-            const handleAutomationInterval: any = (auto: Automation) => {
-                if (Number(auto.interval) > 0 && auto.enabled) {
-                    console.log(`Starting interval for automation ${auto.id}`)
-                } else {
-                    console.log(`Stopping interval for automation ${auto.id}`)
-                }
-            }
-
             // get the chatflowid from the url
             const chatflowid = req.params.chatflowid
 
@@ -920,8 +916,11 @@ export class App {
                         if (!results) return res.status(500).send(`Error when updating automation`)
                     }
 
-                    // handle starting/stopping the automation inverval if it is enabled/specified
-                    handleAutomationInterval(automationOutput)
+                    // update the automation interval if needed
+                    if (Number(automationOutput.interval) > 0) {
+                        const updateInterval = await shouldUpdateInterval(automationOutput)
+                        updateInterval && handleAutomationInterval(automationOutput)
+                    }
                 }
             }
 
@@ -2061,7 +2060,7 @@ export class App {
                         const { status: handlerStatus, output: handlerOutput } = await handlerInstances[i].runHandler(
                             handlerNodes[i],
                             combinedOutupts,
-                            options,
+                            options
                         )
                     } catch (e) {
                         logger.error('[server]: Error:', e)

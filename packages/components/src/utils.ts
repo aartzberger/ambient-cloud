@@ -408,6 +408,7 @@ export const refreshAccessToken = async (credentialId: string): Promise<string> 
  */
 export const updateAutomation = async (automationData: any): Promise<string> => {
     try {
+        // update the automation. no need to restart automation
         const response = await axios.post(BASE_URL + `/api/v1/automations/${automationData.chatflowid}`, { automations: [automationData] })
         return response.data
     } catch (error) {

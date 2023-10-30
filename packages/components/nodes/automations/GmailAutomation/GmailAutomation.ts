@@ -117,7 +117,7 @@ class GmailAutomation implements IAutomationNode {
             // if ne emails list is cached, cache the emails so we can check for new emails next time
             nodeData.automationData.cache = JSON.stringify({ emails: emails })
             // add the cache to the automation and save to database
-            await updateAutomation(nodeData.automationData)
+            updateAutomation(nodeData.automationData)
 
             return { status: false, output: 'No new emails', auxData: null }
         }
@@ -130,7 +130,7 @@ class GmailAutomation implements IAutomationNode {
 
         // update the automation cache
         nodeData.automationData.cache = JSON.stringify({ emails: emails })
-        await updateAutomation(nodeData.automationData)
+        updateAutomation(nodeData.automationData)
 
         if (trulyNewEmails?.length) {
             const toSendIds = []
