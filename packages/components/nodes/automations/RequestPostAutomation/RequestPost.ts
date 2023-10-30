@@ -10,7 +10,7 @@ const makeUniqueUrl = () => {
     return url
 }
 
-class ZapierAutomation implements IAutomationNode {
+class RequestPostAutomation implements IAutomationNode {
     label: string
     name: string
     version: number
@@ -24,14 +24,14 @@ class ZapierAutomation implements IAutomationNode {
     outputs: INodeOutputsValue[]
 
     constructor() {
-        this.label = 'Zapier Automation'
-        this.name = 'zapierAutomation'
+        this.label = 'Post Request Automation'
+        this.name = 'postRequestAutomation'
         this.version = 1.0
         this.type = 'Automation'
-        this.icon = 'zapier.svg'
+        this.icon = 'requestspost.svg'
         this.category = 'Automations'
         this.description =
-            'Handles request from Zapier. Default handler sends response back to Zapier. Make sure to configure the zap on Zapier.'
+            'Handles a POST request to a URL and returns the automation output to the caller. You can specify the input and output keys in the request and response bodies.'
         this.baseClasses = [this.type]
         this.inputs = [
             {
@@ -44,6 +44,18 @@ class ZapierAutomation implements IAutomationNode {
             {
                 label: 'Automation Name',
                 name: 'automationName',
+                type: 'string',
+                optional: false
+            },
+            {
+                label: 'Input Key',
+                name: 'inputKey',
+                type: 'string',
+                optional: false
+            },
+            {
+                label: 'Output Key',
+                name: 'outputKey',
                 type: 'string',
                 optional: false
             },
@@ -73,15 +85,20 @@ class ZapierAutomation implements IAutomationNode {
 
     async runTrigger(nodeData: IAutomationNodeData, body: any, res: Response) {
         // return the base input
-        return { status: true, output: body.input as string, auxData: null }
+        const inputKey = nodeData.inputs?.inputKey
+
+        return { status: true, output: body[inputKey] as string, auxData: null }
     }
 
     async runHandler(nodeData: IAutomationNodeData, output: string, body: any, res: Response, auxData: any) {
+        // return the base input
+        const outputKey = nodeData.inputs?.outputKey
+
         // return the output to zapier
-        res.status(200).send({ output: output })
+        res.status(200).send({ outputKey: output })
 
         return { status: true, output: 'ok' }
     }
 }
 
-module.exports = { nodeClass: ZapierAutomation }
+module.exports = { nodeClass: RequestPostAutomation }

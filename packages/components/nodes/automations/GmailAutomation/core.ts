@@ -88,14 +88,14 @@ export function getSenderAddress(message: any): string | null {
 // HANDLER METHODS
 // -----------------------------------
 
-export async function sendEmail(accessToken: string, to:string, subject: string, body: string, threadId: string) {
+export async function sendEmail(credential: string, accessToken: string, to:string, subject: string, body: string, threadId?: string): Promise<any> {
     const rawEmail = `To: ${to}\nSubject: ${subject}\nContent-Type: text/plain; charset="UTF-8"\n\n${body}`;
     const encodedEmail = base64UrlSafeEncode(rawEmail);
 
     try {
         const response = await axios.post('https://www.googleapis.com/gmail/v1/users/me/messages/send', {
             raw: encodedEmail,
-            threadId: threadId
+            threadId: threadId || ''
         }, {
             headers: {
                 Authorization: `Bearer ${accessToken}`
@@ -104,8 +104,12 @@ export async function sendEmail(accessToken: string, to:string, subject: string,
 
         return response.data;
     } catch (error) {
-        console.error("Failed to send the email:", error);
-        throw error;
+        const accessToken = await refreshAccessToken(credential)
+        if (!accessToken) {
+            return error
+        }
+        const res = await sendEmail(credential, accessToken, to, subject, body, threadId || '')
+        return res.data
     }
 }
 

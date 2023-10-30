@@ -34,10 +34,10 @@ class GmailAutomation implements IAutomationNode {
         this.label = 'Gmail Automation'
         this.name = 'gmailAutomation'
         this.version = 1.0
-        this.type = 'GmailAutomation'
+        this.type = 'Automation'
         this.icon = 'google.svg'
         this.category = 'Automations'
-        this.description = 'Automate when and how your model runs. Simply place on canvas and "Configure" to get started.'
+        this.description = 'Automated response to Gmail emails. Default handler replies to sender of the email.'
         this.baseClasses = [this.type]
         this.credential = {
             label: 'Connect Credential',
@@ -76,6 +76,7 @@ class GmailAutomation implements IAutomationNode {
                 label: 'Response Subject',
                 name: 'responseSubject',
                 type: 'string',
+                default: 'Thanks for your email!',
                 optional: false
             },
             {
@@ -170,7 +171,7 @@ class GmailAutomation implements IAutomationNode {
 
         // send the email if its not from donotreply address
         if (!toSendEmail.includes('donotreply')) {
-            const response = await sendEmail(accessToken, toSendEmail, responseSubject, output, threadId)
+            const response = await sendEmail(nodeData.credential as string, accessToken, toSendEmail, responseSubject, output, threadId)
         }
 
         return { status: true, output: 'Email sent' }

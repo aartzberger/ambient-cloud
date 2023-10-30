@@ -133,6 +133,22 @@ export interface IAutomationNode extends INodeProperties {
     clearSessionMemory?(nodeData: INodeData, options?: ICommonObject): Promise<void>
 }
 
+export interface IHandlerNode extends INodeProperties {
+    inputs?: INodeParams[]
+    output?: INodeOutputsValue[]
+    loadMethods?: {
+        [key: string]: (nodeData: INodeData, options?: ICommonObject) => Promise<INodeOptionsValue[]>
+    }
+    init?(nodeData: INodeData, input: string, options?: ICommonObject): Promise<any>
+    run?(nodeData: INodeData, input: string, options?: ICommonObject): Promise<string | ICommonObject>
+    runHandler?(
+        nodeData: INodeData,
+        output: string,
+        options: ICommonObject,
+    ): Promise<{ status: boolean; output: string }>
+    clearSessionMemory?(nodeData: INodeData, options?: ICommonObject): Promise<void>
+}
+
 export interface INodeData extends INodeProperties {
     id: string
     inputs?: ICommonObject

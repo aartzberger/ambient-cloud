@@ -1884,6 +1884,26 @@ export class App {
             }
         }
 
+        const getHandlerNodes = (nodes: any, edges: any, automationId: string) => {
+            const handlerTargets = []
+            for (const edge of edges) {
+                if (edge.source === automationId) {
+                    handlerTargets.push(edge.target)
+                }
+            }
+
+            const handlerNodesData = []
+            for (const node of nodes) {
+                for (const target of handlerTargets) {
+                    if (node.id === target) {
+                        handlerNodesData.push(node.data)
+                    }
+                }
+            }
+
+            return handlerNodesData
+        }
+
         const options = {
             appDataSource: this.AppDataSource,
             databaseEntities: databaseEntities
@@ -1912,16 +1932,26 @@ export class App {
             const flowData = chatflow.flowData
             const parsedFlowData: IReactFlowObject = JSON.parse(flowData)
             const nodes = parsedFlowData.nodes
+            const edges = parsedFlowData.edges
 
             // first make a node instance for the automation
             const automationNode = getAutomationNode(nodes, automation)
             // add the additionl information to the automation node
             automationNode.automationData = automation
-
             // create an instance of the automation node
             const automationInstanceFilePath = this.nodesPool.componentNodes[automationNode.name].filePath as string
             const automationModule = await import(automationInstanceFilePath)
             const automationInstance = new automationModule.nodeClass()
+
+            // get instances for each of the handler nodes
+            const handlerInstances = []
+            const handlerNodes = getHandlerNodes(nodes, edges, automationNode.id)
+            for (const handlerNode of handlerNodes) {
+                const handlerInstanceFilePath = this.nodesPool.componentNodes[handlerNode.name].filePath as string
+                const handlerModule = await import(handlerInstanceFilePath)
+                const handlerInstance = new handlerModule.nodeClass()
+                handlerInstances.push(handlerInstance)
+            }
 
             // get some of the required information from the automation
             const definedQuestions = automationNode.inputs.definedQuestions || null
@@ -1930,7 +1960,11 @@ export class App {
             // the input from the trigger can be a list of inputs to run multiple times
             // or just a string to run one time
             // auxData should be of same length of triggerInputs and coorelat to each input
-            let { status: triggerStatus, output: triggerInputs, auxData: auxData } = await automationInstance.runTrigger(automationNode, req.body, res, options)
+            let {
+                status: triggerStatus,
+                output: triggerInputs,
+                auxData: auxData
+            } = await automationInstance.runTrigger(automationNode, req.body, res, options)
 
             // if the trigger fails, return the error
             if (triggerStatus === false) {
@@ -2006,7 +2040,7 @@ export class App {
                     }
                 }
 
-                // finally, use the handler
+                // use the default handler for the automation
                 try {
                     const { status: handlerStatus, output: handlerOutput } = await automationInstance.runHandler(
                         automationNode,
@@ -2019,6 +2053,20 @@ export class App {
                 } catch (e) {
                     logger.error('[server]: Error:', e)
                     return res.status(404).send('Failed to run handler function')
+                }
+
+                // if additional handlers are attached, run them also
+                for (let i = 0; i < handlerInstances.length; i++) {
+                    try {
+                        const { status: handlerStatus, output: handlerOutput } = await handlerInstances[i].runHandler(
+                            handlerNodes[i],
+                            combinedOutupts,
+                            options,
+                        )
+                    } catch (e) {
+                        logger.error('[server]: Error:', e)
+                        return res.status(404).send('Failed to run handler function')
+                    }
                 }
             }
         } catch (e: any) {

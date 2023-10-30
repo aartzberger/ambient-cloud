@@ -135,6 +135,15 @@ export const constructGraphs = (reactFlowNodes: IReactFlowNode[], reactFlowEdges
         nodeDependencies[target] += 1
     }
 
+    // TODO CMAN - Probably a better way to do this
+    // make sure all automations and handlers are not included in graph logic
+    for (const key in graph) {
+        const nodeData = reactFlowNodes.find((nd) => nd.id === key)?.data
+        if (nodeData && nodeData.category === 'Handlers' || nodeData?.category === 'Automations') {
+            nodeDependencies[key] = 0
+        }
+    }
+
     return { graph, nodeDependencies }
 }
 

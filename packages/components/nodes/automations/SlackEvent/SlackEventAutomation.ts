@@ -29,10 +29,11 @@ class SlackEventAutomation implements IAutomationNode {
         this.label = 'Slack Event Automation'
         this.name = 'slackEventAutomation'
         this.version = 1.0
-        this.type = 'SlackEventAutomation'
+        this.type = 'Automation'
         this.icon = 'slack.svg'
         this.category = 'Automations'
-        this.description = 'Handles responses to a Slack Event. Make sure to configure the event and add automation URL to Slack app.'
+        this.description =
+            'Handles responses to a Slack Event. Defualt handler replis to the originating Slack thread. Make sure to configure the event and add automation URL to Slack app.'
         this.baseClasses = [this.type]
         this.credential = {
             label: 'Slack Bot Token',

@@ -28,7 +28,7 @@ class CustomAutomation implements IAutomationNode {
         this.label = 'Custom Automation'
         this.name = 'customAutomation'
         this.version = 1.0
-        this.type = 'CustomAutomation'
+        this.type = 'Automation'
         this.icon = 'automation.svg'
         this.category = 'Automations'
         this.description = 'Automate when and how your model runs. Simply place on canvas and "Configure" to get started.'

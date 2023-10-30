@@ -27,10 +27,11 @@ class SlackCommandAutomation implements IAutomationNode {
         this.label = 'Slack Command Automation'
         this.name = 'slackCommandAutomation'
         this.version = 1.0
-        this.type = 'SlackCommandAutomation'
+        this.type = 'Automation'
         this.icon = 'slack.svg'
         this.category = 'Automations'
-        this.description = 'Handles responses to a Slack /Command. Add the automation URL to your Slack /command app.'
+        this.description =
+            'Handles responses to a Slack /Command. The default handler replies to the command URL provided by slack. Make sure to add the automation URL to your Slack /command app.'
         this.baseClasses = [this.type]
         this.inputs = [
             {
