@@ -310,7 +310,7 @@ export class App {
         // initical oauth handler for google
         this.app.get('/api/v1/oauth/google', (req, res) => {
             const CLIENT_ID = GOOGLE_CLIENT_ID
-            const redirectUrl = `https://${DEPLOYED_URL}/api/v1/credentials/from-google-oauth`
+            const redirectUrl = `${DEPLOYED_URL}/api/v1/credentials/from-google-oauth`
 
             const googleAuthURL = 'https://accounts.google.com/o/oauth2/v2/auth'
             const scope = [
@@ -652,7 +652,7 @@ export class App {
             let userProfile = null
 
             try {
-                const redirectUri = `https://${DEPLOYED_URL}/api/v1/credentials/from-google-oauth`
+                const redirectUri = `${DEPLOYED_URL}/api/v1/credentials/from-google-oauth`
                 // This is where Google sends the authorization code after user consent
                 const code = req.query.code as string
 
