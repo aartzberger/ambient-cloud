@@ -34,7 +34,7 @@ class Milvus_Existing_VectorStores implements INode {
         this.icon = 'collection.svg'
         this.category = 'Collections'
         this.description = 'Load one of your existing data collections!'
-        this.baseClasses = [this.type, 'VectorStoreRetriever', 'BaseRetriever']
+        this.baseClasses = [this.type, 'VectorStoreRetriever', 'BaseRetriever', ...getBaseClasses(DynamicTool)]
         // this.credential = {
         //     label: 'Connect Credential',
         //     name: 'credential',
