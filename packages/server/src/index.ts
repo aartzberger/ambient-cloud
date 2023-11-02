@@ -284,7 +284,7 @@ export class App {
                                 clientUrl: 'foobar'
                             })
                         } catch (error) {
-                            console.error('Error in handleRemoteDb:', error)
+                            logger.error('❌ [server]: Error in handleRemoteDb:', error)
                         }
 
                         return res.redirect('/chatflows')
@@ -689,8 +689,8 @@ export class App {
                 accessToken = access_token
                 refreshToken = refresh_token
             } catch (error) {
-                console.error('Error in Google OAuth callback', error)
-                res.status(500).send('Authentication failed.')
+                logger.error('❌ [server]: Error in Google OAuth callback')
+                return res.redirect('/oauth-complete/failed')
             }
 
             if (accessToken && refreshToken) {
@@ -718,9 +718,10 @@ export class App {
                     const results = await this.AppDataSource.getRepository(Credential).save(credential)
                 }
 
-                return res.redirect('/oauth-complete')
+                return res.redirect('/oauth-complete/success')
             } else {
-                return res.status(500).send('Authentication failed. No values for access token and refresh token')
+                logger.error('❌ [server]: Error updating tokens')
+                return res.redirect('/oauth-complete/failed')
             }
         })
 
@@ -1870,10 +1871,10 @@ export class App {
                       analytic: chatflow.analytic
                   })
 
-            logger.debug(`[server]: Finished running ${nodeToExecuteData.label} (${nodeToExecuteData.id})`)
+            logger.debug(`❌ [server]: Finished running ${nodeToExecuteData.label} (${nodeToExecuteData.id})`)
             return res.json(result)
         } catch (e: any) {
-            logger.error('[server]: Error:', e)
+            logger.error('❌ [server]: Error:', e)
             return res.status(500).send(e.message)
         }
     }
@@ -2064,7 +2065,7 @@ export class App {
                         aux
                     )
                 } catch (e) {
-                    logger.error('[server]: Error:', e)
+                    logger.error('❌ [server]: Error:', e)
                     return res.status(404).send('Failed to run handler function')
                 }
 
@@ -2077,13 +2078,13 @@ export class App {
                             options
                         )
                     } catch (e) {
-                        logger.error('[server]: Error:', e)
+                        logger.error('❌ [server]: Error:', e)
                         return res.status(404).send('Failed to run handler function')
                     }
                 }
             }
         } catch (e: any) {
-            logger.error('[server]: Error:', e)
+            logger.error('❌ [server]: Error:', e)
             return res.status(500).send(e.message)
         }
     }

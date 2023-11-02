@@ -24,15 +24,15 @@ const scheduleInterval = async (data: ScheduleArgs) => {
         const response = await axios.post(`${WORKER_URL}/schedule`, data)
         if (response.status === 200) {
             if (data.interval === '') {
-                logger.info(`[server]: Automation ${autoId} interval revoked`)
+                logger.debug(`[server]: Automation ${autoId} interval revoked`)
             } else {
-                logger.info(`[server]: Automation ${autoId} interval set to ${data.interval}`)
+                logger.debug(`[server]: Automation ${autoId} interval set to ${data.interval}`)
             }
         } else {
-            logger.info(`[server]: Fauiled to schedule interval for automation ${autoId}`)
+            logger.debug(`[server]: Fauiled to schedule interval for automation ${autoId}`)
         }
     } catch (error) {
-        logger.info(`[server]: Fauiled to schedule interval for automation ${autoId}`)
+        logger.debug(`[server]: Fauiled to schedule interval for automation ${autoId}`)
     }
 }
 

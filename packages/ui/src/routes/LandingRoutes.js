@@ -23,7 +23,7 @@ const LandingRoutes = {
             element: <Landing />
         },
         {
-            path: '/oauth-complete',
+            path: '/oauth-complete/:status',
             element: <OauthComplete />
         }
     ]
