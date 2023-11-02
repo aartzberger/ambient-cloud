@@ -14,6 +14,7 @@ import { Server } from 'socket.io'
 import logger from './utils/logger'
 import { expressRequestLogger } from './utils/logger'
 import { MilvusClient } from '@zilliz/milvus2-sdk-node'
+import { DynamoDB } from '@aws-sdk/client-dynamodb'
 
 import {
     IChatFlow,
@@ -165,9 +166,46 @@ export class App {
 
         const upload = multer({ dest: `${path.join(__dirname, '..', 'uploads')}/` })
 
+        // Check if DYNAMODB_TABLE is provided, then use DynamoDB; otherwise, use default in-memory store
+        let sessionStore
+        if (process.env.DYNAMODB_TABLE) {
+            logger.info('📦 [server]: Using DynamoDb session')
+            const DynamoDBStore = require('connect-dynamodb')({ session: session })
+
+            if (
+                !process.env.AWS_ACCESS_KEY_ID ||
+                !process.env.AWS_SECRET_ACCESS_KEY ||
+                !process.env.DYNAMODB_REGION ||
+                !process.env.DYNAMODB_TABLE
+            ) {
+                throw new Error('AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION must be set in server .env when using DynamoDB')
+            }
+
+            // Configure the region
+            const awsConfig = {
+                region: process.env.DYNAMODB_REGION,
+                accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+            }
+
+            var options = {
+                // Optional DynamoDB table name, defaults to 'sessions'
+                table: process.env.DYNAMODB_TABLE,
+                // Optional client for alternate endpoint, such as DynamoDB Local
+                client: new DynamoDB(awsConfig)
+            }
+
+            // Configure sessionStore to use DynamoDB
+            sessionStore = new DynamoDBStore(options)
+        } else {
+            logger.info('📦 [server]: Using default in-memory session store')
+            sessionStore = new session.MemoryStore()
+        }
+
         this.app.use(
             session({
-                secret: 'secret-key',
+                store: sessionStore,
+                secret: process.env.SESSION_SECRET || 'secret-key', // Use env variable for the secret
                 resave: false,
                 saveUninitialized: true
             })
@@ -2086,7 +2124,7 @@ export class App {
             const removePromises: any[] = []
             await Promise.all(removePromises)
         } catch (e) {
-            logger.error(`❌[server]: Flowise Server shut down error: ${e}`)
+            logger.error(`❌[server]: AmbientWare Server shut down error: ${e}`)
         }
     }
 }
@@ -2130,7 +2168,7 @@ export async function start(): Promise<void> {
     await serverApp.config(io)
 
     server.listen(port, () => {
-        logger.info(`⚡️ [server]: Flowise Server is listening at ${port}`)
+        logger.info(`⚡️ [server]: AmbientWare Server is listening at ${port}`)
     })
 }
 

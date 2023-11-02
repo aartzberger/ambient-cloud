@@ -5,6 +5,7 @@ networks:
 
 services:
   ambient:
+    build: .
     image: cmclean165/ambient-cloud:latest
     restart: unless-stopped
     networks:

@@ -1,9 +1,19 @@
 version: 2
 
 tunnels:
-  flow:
+  app:
     proto: http
-    addr: ambient:3000  # The local port you want to expose
-    domain: flow-ambient.ngrok.app
+    addr: 127.0.0.1:3500  # The local port you want to expose
+    domain: app-ambient.ngrok.app
+
+  main:
+    proto: http
+    addr: 127.0.0.1:3000  # The local port you want to expose
+    domain: main-ambient.ngrok.app
+
+  worker:
+    proto: http
+    addr: 127.0.0.1:8000  # The local port you want to expose
+    domain: worker-ambient.ngrok.app
 
 authtoken: 2Qsvi3pRhAqRK6m3c2BKo3bNaMT_5DfkN6TiBfzZTha8yg4ZP
