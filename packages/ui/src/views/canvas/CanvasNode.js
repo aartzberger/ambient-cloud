@@ -111,7 +111,7 @@ const CanvasNode = ({ data }) => {
                             style={{
                                 background: 'transparent',
                                 display: 'flex',
-                                flexDirection: 'column'
+                                flexDirection: 'row'
                             }}
                         >
                             <IconButton
@@ -147,7 +147,7 @@ const CanvasNode = ({ data }) => {
                             </IconButton>
                         </div>
                     }
-                    placement='right-start'
+                    placement='top-end'
                 >
                     <Box>
                         <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
