@@ -3,7 +3,7 @@ import { getCredentialData, getCredentialParam, updateAutomation } from '../../.
 import { Response } from 'express'
 import { getUnreadMessages, getMessageDetails, findPlainTextPart, getSenderAddress, sendEmail } from './core'
 
-const BASE_URL = process.env.BASE_URL || 'https://flow-ambient.ngrok.app'
+const BASE_URL = process.env.BASE_URL || 'https://app-ambient.ngrok.app'
 
 type Email = {
     id: string

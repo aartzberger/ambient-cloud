@@ -3,7 +3,7 @@ import { getCredentialData, getCredentialParam } from '../../../src/utils'
 import { Response } from 'express'
 import { WebClient } from '@slack/web-api'
 
-const BASE_URL = process.env.BASE_URL || 'https://flow-ambient.ngrok.app'
+const BASE_URL = process.env.BASE_URL || 'https://app-ambient.ngrok.app'
 
 class SlackEventAutomation implements IAutomationNode {
     label: string

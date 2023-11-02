@@ -12,7 +12,7 @@ import { AIMessage, HumanMessage } from 'langchain/schema'
 export const numberOrExpressionRegex = '^(\\d+\\.?\\d*|{{.*}})$' //return true if string consists only numbers OR expression {{}}
 export const notEmptyRegex = '(.|\\s)*\\S(.|\\s)*' //return true if string is not empty or blank
 
-const BASE_URL = process.env.BASE_URL || 'https://flow-ambient.ngrok.app'
+const BASE_URL = process.env.BASE_URL || 'https://app-ambient.ngrok.app'
 
 /**
  * Get base classes of components

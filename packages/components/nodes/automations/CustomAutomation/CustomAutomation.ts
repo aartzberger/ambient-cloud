@@ -10,7 +10,7 @@ import {
 import { DataSource } from 'typeorm'
 import { Request } from 'express'
 
-const BASE_URL = process.env.BASE_URL || 'https://flow-ambient.ngrok.app'
+const BASE_URL = process.env.BASE_URL || 'https://app-ambient.ngrok.app'
 
 class CustomAutomation implements IAutomationNode {
     label: string

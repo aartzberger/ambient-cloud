@@ -1,7 +1,7 @@
 import { ICommonObject, IAutomationNode, IAutomationNodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
 import { Response } from 'express'
 
-const BASE_URL = process.env.BASE_URL || 'https://flow-ambient.ngrok.app'
+const BASE_URL = process.env.BASE_URL || 'https://app-ambient.ngrok.app'
 
 class ZapierAutomation implements IAutomationNode {
     label: string
