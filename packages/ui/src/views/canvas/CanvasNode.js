@@ -72,7 +72,7 @@ const CanvasNode = ({ data }) => {
     const onDialogClicked = () => {
         const dialogProps = {
             data,
-            inputParams: data.inputParams.filter((param) => param.additionalParams),
+            inputParams: data.inputParams,
             confirmButtonName: 'Save',
             cancelButtonName: 'Cancel'
         }
@@ -209,22 +209,15 @@ const CanvasNode = ({ data }) => {
                         {data.inputAnchors.map((inputAnchor, index) => (
                             <NodeInputHandler key={index} inputAnchor={inputAnchor} data={data} />
                         ))}
-                        {data.inputParams.map((inputParam, index) => (
-                            <NodeInputHandler key={index} inputParam={inputParam} data={data} />
-                        ))}
-                        {data.inputParams.find((param) => param.additionalParams) && (
+                        {data.inputParams.length > 0 && (
                             <div
                                 style={{
                                     textAlign: 'center',
-                                    marginTop:
-                                        data.inputParams.filter((param) => param.additionalParams).length ===
-                                        data.inputParams.length + data.inputAnchors.length
-                                            ? 20
-                                            : 0
+                                    marginTop: 20
                                 }}
                             >
                                 <Button sx={{ borderRadius: '10px', width: '90%', mb: 2 }} variant='outlined' onClick={onDialogClicked}>
-                                    {data.type === 'Automation' ? 'Configure Automation' : 'Configure Parameters'}
+                                    Configure Component
                                 </Button>
                             </div>
                         )}
@@ -240,7 +233,6 @@ const CanvasNode = ({ data }) => {
                             </Typography>
                         </Box>
                         <Divider />
-
                         {data.outputAnchors.map((outputAnchor, index) => (
                             <NodeOutputHandler key={index} outputAnchor={outputAnchor} data={data} />
                         ))}
