@@ -1,4 +1,5 @@
 import axios from 'axios'
+import logger from './logger'
 import { Automation } from '../database/entities/Automation'
 
 const WORKER_URL = process.env.WORKER_URL as string
@@ -16,10 +17,22 @@ const scheduleInterval = async (data: ScheduleArgs) => {
         throw new Error('WORKER_URL is not defined')
     }
 
+    let parts = data.url.split('/')
+    let autoId = parts[parts.length - 1]
+
     try {
         const response = await axios.post(`${WORKER_URL}/schedule`, data)
+        if (response.status === 200) {
+            if (data.interval === '') {
+                logger.info(`[server]: Automation ${autoId} interval revoked`)
+            } else {
+                logger.info(`[server]: Automation ${autoId} interval set to ${data.interval}`)
+            }
+        } else {
+            logger.info(`[server]: Fauiled to schedule interval for automation ${autoId}`)
+        }
     } catch (error) {
-        console.log(error)
+        logger.info(`[server]: Fauiled to schedule interval for automation ${autoId}`)
     }
 }
 
@@ -37,7 +50,6 @@ export const handleAutomationInterval: any = async (auto: Automation) => {
 }
 
 export const removeAutomationInterval: any = async (auto: Automation) => {
-
     const args: ScheduleArgs = {
         url: `${DEPLOYED_URL}/api/v1/automations/run/${auto.url}`,
         interval: '',
