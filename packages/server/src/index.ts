@@ -32,18 +32,12 @@ import {
     constructGraphs,
     resolveVariables,
     isStartNodeDependOnInput,
-    getAPIKeys,
-    addAPIKey,
-    updateAPIKey,
-    deleteAPIKey,
-    compareKeys,
     mapMimeTypeToInputField,
     findAvailableConfigs,
     isSameOverrideConfig,
     replaceAllAPIKeys,
     isFlowValidForStream,
     databaseEntities,
-    getApiKey,
     transformToCredentialEntity,
     decryptCredentialData,
     clearSessionMemory,
@@ -51,6 +45,7 @@ import {
     getEncryptionKey,
     checkMemorySessionId
 } from './utils'
+import { getApiKey, getAPIKeys, addAPIKey, updateAPIKey, deleteAPIKey, compareKeys } from './utils/apiKeyHelpers'
 import MilvusUpsert from './utils/Upsert'
 import blacklistNodes from './utils/blacklist'
 import { DocumentLoaders, getFileName } from './utils/DocsLoader'
@@ -115,9 +110,6 @@ export class App {
 
                 // Initialize chatflow pool
                 this.chatflowPool = new ChatflowPool()
-
-                // Initialize API keys
-                await getAPIKeys()
 
                 // Initialize encryption key
                 await getEncryptionKey()
@@ -470,7 +462,7 @@ export class App {
         // Get specific chatflow via api key
         this.app.get('/api/v1/chatflows/apikey/:apiKey', async (req: Request, res: Response) => {
             try {
-                const apiKey = await getApiKey(req.params.apiKey)
+                const apiKey = await getApiKey(req.params.apiKey, req.user as User, this.AppDataSource)
                 if (!apiKey) return res.status(401).send('Unauthorized')
                 const chatflows = await this.AppDataSource.getRepository(ChatFlow)
                     .createQueryBuilder('cf')
@@ -1473,7 +1465,7 @@ export class App {
             const chatflows = await this.AppDataSource.getRepository(ChatFlow).find({
                 where: { user: req.user as User }
             })
-            const apikeys = await getAPIKeys()
+            const apikeys = await getAPIKeys(req.user as User, this.AppDataSource)
             const result: IDatabaseExport = {
                 chatmessages,
                 chatflows,
@@ -1623,32 +1615,32 @@ export class App {
 
         // Get api keys
         this.app.get('/api/v1/apikey', async (req: Request, res: Response) => {
-            const keys = await getAPIKeys()
+            const keys = await getAPIKeys(req.user as User, this.AppDataSource)
             return res.json(keys)
         })
 
         // Add new api key
         this.app.post('/api/v1/apikey', async (req: Request, res: Response) => {
-            const keys = await addAPIKey(req.body.keyName)
+            const keys = await addAPIKey(req.body.keyName, req.user as User, this.AppDataSource)
             return res.json(keys)
         })
 
         // Update api key
         this.app.put('/api/v1/apikey/:id', async (req: Request, res: Response) => {
-            const keys = await updateAPIKey(req.params.id, req.body.keyName)
+            const keys = await updateAPIKey(req.params.id, req.body.keyName, req.user as User, this.AppDataSource)
             return res.json(keys)
         })
 
         // Delete new api key
         this.app.delete('/api/v1/apikey/:id', async (req: Request, res: Response) => {
-            const keys = await deleteAPIKey(req.params.id)
+            const keys = await deleteAPIKey(req.params.id, req.user as User, this.AppDataSource)
             return res.json(keys)
         })
 
         // Verify api key
         this.app.get('/api/v1/verify/apikey/:apiKey', async (req: Request, res: Response) => {
             try {
-                const apiKey = await getApiKey(req.params.apiKey)
+                const apiKey = await getApiKey(req.params.apiKey, req.user as User, this.AppDataSource)
                 if (!apiKey) return res.status(401).send('Unauthorized')
                 return res.status(200).send('OK')
             } catch (err: any) {
@@ -1687,8 +1679,8 @@ export class App {
 
         const suppliedKey = authorizationHeader.split(`Bearer `).pop()
         if (suppliedKey) {
-            const keys = await getAPIKeys()
-            const apiSecret = keys.find((key) => key.id === chatFlowApiKeyId)?.apiSecret
+            const keys = await getAPIKeys(req.user as User, this.AppDataSource)
+            const apiSecret = keys.find((key) => key.id === chatFlowApiKeyId)?.apiSecret || ''
             if (!compareKeys(apiSecret, suppliedKey)) return false
             return true
         }

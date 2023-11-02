@@ -1,11 +1,12 @@
 /* eslint-disable */
 import { Entity, Column, OneToMany, PrimaryColumn, ManyToMany } from 'typeorm'
 import { IUser } from '../../Interface'
-import { ChatFlow } from './ChatFlow' // import the ChatFlow entity
-import { ChatMessage } from './ChatMessage' // import the ChatFlow entity
-import { Credential } from './Credential' // import the ChatFlow entity
-import { Tool } from './Tool' // import the ChatFlow entity
-import { RemoteDb } from './RemoteDb' // import the ChatFlow entity
+import { ChatFlow } from './ChatFlow'
+import { ChatMessage } from './ChatMessage'
+import { Credential } from './Credential'
+import { ApiKey } from './ApiKey'
+import { Tool } from './Tool'
+import { RemoteDb } from './RemoteDb' 
 import { Trigger } from './Trigger'
 import { AutomationHandler } from './AutomationHandler'
 import { Automation } from './Automation'
@@ -35,6 +36,11 @@ export class User implements IUser {
         cascade: true // This will allow you to save credentials when saving a user
     })
     credentials: Credential[]
+
+    @OneToMany((type) => ApiKey, (apiKey) => apiKey.user, {
+        cascade: true // This will allow you to save credentials when saving a user
+    })
+    apiKeys: ApiKey[]
 
     @OneToMany((type) => Tool, (tool) => tool.user, {
         cascade: true // This will allow you to save tools when saving a user

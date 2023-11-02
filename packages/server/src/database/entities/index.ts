@@ -5,6 +5,7 @@ import { Trigger } from './Trigger'
 import { AutomationHandler } from './AutomationHandler'
 import { ChatMessage } from './ChatMessage'
 import { Credential } from './Credential'
+import { ApiKey } from './ApiKey'
 import { Tool } from './Tool'
 import { RemoteDb } from './RemoteDb'
 
@@ -16,6 +17,7 @@ export const entities = {
     AutomationHandler,
     ChatMessage,
     Credential,
+    ApiKey,
     Tool,
     RemoteDb
 }

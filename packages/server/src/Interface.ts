@@ -1,12 +1,11 @@
 import { ICommonObject, INode, INodeData as INodeDataFromComponent, INodeParams } from 'flowise-components'
-import { User } from '../src/database/entities/User' // import the ChatFlow entity
-import { ChatFlow } from '../src/database/entities/ChatFlow' // import the ChatFlow entity
-import { ChatMessage } from '../src/database/entities/ChatMessage' // import the ChatFlow entity
-import { Credential } from '../src/database/entities/Credential' // import the ChatFlow entity
-import { Tool } from '../src/database/entities/Tool' // import the ChatFlow entity
-// import the ChatFlow entity
-import { Automation } from './database/entities/Automation' // import the ChatFlow entity
-// import the ChatFlow entity
+import { User } from '../src/database/entities/User'
+import { ChatFlow } from '../src/database/entities/ChatFlow'
+import { ChatMessage } from '../src/database/entities/ChatMessage'
+import { Credential } from '../src/database/entities/Credential'
+import { ApiKey } from '../src/database/entities/ApiKey'
+import { Tool } from '../src/database/entities/Tool'
+import { Automation } from './database/entities/Automation'
 
 export type MessageType = 'apiMessage' | 'userMessage'
 
@@ -22,6 +21,7 @@ export interface IUser {
     chatmessages?: ChatMessage[]
     credentials?: Credential[]
     tools?: Tool[]
+    apiKeys?: ApiKey[]
 }
 
 export interface IChatFlow {
@@ -115,6 +115,16 @@ export interface ICredential {
     name: string
     credentialName: string
     encryptedData: string
+    updatedDate: Date
+    createdDate: Date
+    user: User
+}
+
+export interface IApiKey {
+    id: string
+    keyName: string
+    apiKey: string
+    apiSecret: string
     updatedDate: Date
     createdDate: Date
     user: User
