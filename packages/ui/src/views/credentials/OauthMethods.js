@@ -2,7 +2,7 @@ import { StyledButton } from 'ui-component/button/StyledButton'
 
 const GoogleOauth2 = ({ onConfirm }) => {
     async function authorizeWithOAuth2() {
-        const authorizationUrl = `${process.env.BASE_URL}/api/v1/oauth/google` || `https://app-ambient.ngrok.app/api/v1/oauth/google`
+        const authorizationUrl = '/api/v1/oauth/google'
 
         const authWindow = window.open(authorizationUrl, 'Authorization', 'width=600,height=400')
 
