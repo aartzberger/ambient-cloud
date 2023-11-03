@@ -13,6 +13,7 @@ import ProfileSection from './ProfileSection'
 
 // assets
 import { IconMenu2, IconLogout } from '@tabler/icons'
+import LogoSection from '../LogoSection'
 
 // store
 import { SET_DARKMODE } from 'store/actions'
@@ -100,9 +101,9 @@ const Header = ({ handleLeftDrawerToggle }) => {
                     }
                 }}
             >
-                {/* <Box component='span' sx={{ display: { xs: 'none', md: 'block' }, flexGrow: 1 }}>
+                <Box component='span' sx={{ display: { xs: 'none', md: 'block' }, flexGrow: 1 }}>
                     <LogoSection />
-                </Box> */}
+                </Box>
                 <ButtonBase sx={{ borderRadius: '12px', overflow: 'hidden' }}>
                     <Avatar
                         variant='rounded'
