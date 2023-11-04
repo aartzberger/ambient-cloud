@@ -10,12 +10,8 @@ services:
     restart: unless-stopped
     networks:
       - ambient
-    environment:
-      - DEPLOYED_URL=www.ambientware.co
-      - BASE_URL=https://www.ambientware.co
-      - OPENAI_API_KEY={OPENAI_API_KEY}
-    volumes:
-      - ./db_version:/root/.flowise
+    env_file:
+      - packages/server/.env
     working_dir: /usr/src/packages
     command: ["yarn", "start"]
     ports:
