@@ -3,6 +3,8 @@
  */
 import { Response } from 'express'
 
+export const DeployedUrl = process.env.DEPLOYED_URL || 'https://app-ambient.ngrok.app'
+
 export type NodeParamsType =
     | 'asyncButton'
     | 'button'

@@ -1,9 +1,8 @@
-import { ICommonObject, IAutomationNode, IAutomationNodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
+import { ICommonObject, IAutomationNode, IAutomationNodeData, INodeOutputsValue, INodeParams, DeployedUrl } from '../../../src/Interface'
 import { getCredentialData, getCredentialParam } from '../../../src/utils'
 import { Response } from 'express'
 import { WebClient } from '@slack/web-api'
 
-const BASE_URL = process.env.BASE_URL || 'https://app-ambient.ngrok.app'
 
 class SlackEventAutomation implements IAutomationNode {
     label: string
@@ -60,7 +59,7 @@ class SlackEventAutomation implements IAutomationNode {
                 label: 'Automation URL - make POST requets to this URL to trigger the automation',
                 name: 'automationUrl',
                 type: 'uniqueUrl',
-                default: BASE_URL + '/api/v1/automations/run/',
+                default: DeployedUrl + '/api/v1/automations/run/',
                 additionalParams: true,
                 optional: true,
                 disabled: true

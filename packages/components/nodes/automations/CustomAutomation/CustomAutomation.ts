@@ -5,12 +5,12 @@ import {
     IAutomationNodeData,
     INodeOutputsValue,
     INodeOptionsValue,
-    INodeParams
+    INodeParams,
+    DeployedUrl
 } from '../../../src/Interface'
 import { DataSource } from 'typeorm'
 import { Request } from 'express'
 
-const BASE_URL = process.env.BASE_URL || 'https://app-ambient.ngrok.app'
 
 class CustomAutomation implements IAutomationNode {
     label: string
@@ -84,7 +84,7 @@ class CustomAutomation implements IAutomationNode {
                 label: 'Automation URL - make POST requets to this URL to trigger the automation',
                 name: 'automationUrl',
                 type: 'uniqueUrl',
-                default: BASE_URL + '/api/v1/automations/run/',
+                default: DeployedUrl + '/api/v1/automations/run/',
                 additionalParams: true,
                 optional: true,
                 disabled: true

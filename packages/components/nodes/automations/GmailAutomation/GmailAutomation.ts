@@ -1,9 +1,7 @@
-import { IAutomationNode, ICommonObject, IAutomationNodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
+import { IAutomationNode, ICommonObject, IAutomationNodeData, INodeOutputsValue, INodeParams, DeployedUrl } from '../../../src/Interface'
 import { getCredentialData, getCredentialParam, updateAutomation } from '../../../src/utils'
 import { Response } from 'express'
 import { getUnreadMessages, getMessageDetails, findPlainTextPart, getSenderAddress, sendEmail } from './core'
-
-const BASE_URL = process.env.BASE_URL || 'https://app-ambient.ngrok.app'
 
 type Email = {
     id: string
@@ -84,7 +82,7 @@ class GmailAutomation implements IAutomationNode {
                 label: 'Automation URL - make POST requets to this URL to trigger the automation',
                 name: 'automationUrl',
                 type: 'uniqueUrl',
-                default: BASE_URL + '/api/v1/automations/run/',
+                default: DeployedUrl + '/api/v1/automations/run/',
                 additionalParams: true,
                 optional: true,
                 disabled: true
