@@ -1,11 +1,19 @@
-import { ICommonObject, INode, INodeData, INodeOutputsValue, INodeParams } from '../../../src/Interface'
-import { DataType, ErrorCode } from '@zilliz/milvus2-sdk-node'
+import { ICommonObject, IDatabaseEntity, INode, INodeData, INodeOutputsValue, INodeOptionsValue, INodeParams } from '../../../src/Interface'
+import { DataType, ErrorCode, MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { MilvusLibArgs, Milvus } from 'langchain/vectorstores/milvus'
-import { Embeddings } from 'langchain/embeddings/base'
-import { getBaseClasses, getCredentialData, getCredentialParam } from '../../../src/utils'
+import { getBaseClasses } from '../../../src/utils'
 import { Document } from 'langchain/document'
+import { DataSource } from 'typeorm'
+import { Request } from 'express'
+import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
+import { DynamicTool } from 'langchain/tools'
+import { createRetrieverTool } from 'langchain/agents/toolkits'
+import { BaseRetriever } from 'langchain/schema/retriever'
 
-class Milvus_Existing_VectorStores implements INode {
+// TODO CMAN - chang this for input
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+
+class Milvus_Existing_Collection implements INode {
     label: string
     name: string
     version: number
@@ -19,40 +27,52 @@ class Milvus_Existing_VectorStores implements INode {
     outputs: INodeOutputsValue[]
 
     constructor() {
-        this.label = 'Milvus Load Existing collection'
-        this.name = 'milvusExistingCollection'
+        this.label = 'Load Existing Collection'
+        this.name = 'milvusExistingDataCollection'
         this.version = 2.0
         this.type = 'Milvus'
-        this.icon = 'milvus.svg'
-        this.category = 'Vector Stores'
-        this.description = 'Load existing collection from Milvus (i.e: Document has been upserted)'
-        this.baseClasses = [this.type, 'VectorStoreRetriever', 'BaseRetriever']
-        this.credential = {
-            label: 'Connect Credential',
-            name: 'credential',
-            type: 'credential',
-            optional: true,
-            credentialNames: ['milvusAuth']
-        }
+        this.icon = 'collection.svg'
+        this.category = 'Collections'
+        this.description = 'Load one of your existing data collections!'
+        this.baseClasses = [this.type, 'VectorStoreRetriever', 'BaseRetriever', ...getBaseClasses(DynamicTool)]
+        // this.credential = {
+        //     label: 'Connect Credential',
+        //     name: 'credential',
+        //     type: 'credential',
+        //     optional: true,
+        //     credentialNames: ['milvusAuth']
+        // }
         this.inputs = [
+            // {
+            //     label: 'Embeddings',
+            //     name: 'embeddings',
+            //     type: 'Embeddings',
+            //     optional: true
+            // },
             {
-                label: 'Embeddings',
-                name: 'embeddings',
-                type: 'Embeddings'
-            },
-            {
-                label: 'Milvus Server URL',
+                label: 'Server URL',
                 name: 'milvusServerUrl',
                 type: 'string',
                 placeholder: 'http://localhost:19530'
             },
             {
-                label: 'Milvus Collection Name',
-                name: 'milvusCollection',
-                type: 'string'
+                label: 'Collection Name',
+                name: 'selectedCollection',
+                type: 'asyncOptions',
+                loadMethod: 'listCollections'
             },
             {
-                label: 'Milvus Filter',
+                label: 'Retriever Tool Description',
+                name: 'description',
+                optional: true,
+                type: 'string',
+                description: 'When should agent use this tool to retrieve documents',
+                rows: 3,
+                default: 'Searches and returns information essential to answering the question. Always use this tool to stay well informed',
+                additionalParams: true
+            },
+            {
+                label: 'Filter',
                 name: 'milvusFilter',
                 type: 'string',
                 optional: true,
@@ -73,47 +93,77 @@ class Milvus_Existing_VectorStores implements INode {
         ]
         this.outputs = [
             {
-                label: 'Milvus Retriever',
+                label: 'Retriever Tool',
+                name: 'retrieverTool',
+                baseClasses: ['DynamicTool', ...getBaseClasses(DynamicTool)]
+            },
+            {
+                label: 'Retriever',
                 name: 'retriever',
                 baseClasses: this.baseClasses
             },
             {
-                label: 'Milvus Vector Store',
+                label: 'Vector Store',
                 name: 'vectorStore',
                 baseClasses: [this.type, ...getBaseClasses(Milvus)]
             }
         ]
     }
 
+    //@ts-ignore
+    loadMethods = {
+        async listCollections(_: INodeData, options: ICommonObject, req: Request): Promise<INodeOptionsValue[]> {
+            const returnData: INodeOptionsValue[] = []
+
+            const appDataSource = options.appDataSource as DataSource
+            const databaseEntities = options.databaseEntities as IDatabaseEntity
+            if (appDataSource === undefined || !appDataSource) {
+                return returnData
+            }
+            const RemoteDb = await appDataSource.getRepository(databaseEntities['RemoteDb']).findOneBy({
+                user: options.user
+            })
+            const milvusUrl = (RemoteDb as any).milvusUrl
+
+            const client = new MilvusClient({ address: milvusUrl })
+            const collectionData = await client.showCollections()
+            for (let collection of collectionData.data) {
+                const data = {
+                    label: collection.name,
+                    name: collection.name
+                    // description: collection.description
+                } as INodeOptionsValue
+                returnData.push(data)
+            }
+            return returnData
+        }
+    }
+
     async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
         // server setup
         const address = nodeData.inputs?.milvusServerUrl as string
-        const collectionName = nodeData.inputs?.milvusCollection as string
+        const collectionName = nodeData.inputs?.selectedCollection as string
         const milvusFilter = nodeData.inputs?.milvusFilter as string
+        const retrieverToolDescription = nodeData.inputs?.description as string
 
         // embeddings
-        const embeddings = nodeData.inputs?.embeddings as Embeddings
+        // const embeddings = nodeData.inputs?.embeddings
+        //     ? nodeData.inputs?.embeddings
+        //     : new HuggingFaceInferenceEmbeddings({ model: 'sentence-transformers/all-MiniLM-L6-v2' })
+        const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
         const topK = nodeData.inputs?.topK as string
 
         // output
         const output = nodeData.outputs?.output as string
 
         // format data
-        const k = topK ? parseInt(topK, 10) : 4
-
-        // credential
-        const credentialData = await getCredentialData(nodeData.credential ?? '', options)
-        const milvusUser = getCredentialParam('milvusUser', credentialData, nodeData)
-        const milvusPassword = getCredentialParam('milvusPassword', credentialData, nodeData)
+        const k = topK ? parseInt(topK, 10) : 10
 
         // init MilvusLibArgs
         const milVusArgs: MilvusLibArgs = {
             url: address,
             collectionName: collectionName
         }
-
-        if (milvusUser) milVusArgs.username = milvusUser
-        if (milvusPassword) milVusArgs.password = milvusPassword
 
         const vectorStore = await Milvus.fromExistingCollection(embeddings, milVusArgs)
 
@@ -188,8 +238,17 @@ class Milvus_Existing_VectorStores implements INode {
         } else if (output === 'vectorStore') {
             ;(vectorStore as any).k = k
             return vectorStore
+        } else if (output === 'retrieverTool') {
+            // TODO CMAN - should default to a collection description
+            const name = collectionName + '_retriever_tool'
+            const description = retrieverToolDescription
+            const retriever = vectorStore.asRetriever(k)
+            const tool = createRetrieverTool(retriever as BaseRetriever, {
+                name,
+                description
+            })
+            return tool
         }
-        return vectorStore
     }
 }
 
@@ -202,4 +261,4 @@ function checkJsonString(value: string): { isJson: boolean; obj: any } {
     }
 }
 
-module.exports = { nodeClass: Milvus_Existing_VectorStores }
+module.exports = { nodeClass: Milvus_Existing_Collection }
