@@ -28,7 +28,7 @@ import FormatPromptValuesDialog from 'ui-component/dialog/FormatPromptValuesDial
 import CredentialInputHandler from './CredentialInputHandler'
 
 // utils
-import { getInputVariables, makeUniqueUrl } from 'utils/genericHelper'
+import { getInputVariables, checkUniqueUrl } from 'utils/genericHelper'
 
 // const
 import { FLOWISE_CREDENTIAL_ID } from 'store/constant'
@@ -161,19 +161,6 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
     useEffect(() => {
         updateNodeInternals(data.id)
     }, [data.id, position, updateNodeInternals])
-
-    useEffect(() => {
-        // this can be used for any preprocessing of data before loading the node
-        if (inputParam?.type === 'uniqueUrl') {
-            // if the input is suppose to have unique url, then generate one
-            const vals = data.inputs[inputParam.name]?.split('/')
-            if (vals[vals.length - 1] === '') {
-                const url = makeUniqueUrl(inputParam.default)
-                inputParam.default = url
-                data.inputs[inputParam.name] = url
-            }
-        }
-    }, [])
 
     return (
         <div ref={ref}>
@@ -318,12 +305,10 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
                         )}
                         {inputParam.type === 'uniqueUrl' && (
                             <UniqueUrl
-                                data={data}
-                                key={data.inputs[inputParam.name]}
-                                disabled={typeof inputParam.disabled !== 'undefined' ? inputParam.disabled : disabled}
                                 inputParam={inputParam}
+                                value={checkUniqueUrl(data, inputParam)}
                                 onChange={(newValue) => (data.inputs[inputParam.name] = newValue)}
-                                nodeId={data.id}
+                                disabled={typeof inputParam.disabled !== 'undefined' ? inputParam.disabled : disabled}
                                 showDialog={showExpandDialog}
                                 dialogProps={expandDialogProps}
                                 onDialogCancel={() => setShowExpandDialog(false)}

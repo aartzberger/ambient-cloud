@@ -3,7 +3,6 @@ import { Entity, Column, CreateDateColumn, UpdateDateColumn, PrimaryGeneratedCol
 import { IApiKey } from '../../Interface'
 import { User } from './User' // import the User entity
 
-
 @Entity()
 export class ApiKey implements IApiKey {
     @PrimaryGeneratedColumn('uuid')

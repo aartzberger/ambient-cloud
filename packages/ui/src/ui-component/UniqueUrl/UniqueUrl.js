@@ -3,17 +3,7 @@ import PropTypes from 'prop-types'
 import { FormControl, OutlinedInput } from '@mui/material'
 import ExpandTextDialog from 'ui-component/dialog/ExpandTextDialog'
 
-export const UniqueUrl = ({
-    data,
-    inputParam,
-    value,
-    onChange,
-    disabled = false,
-    showDialog,
-    dialogProps,
-    onDialogCancel,
-    onDialogConfirm
-}) => {
+export const UniqueUrl = ({ inputParam, value, onChange, disabled = false, showDialog, dialogProps, onDialogCancel, onDialogConfirm }) => {
     const [myValue, setMyValue] = useState(value ?? '')
 
     const getInputType = (type) => {

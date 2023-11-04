@@ -3,7 +3,7 @@ import { getBaseClasses } from '../../../src/utils'
 import { AgentToolParams, agentToolRequest } from './core'
 import { DataSource } from 'typeorm'
 import { Request } from 'express'
-import { DynamicTool } from "langchain/tools";
+import { DynamicTool } from 'langchain/tools'
 
 class Agent_Tool implements INode {
     label: string
@@ -73,7 +73,7 @@ class Agent_Tool implements INode {
     }
 
     async init(nodeData: INodeData): Promise<any> {
-        const name = nodeData.inputs?.selectedAgent as string || `Agent_Tool_${nodeData.inputs?.model}`
+        const name = (nodeData.inputs?.selectedAgent as string) || `Agent_Tool_${nodeData.inputs?.model}`
         const description = nodeData.inputs?.description as string
         const id = nodeData.inputs?.model as string
 

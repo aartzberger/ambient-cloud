@@ -2042,7 +2042,8 @@ export class App {
                 chatId,
                 memoryType,
                 sessionId,
-                createdDate: userMessageDateTime
+                createdDate: userMessageDateTime,
+                user: req.user as User
             }
             await this.addChatMessage(userMessage, req.user as User)
 
@@ -2058,7 +2059,8 @@ export class App {
                 chatType: isInternal ? chatType.INTERNAL : chatType.EXTERNAL,
                 chatId,
                 memoryType,
-                sessionId
+                sessionId,
+                user: req.user as User
             }
             if (result?.sourceDocuments) apiMessage.sourceDocuments = JSON.stringify(result.sourceDocuments)
             await this.addChatMessage(apiMessage, req.user as User)

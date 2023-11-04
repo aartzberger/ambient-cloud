@@ -11,7 +11,6 @@ import {
 import { DataSource } from 'typeorm'
 import { Request } from 'express'
 
-
 class CustomAutomation implements IAutomationNode {
     label: string
     name: string

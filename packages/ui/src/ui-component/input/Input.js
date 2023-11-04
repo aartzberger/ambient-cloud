@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import PropTypes from 'prop-types'
 import { FormControl, OutlinedInput, Popover } from '@mui/material'
 import ExpandTextDialog from 'ui-component/dialog/ExpandTextDialog'

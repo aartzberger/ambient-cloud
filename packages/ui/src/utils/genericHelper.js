@@ -1,6 +1,21 @@
 import moment from 'moment'
 import { nanoid } from 'nanoid'
 
+export const checkUniqueUrl = (data, inputParam) => {
+    const vals = data.inputs[inputParam.name]?.split('/')
+    // if the input does not end with unque id then add it
+    if (vals[vals.length - 1] === '') {
+        const url = makeUniqueUrl(inputParam.default)
+        inputParam.default = url
+        data.inputs[inputParam.name] = url
+
+        return url
+    }
+
+    // otherwise return the original value
+    return data.inputs[inputParam.name]
+}
+
 export const makeUniqueUrl = (baseUrl, idLength = 10) => {
     const uniqueId = nanoid(idLength)
 

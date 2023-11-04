@@ -13,7 +13,6 @@ import { AIMessage, HumanMessage } from 'langchain/schema'
 export const numberOrExpressionRegex = '^(\\d+\\.?\\d*|{{.*}})$' //return true if string consists only numbers OR expression {{}}
 export const notEmptyRegex = '(.|\\s)*\\S(.|\\s)*' //return true if string is not empty or blank
 
-
 /**
  * Get base classes of components
  *
@@ -410,7 +409,9 @@ export const refreshAccessToken = async (credentialId: string): Promise<string> 
 export const updateAutomation = async (automationData: any): Promise<string> => {
     try {
         // update the automation. no need to restart automation
-        const response = await axios.post(DeployedUrl + `/api/v1/automations/${automationData.chatflowid}`, { automations: [automationData] })
+        const response = await axios.post(DeployedUrl + `/api/v1/automations/${automationData.chatflowid}`, {
+            automations: [automationData]
+        })
         return response.data
     } catch (error) {
         console.error('The API returned an error:', error.response.data)

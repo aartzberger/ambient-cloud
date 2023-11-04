@@ -1,7 +1,6 @@
 import { ICommonObject, IAutomationNode, IAutomationNodeData, INodeOutputsValue, INodeParams, DeployedUrl } from '../../../src/Interface'
 import { Response } from 'express'
 
-
 class ScheduleAutomation implements IAutomationNode {
     label: string
     name: string

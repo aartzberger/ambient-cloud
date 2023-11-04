@@ -3,7 +3,6 @@ import { getCredentialData, getCredentialParam } from '../../../src/utils'
 import { Response } from 'express'
 import { WebClient } from '@slack/web-api'
 
-
 class SlackEventAutomation implements IAutomationNode {
     label: string
     name: string
