@@ -48,7 +48,7 @@ class CustomTool_Tools implements INode {
             }
 
             const tools = await appDataSource.getRepository(databaseEntities['Tool']).find({
-                where: { user: req.user }
+                where: { user: options.user }
             })
 
             for (let i = 0; i < tools.length; i += 1) {
