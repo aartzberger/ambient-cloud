@@ -4,7 +4,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { JSDOM } from 'jsdom'
 import { DataSource } from 'typeorm'
-import { ICommonObject, IDatabaseEntity, IMessage, INodeData } from './Interface'
+import { ICommonObject, IDatabaseEntity, IMessage, INodeData, DeployedUrl } from './Interface'
 import { AES, enc } from 'crypto-js'
 import { ChatMessageHistory } from 'langchain/memory'
 import { AIMessage, HumanMessage } from 'langchain/schema'
@@ -12,7 +12,6 @@ import { AIMessage, HumanMessage } from 'langchain/schema'
 export const numberOrExpressionRegex = '^(\\d+\\.?\\d*|{{.*}})$' //return true if string consists only numbers OR expression {{}}
 export const notEmptyRegex = '(.|\\s)*\\S(.|\\s)*' //return true if string is not empty or blank
 
-const BASE_URL = process.env.BASE_URL || 'https://app-ambient.ngrok.app'
 
 /**
  * Get base classes of components
@@ -394,7 +393,7 @@ const getEncryptionKeyFilePath = (): string => {
  */
 export const refreshAccessToken = async (credentialId: string): Promise<string> => {
     try {
-        const response = await axios.post(BASE_URL + '/api/v1/credentials/refresh-token', { id: credentialId })
+        const response = await axios.post(DeployedUrl + '/api/v1/credentials/refresh-token', { id: credentialId })
         return response.data.token
     } catch (error) {
         console.error('The API returned an error:', error.response.data)
@@ -409,7 +408,7 @@ export const refreshAccessToken = async (credentialId: string): Promise<string> 
 export const updateAutomation = async (automationData: any): Promise<string> => {
     try {
         // update the automation. no need to restart automation
-        const response = await axios.post(BASE_URL + `/api/v1/automations/${automationData.chatflowid}`, { automations: [automationData] })
+        const response = await axios.post(DeployedUrl + `/api/v1/automations/${automationData.chatflowid}`, { automations: [automationData] })
         return response.data
     } catch (error) {
         console.error('The API returned an error:', error.response.data)
