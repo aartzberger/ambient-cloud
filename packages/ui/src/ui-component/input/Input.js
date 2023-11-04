@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useEffect } from 'react'
 import PropTypes from 'prop-types'
-import { FormControl, OutlinedInput } from '@mui/material'
+import { FormControl, OutlinedInput, Popover } from '@mui/material'
 import ExpandTextDialog from 'ui-component/dialog/ExpandTextDialog'
+import SelectVariable from 'ui-component/json/SelectVariable'
+import { getAvailableNodesForVariable } from 'utils/genericHelper'
 
 // API
 import remotesApi from 'api/remotes'
@@ -10,6 +12,9 @@ export const Input = ({
     data,
     inputParam,
     value,
+    nodes,
+    edges,
+    nodeId,
     onChange,
     disabled = false,
     showDialog,
@@ -19,6 +24,21 @@ export const Input = ({
 }) => {
     const [myValue, setMyValue] = useState(value ?? '')
     const [url, setUrl] = useState(value ?? '')
+    const [anchorEl, setAnchorEl] = useState(null)
+    const [availableNodesForVariable, setAvailableNodesForVariable] = useState([])
+    const ref = useRef(null)
+
+    const openPopOver = Boolean(anchorEl)
+
+    const handleClosePopOver = () => {
+        setAnchorEl(null)
+    }
+
+    const setNewVal = (val) => {
+        const newVal = myValue + val.substring(2)
+        onChange(newVal)
+        setMyValue(newVal)
+    }
 
     const getInputType = (type) => {
         switch (type) {
@@ -32,6 +52,19 @@ export const Input = ({
                 return 'text'
         }
     }
+
+    useEffect(() => {
+        if (!disabled && nodes && edges && nodeId && inputParam) {
+            const nodesForVariable = inputParam?.acceptVariable ? getAvailableNodesForVariable(nodes, edges, nodeId, inputParam.id) : []
+            setAvailableNodesForVariable(nodesForVariable)
+        }
+    }, [disabled, inputParam, nodes, edges, nodeId])
+
+    useEffect(() => {
+        if (typeof myValue === 'string' && myValue && myValue.endsWith('{{')) {
+            setAnchorEl(ref.current)
+        }
+    }, [myValue])
 
     // TODO CMAN: ideally we should spin milvus url into ints own ui component
     useEffect(() => {
@@ -87,6 +120,31 @@ export const Input = ({
                     }}
                 ></ExpandTextDialog>
             )}
+            <div ref={ref}></div>
+            {inputParam?.acceptVariable && (
+                <Popover
+                    open={openPopOver}
+                    anchorEl={anchorEl}
+                    onClose={handleClosePopOver}
+                    anchorOrigin={{
+                        vertical: 'bottom',
+                        horizontal: 'left'
+                    }}
+                    transformOrigin={{
+                        vertical: 'top',
+                        horizontal: 'left'
+                    }}
+                >
+                    <SelectVariable
+                        disabled={disabled}
+                        availableNodesForVariable={availableNodesForVariable}
+                        onSelectAndReturnVal={(val) => {
+                            setNewVal(val)
+                            handleClosePopOver()
+                        }}
+                    />
+                </Popover>
+            )}
         </>
     )
 }
@@ -99,6 +157,9 @@ Input.propTypes = {
     disabled: PropTypes.bool,
     showDialog: PropTypes.bool,
     dialogProps: PropTypes.object,
+    nodes: PropTypes.array,
+    edges: PropTypes.array,
+    nodeId: PropTypes.string,
     onDialogCancel: PropTypes.func,
     onDialogConfirm: PropTypes.func
 }

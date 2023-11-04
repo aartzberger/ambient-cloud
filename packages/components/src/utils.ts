@@ -3,6 +3,7 @@ import { load } from 'cheerio'
 import * as fs from 'fs'
 import * as path from 'path'
 import { JSDOM } from 'jsdom'
+import { z } from 'zod'
 import { DataSource } from 'typeorm'
 import { ICommonObject, IDatabaseEntity, IMessage, INodeData, DeployedUrl } from './Interface'
 import { AES, enc } from 'crypto-js'
@@ -133,6 +134,7 @@ export const getNodeModulesPackagePath = (packageName: string): string => {
  * @returns {boolean}
  */
 export const getInputVariables = (paramValue: string): string[] => {
+    if (typeof paramValue !== 'string') return []
     let returnVal = paramValue
     const variableStack = []
     const inputVariables = []
@@ -540,7 +542,7 @@ export const getUserHome = (): string => {
 
 /**
  * Map incoming chat history to ChatMessageHistory
- * @param {options} ICommonObject
+ * @param {ICommonObject} options
  * @returns {ChatMessageHistory}
  */
 export const mapChatHistory = (options: ICommonObject): ChatMessageHistory => {
@@ -574,4 +576,31 @@ export const convertChatHistoryToText = (chatHistory: IMessage[] = []): string =
             }
         })
         .join('\n')
+}
+
+/**
+ * Convert schema to zod schema
+ * @param {string | object} schema
+ * @returns {ICommonObject}
+ */
+export const convertSchemaToZod = (schema: string | object): ICommonObject => {
+    try {
+        const parsedSchema = typeof schema === 'string' ? JSON.parse(schema) : schema
+        const zodObj: ICommonObject = {}
+        for (const sch of parsedSchema) {
+            if (sch.type === 'string') {
+                if (sch.required) z.string({ required_error: `${sch.property} required` }).describe(sch.description)
+                zodObj[sch.property] = z.string().describe(sch.description)
+            } else if (sch.type === 'number') {
+                if (sch.required) z.number({ required_error: `${sch.property} required` }).describe(sch.description)
+                zodObj[sch.property] = z.number().describe(sch.description)
+            } else if (sch.type === 'boolean') {
+                if (sch.required) z.boolean({ required_error: `${sch.property} required` }).describe(sch.description)
+                zodObj[sch.property] = z.boolean().describe(sch.description)
+            }
+        }
+        return zodObj
+    } catch (e) {
+        throw new Error(e)
+    }
 }

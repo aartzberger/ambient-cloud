@@ -11,6 +11,7 @@ export type NodeParamsType =
     | 'asyncOptions'
     | 'options'
     | 'multiOptions'
+    | 'datagrid'
     | 'string'
     | 'number'
     | 'boolean'
@@ -65,6 +66,7 @@ export interface INodeParams {
     description?: string
     warning?: string
     options?: Array<INodeOptionsValue>
+    datagrid?: Array<ICommonObject>
     credentialNames?: Array<string>
     optional?: boolean | INodeDisplay
     step?: number

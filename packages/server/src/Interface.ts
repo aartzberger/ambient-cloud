@@ -9,6 +9,10 @@ import { Automation } from './database/entities/Automation'
 
 export type MessageType = 'apiMessage' | 'userMessage'
 
+export enum chatType {
+    INTERNAL = 'INTERNAL',
+    EXTERNAL = 'EXTERNAL'
+}
 /**
  * Databases
  */
@@ -45,8 +49,12 @@ export interface IChatMessage {
     role: MessageType
     content: string
     chatflowid: string
-    createdDate: Date
     sourceDocuments?: string
+    chatType: string
+    chatId: string
+    memoryType?: string
+    sessionId?: string
+    createdDate: Date
     user: User
 }
 
@@ -227,6 +235,7 @@ export interface IncomingInput {
     history: IMessage[]
     overrideConfig?: ICommonObject
     socketIOClientId?: string
+    chatId?: string
 }
 
 export interface IActiveChatflows {
