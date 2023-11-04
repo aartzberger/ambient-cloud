@@ -48,7 +48,7 @@ import {
 } from './utils'
 import { getApiKey, getAPIKeys, addAPIKey, updateAPIKey, deleteAPIKey, compareKeys } from './utils/apiKeyHelpers'
 import MilvusUpsert from './utils/Upsert'
-import blacklistNodes from './utils/blacklist'
+import whitelistNodes from './utils/whitelistNodes'
 import { DocumentLoaders, getFileName } from './utils/DocsLoader'
 import { cloneDeep, omit } from 'lodash'
 import { getDataSource } from './DataSource'
@@ -376,7 +376,7 @@ export class App {
         this.app.get('/api/v1/nodes', (req: Request, res: Response) => {
             const returnData = []
             for (const nodeName in this.nodesPool.componentNodes) {
-                if (blacklistNodes.includes(nodeName)) continue // skip over nodes that are blacklisted
+                if (!whitelistNodes.includes(nodeName)) continue // skip over nodes that are whitelist
                 const clonedNode = cloneDeep(this.nodesPool.componentNodes[nodeName])
                 returnData.push(clonedNode)
             }
