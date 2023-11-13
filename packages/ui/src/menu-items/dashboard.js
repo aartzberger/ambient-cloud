@@ -1,8 +1,8 @@
 // assets
-import { IconHierarchy, IconTemplate, IconKey, IconTool, IconLock, IconSettingsAutomation, IconDatabase } from '@tabler/icons'
+import { IconHierarchy, IconTemplate, IconKey, IconTool, IconLock, IconSettingsAutomation, IconDatabase, IconRobot } from '@tabler/icons'
 
 // constant
-const icons = { IconHierarchy, IconTemplate, IconKey, IconTool, IconLock, IconSettingsAutomation, IconDatabase }
+const icons = { IconHierarchy, IconTemplate, IconKey, IconTool, IconLock, IconSettingsAutomation, IconDatabase, IconRobot }
 
 // ==============================|| DASHBOARD MENU ITEMS ||============================== //
 
@@ -49,6 +49,14 @@ const dashboard = {
             type: 'item',
             url: '/marketplaces',
             icon: icons.IconTemplate,
+            breadcrumbs: true
+        },
+        {
+            id: 'assistants',
+            title: 'Assistants',
+            type: 'item',
+            url: '/assistants',
+            icon: icons.IconRobot,
             breadcrumbs: true
         },
         {

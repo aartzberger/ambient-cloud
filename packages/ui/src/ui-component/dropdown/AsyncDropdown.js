@@ -10,6 +10,7 @@ import { styled } from '@mui/material/styles'
 
 // API
 import credentialsApi from 'api/credentials'
+import remoteDb from 'api/remotesDb'
 
 // const
 import { baseURL } from 'store/constant'
@@ -54,6 +55,7 @@ export const AsyncDropdown = ({
     isCreateNewOption,
     onCreateNew,
     credentialNames = [],
+    isCollection = false,
     disabled = false,
     disableClearable = false
 }) => {
@@ -92,11 +94,44 @@ export const AsyncDropdown = ({
         }
     }
 
+    const fetchCollectionList = async () => {
+        try {
+            const resp = await remoteDb.getUserCollections('openai')
+            if (resp.data) {
+                const returnList = []
+                for (let i = 0; i < resp.data.length; i += 1) {
+                    const data = {
+                        label: resp.data[i].name,
+                        name: resp.data[i].name
+                    }
+                    returnList.push(data)
+                }
+
+                return returnList
+            }
+        } catch (error) {
+            console.error(error)
+        }
+    }
+
+    const fetchOptions = async () => {
+        let fetched
+        if (credentialNames.length) {
+            fetched = await fetchCredentialList()
+        } else if (isCollection) {
+            fetched = await fetchCollectionList()
+        } else {
+            fetched = await fetchList({ name, nodeData })
+        }
+
+        return fetched
+    }
+
     useEffect(() => {
         setLoading(true)
         ;(async () => {
             const fetchData = async () => {
-                let response = credentialNames.length ? await fetchCredentialList() : await fetchList({ name, nodeData })
+                let response = await fetchOptions()
                 if (isCreateNewOption) setOptions([...response, ...addNewOption])
                 else setOptions([...response])
                 setLoading(false)
@@ -173,6 +208,7 @@ AsyncDropdown.propTypes = {
     onCreateNew: PropTypes.func,
     disabled: PropTypes.bool,
     credentialNames: PropTypes.array,
+    isCollection: PropTypes.bool,
     disableClearable: PropTypes.bool,
     isCreateNewOption: PropTypes.bool
 }

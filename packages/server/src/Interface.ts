@@ -57,6 +57,7 @@ export interface IChatMessage {
     content: string
     chatflowid: string
     sourceDocuments?: string
+    usedTools?: string
     chatType: string
     chatId: string
     memoryType?: string
@@ -122,6 +123,16 @@ export interface IRemoteDb {
     updatedDate: Date
     createdDate: Date
     user: User
+}
+
+export interface IAssistant {
+    id: string
+    details: string
+    credential: string
+    collection?: string
+    iconSrc?: string
+    updatedDate: Date
+    createdDate: Date
 }
 
 export interface ICredential {

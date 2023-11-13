@@ -10,6 +10,7 @@ import { RemoteDb } from './RemoteDb'
 import { Trigger } from './Trigger'
 import { AutomationHandler } from './AutomationHandler'
 import { Automation } from './Automation'
+import { Assistant } from './Assistant'
 
 @Entity()
 export class User implements IUser {
@@ -66,4 +67,9 @@ export class User implements IUser {
         cascade: true // This will allow you to save tools when saving a user
     })
     automationhandlers: AutomationHandler[]
+
+    @OneToMany((type) => Assistant, (assistant) => assistant.user, {
+        cascade: true // This will allow you to save tools when saving a user
+    })
+    assistants: Assistant[]
 }

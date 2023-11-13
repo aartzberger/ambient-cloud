@@ -21,6 +21,9 @@ export class ChatMessage implements IChatMessage {
     @Column({ nullable: true, type: 'text' })
     sourceDocuments?: string
 
+    @Column({ nullable: true, type: 'text' })
+    usedTools?: string
+
     @Column()
     chatType: string
 

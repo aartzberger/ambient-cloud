@@ -39,7 +39,7 @@ def find_and_update_names(start_dir, whitelist_file):
         file.write('const whitelistNodes = [\n')
         for name, is_commented in all_names:
             prefix = '// ' if is_commented else ''
-            file.write(f"    {prefix}\"{name}\",\n")
+            file.write(f"    {prefix}\'{name}\',\n")
         file.write(']\n\n')
         file.write('export default whitelistNodes\n')
         

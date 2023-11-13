@@ -45,7 +45,7 @@ import useNotifier from 'utils/useNotifier'
 import { HIDE_CANVAS_DIALOG, SHOW_CANVAS_DIALOG } from 'store/actions'
 import remotesDb from 'api/remotesDb'
 
-const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm, dataSource }) => {
+const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }) => {
     const portalElement = document.getElementById('portal')
 
     const dispatch = useDispatch()
@@ -154,18 +154,18 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
     useEffect(() => {
         setMapLoaded(false)
 
-        if (dialogProps.type === 'EDIT' && dialogProps.name) {
-            // When tool dialog is opened from CustomTool node in canvas
-            setCollectionName(dialogProps.name)
-            getSpecificCollectionApi.request(dataSource, dialogProps.name)
-            querySpecificCollectionApi.request(dataSource, dialogProps.name)
-            setOldCollectionName(dialogProps.name)
-        } else if (dialogProps.type === 'EDIT' && dialogProps.data.name) {
+        if (dialogProps.type === 'EDIT' && dialogProps.data) {
             // When tool dialog is opened from CustomTool node in canvas
             setCollectionName(dialogProps.data.name)
             getSpecificCollectionApi.request(dataSource, dialogProps.data.name)
             querySpecificCollectionApi.request(dataSource, dialogProps.data.name)
             setOldCollectionName(dialogProps.data.name)
+        } else if (dialogProps.type === 'EDIT' && dialogProps.name) {
+            // When tool dialog is opened from CustomTool node in canvas
+            setCollectionName(dialogProps.name)
+            getSpecificCollectionApi.request(dataSource, dialogProps.name)
+            querySpecificCollectionApi.request(dataSource, dialogProps.name)
+            setOldCollectionName(dialogProps.name)
         } else if (dialogProps.type === 'ADD') {
             // When tool dialog is to add a new tool
             setCollectionName('')
@@ -420,7 +420,6 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
 CollectionDialog.propTypes = {
     show: PropTypes.bool,
     dialogProps: PropTypes.object,
-    onUseTemplate: PropTypes.func,
     onCancel: PropTypes.func,
     onConfirm: PropTypes.func,
     dataSource: PropTypes.string

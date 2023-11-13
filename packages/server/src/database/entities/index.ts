@@ -7,6 +7,7 @@ import { ChatMessage } from './ChatMessage'
 import { Credential } from './Credential'
 import { ApiKey } from './ApiKey'
 import { Tool } from './Tool'
+import { Assistant } from './Assistant'
 import { RemoteDb } from './RemoteDb'
 
 export const entities = {
@@ -19,5 +20,6 @@ export const entities = {
     Credential,
     ApiKey,
     Tool,
-    RemoteDb
+    RemoteDb,
+    Assistant
 }

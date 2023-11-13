@@ -7,11 +7,23 @@ import { getFileName } from '../utils/DocsLoader'
 // any time a collecgtion is queried, it will return all files that include the collection name and user id
 // sorting through these is O(n) and will get worse as more files are added
 
+export const checkAssistantFiles = (allFiles: any[]) => {
+    const uniqueFiles = allFiles.reduce((unique: [any], file: any) => {
+        if (!unique.find((f: any) => f.langchain_primaryid === file.langchain_primaryid)) {
+            unique.push(file);
+        }
+        return unique;
+    }, []);
+
+    return uniqueFiles
+}
+
 export class OpenAiFiles {
     private client: OpenAI
 
-    constructor() {
-        this.client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    constructor(apiKey: string|null = null) {
+        const key = apiKey || process.env.OPENAI_API_KEY
+        this.client = new OpenAI({ apiKey: key })
     }
 
     async createCollection(user: User, name: string, files: []) {
