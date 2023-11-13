@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 
 // material-ui
@@ -8,13 +8,14 @@ import { useTheme } from '@mui/material/styles'
 // project imports
 import MainCard from 'ui-component/cards/MainCard'
 import ItemCard from 'ui-component/cards/ItemCard'
+import { Dropdown } from 'ui-component/dropdown/Dropdown'
 import { gridSpacing } from 'store/constant'
 import ToolEmptySVG from 'assets/images/tools_empty.svg'
 import { StyledButton } from 'ui-component/button/StyledButton'
 import CollectionDialog from './CollectionDialog'
 
 // API
-import remotesApi from 'api/remotes'
+import remotesApi from 'api/remotesDb'
 
 // Hooks
 import useApi from 'hooks/useApi'
@@ -22,7 +23,25 @@ import useApi from 'hooks/useApi'
 // icons
 import { IconPlus } from '@tabler/icons'
 
-// ==============================|| CHATFLOWS ||============================== //
+// ==============================|| Collections ||============================== //
+
+const sourceOptions = [
+    {
+        label: 'Cloud',
+        name: 'cloud',
+        description: 'Data on AmbientWare cloud'
+    },
+    {
+        label: 'Local',
+        name: 'local',
+        description: 'Data on your local machine'
+    },
+    {
+        label: 'OpenAi',
+        name: 'openai',
+        description: 'Data hosted on OpenAi'
+    }
+]
 
 const Collections = () => {
     const theme = useTheme()
@@ -32,8 +51,7 @@ const Collections = () => {
 
     const [showDialog, setShowDialog] = useState(false)
     const [dialogProps, setDialogProps] = useState({})
-
-    const inputRef = useRef(null)
+    const [dataSource, setDataSource] = useState(sourceOptions[0].name ?? '')
 
     const onUploadFile = (file) => {
         try {
@@ -90,13 +108,18 @@ const Collections = () => {
         setShowDialog(true)
     }
 
+    const updateDataSource = (source) => {
+        setDataSource(source)
+        getAllCollectionsApi.request(source)
+    }
+
     const onConfirm = () => {
         setShowDialog(false)
-        getAllCollectionsApi.request()
+        getAllCollectionsApi.request(dataSource)
     }
 
     useEffect(() => {
-        getAllCollectionsApi.request()
+        getAllCollectionsApi.request(dataSource)
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
@@ -106,8 +129,17 @@ const Collections = () => {
             <MainCard sx={{ background: customization.isDarkMode ? theme.palette.common.black : '' }}>
                 <Stack flexDirection='row'>
                     <h1>Collections</h1>
-                    <Grid sx={{ mb: 1.25 }} container direction='row'>
+                    <Grid container alignItems='center' spacing={2} sx={{ mb: 1.25 }}>
                         <Box sx={{ flexGrow: 1 }} />
+                        <Grid item xs={1} sm={2}>
+                            <Dropdown
+                                value={dataSource}
+                                onSelect={updateDataSource}
+                                name={'dropdown'}
+                                options={sourceOptions}
+                                fullWidth // This can be used instead of sx={{ width: '100%' }}
+                            />
+                        </Grid>
                         <Grid item>
                             <StyledButton variant='contained' sx={{ color: 'white' }} onClick={addNew} startIcon={<IconPlus />}>
                                 Create
@@ -138,6 +170,7 @@ const Collections = () => {
                 dialogProps={dialogProps}
                 onCancel={() => setShowDialog(false)}
                 onConfirm={onConfirm}
+                dataSource={dataSource}
             ></CollectionDialog>
         </>
     )

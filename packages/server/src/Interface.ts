@@ -6,6 +6,9 @@ import { Credential } from '../src/database/entities/Credential'
 import { ApiKey } from '../src/database/entities/ApiKey'
 import { Tool } from '../src/database/entities/Tool'
 import { Automation } from './database/entities/Automation'
+import { Trigger } from './database/entities/Trigger'
+import { AutomationHandler } from './database/entities/AutomationHandler'
+import { RemoteDb } from './database/entities/RemoteDb'
 
 export type MessageType = 'apiMessage' | 'userMessage'
 
@@ -26,6 +29,10 @@ export interface IUser {
     credentials?: Credential[]
     tools?: Tool[]
     apiKeys?: ApiKey[]
+    remoteDb?: RemoteDb[]
+    automation?: Automation[]
+    trigger?: Trigger[]
+    AutomationHandler?: AutomationHandler[]
 }
 
 export interface IChatFlow {
@@ -111,8 +118,7 @@ export interface IAutomationHandler {
 
 export interface IRemoteDb {
     id: string
-    milvusUrl: string
-    clientUrl: string
+    url: string
     updatedDate: Date
     createdDate: Date
     user: User

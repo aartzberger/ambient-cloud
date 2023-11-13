@@ -5,9 +5,6 @@ import ExpandTextDialog from 'ui-component/dialog/ExpandTextDialog'
 import SelectVariable from 'ui-component/json/SelectVariable'
 import { getAvailableNodesForVariable } from 'utils/genericHelper'
 
-// API
-import remotesApi from 'api/remotes'
-
 export const Input = ({
     data,
     inputParam,
@@ -23,7 +20,6 @@ export const Input = ({
     onDialogConfirm
 }) => {
     const [myValue, setMyValue] = useState(value ?? '')
-    const [url, setUrl] = useState(value ?? '')
     const [anchorEl, setAnchorEl] = useState(null)
     const [availableNodesForVariable, setAvailableNodesForVariable] = useState([])
     const ref = useRef(null)
@@ -66,24 +62,6 @@ export const Input = ({
         }
     }, [myValue])
 
-    // TODO CMAN: ideally we should spin milvus url into ints own ui component
-    useEffect(() => {
-        const getUrl = async () => {
-            try {
-                const res = await remotesApi.getUserMilvusEndpoint()
-                setUrl(res.data.endpoint ? res.data.endpoint : none)
-                data.inputs[inputParam.name] = res.data.endpoint ? res.data.endpoint : none
-            } catch (e) {
-                console.error(e)
-                setUrl('None')
-                data.inputs[inputParam.name] = 'None'
-            }
-        }
-
-        inputParam.name === 'milvusServerUrl' && getUrl()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
-
     return (
         <>
             <FormControl sx={{ mt: 1, width: '100%' }} size='small'>
@@ -95,7 +73,7 @@ export const Input = ({
                     placeholder={inputParam.placeholder}
                     multiline={!!inputParam.rows}
                     rows={inputParam.rows ?? 1}
-                    value={inputParam.name === 'milvusServerUrl' && url ? url : myValue}
+                    value={myValue}
                     name={inputParam.name}
                     onChange={(e) => {
                         setMyValue(e.target.value)

@@ -1,6 +1,6 @@
 import axios from 'axios'
 import querystring from 'querystring'
-import express, { Request, Response, NextFunction } from 'express'
+import express, { Request, Response, NextFunction, query } from 'express'
 import session from 'express-session'
 import passport from 'passport'
 const GoogleStrategy = require('passport-google-oauth20').Strategy
@@ -17,6 +17,8 @@ import { v4 as uuidv4 } from 'uuid'
 import { Between, IsNull, FindOptionsWhere } from 'typeorm'
 import { MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { DynamoDB } from '@aws-sdk/client-dynamodb'
+import { OpenAiFiles } from './utils/openAiHelpers'
+import { Document } from "langchain/document";
 
 import {
     IChatFlow,
@@ -52,6 +54,7 @@ import {
     checkMemorySessionId,
     clearSessionMemoryFromViewMessageDialog
 } from './utils'
+import { getDbAddress, getCollectionName } from './utils/CollectionsHelper'
 import { getApiKey, getAPIKeys, addAPIKey, updateAPIKey, deleteAPIKey, compareKeys } from './utils/apiKeyHelpers'
 import MilvusUpsert from './utils/Upsert'
 import whitelistNodes from './utils/whitelistNodes'
@@ -76,6 +79,7 @@ import { handleAutomationInterval, removeAutomationInterval } from './utils/sche
 import { RecursiveCharacterTextSplitter, RecursiveCharacterTextSplitterParams } from 'langchain/text_splitter'
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
 import PredictionHandler from './PredictionHandler'
+
 // import { HuggingFaceInferenceEmbeddings } from 'langchain/embeddings/hf'
 
 // TODO CMAN - chang this for input
@@ -97,6 +101,7 @@ export class App {
     chatflowPool: ChatflowPool
     cachePool: CachePool
     AppDataSource = getDataSource()
+    openaiFiles = new OpenAiFiles()
 
     constructor() {
         this.app = express()
@@ -316,8 +321,7 @@ export class App {
                         try {
                             const result = await handleRemoteDb({
                                 id: user.id,
-                                milvusUrl: `http://server.ambientware.co:${DEV_MILVUS_PORT}`,
-                                clientUrl: 'foobar'
+                                url: `http://server.ambientware.co:${DEV_MILVUS_PORT}`
                             })
                         } catch (error) {
                             logger.error('❌ [server]: Error in handleRemoteDb:', error)
@@ -1241,7 +1245,7 @@ export class App {
                 user: user
             })
 
-            const endpointData = { milvusUrl: reqBody.milvusUrl, clientUrl: reqBody.clientUrl }
+            const endpointData = { url: reqBody.url }
 
             if (currentdb) {
                 const updateRemoteDb = new RemoteDb()
@@ -1268,54 +1272,15 @@ export class App {
             return res.json(result)
         })
 
-        // return the remote client endpoint for a given user
-        this.app.get('/api/v1/user-client-endpoint', async (req: Request, res: Response) => {
-            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                user: req.user as User
-            })
-
-            const endpointData = { endpoint: remoteData ? (remoteData as RemoteDb).clientUrl : '' }
-            return res.json(endpointData)
-        })
-
-        // return the remote milvus endpoint for a given user
-        this.app.get('/api/v1/user-milvus-endpoint', async (req: Request, res: Response) => {
-            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                user: req.user as User
-            })
-
-            const endpointData = { endpoint: remoteData ? (remoteData as RemoteDb).milvusUrl : '' }
-            return res.json(endpointData)
-        })
-
-        // return a specific collection
-        this.app.get('/api/v1/milvus-collections/:name', async (req: Request, res: Response) => {
-            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                user: req.user as User
-            })
-
-            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
-            if (!client) return res.status(400).send('Milvus client not found')
-
-            const collection = await client.describeCollection({
-                // Return the name and schema of the collection.
-                collection_name: req.params.name
-            })
-
-            return res.json(collection)
-        })
-
         // load or unload a specific collection
-        this.app.post('/api/v1/load-unload-collection', async (req: Request, res: Response) => {
-            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                user: req.user as User
-            })
+        this.app.post('/api/v1/collections/load-unload/:source', async (req: Request, res: Response) => {
+            const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
-            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+            const client = address ? new MilvusClient({ address: address as string }) : null
             if (!client) return res.status(400).send('Milvus client not found')
 
             const load = req.body.load
-            const name = req.body.collection
+            const name = getCollectionName(req.user as User, req.body.collection, req.params.source)
 
             let status
             if (load) {
@@ -1334,17 +1299,22 @@ export class App {
         })
 
         // query collection name to get docs info
-        this.app.get('/api/v1/milvus-query/:name', async (req: Request, res: Response) => {
-            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                user: req.user as User
-            })
+        this.app.get('/api/v1/collections/query/:source/:name', async (req: Request, res: Response) => {
+            const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
-            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+            if (req.params.source === 'openai') {
+                const queryResult = await this.openaiFiles.getFiles(req.user as User, req.params.name)
+
+                return res.json(queryResult)
+            }
+
+            const client = address ? new MilvusClient({ address: address as string }) : null
             if (!client) return res.status(400).send('Milvus client not found')
+            const name = getCollectionName(req.user as User, req.params.name, req.params.source)
 
             const queryResult = await client.query({
                 // Return the name and schema of the collection.
-                collection_name: req.params.name,
+                collection_name: name,
                 expr: '',
                 output_fields: ['fileName'],
                 limit: 15000
@@ -1353,21 +1323,60 @@ export class App {
             return res.json(queryResult)
         })
 
-        // return a list of collections belonging to a given user
-        this.app.get('/api/v1/milvus-collections', async (req: Request, res: Response) => {
-            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                user: req.user as User
-            })
+        // return a specific collection
+        this.app.get('/api/v1/collections/:source/:name', async (req: Request, res: Response) => {
+            const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
-            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+            const client = address ? new MilvusClient({ address: address as string }) : null
             if (!client) return res.status(400).send('Milvus client not found')
 
-            const collections = await client.showCollections()
+            let collection
+            if (req.params.source === 'openai') {
+                collection = await this.openaiFiles.getCollections(req.user as User)
+            } else {
+                collection = await client.describeCollection({
+                    // Return the name and schema of the collection.
+                    collection_name: req.params.name
+                })
+            }
+
+            return res.json(collection)
+        })
+
+        // return a list of collections belonging to a given user
+        this.app.get('/api/v1/collections/:source', async (req: Request, res: Response) => {
+            const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
+
+            let collections
+            let collectionNames
+            try {
+                if (req.params.source === 'openai') {
+                    collectionNames = await this.openaiFiles.getCollections(req.user as User)
+                } else {
+                    const client = address ? new MilvusClient({ address: address as string }) : null
+                    if (!client) return res.status(400).send('Milvus client not found')
+                    collections = await client.showCollections()
+
+                    collectionNames = (collections as any).collection_names
+                }
+            } catch (e) {
+                logger.error(e)
+                return res.status(400).send('Collections not found')
+            }
+
+            // TODO CMAN - this is currently O(1) time... need to improve this
+            // it will be problematic with lots of collections
+            if (req.params.source === 'cloud') {
+                collectionNames = collectionNames.filter((name: string) => {
+                    return name.includes((req.user as User)?.id as string)
+                })
+            }
 
             const returnData: INodeOptionsValue[] = []
-            for (let collection of collections.data) {
+            for (let collection of collectionNames) {
+                const name = getCollectionName(req.user as User, collection, req.params.source)
                 const data = {
-                    name: collection.name
+                    name: name.split('_').shift() // this will remove the user id from cloud collections
                 } as INodeOptionsValue
                 returnData.push(data)
             }
@@ -1376,75 +1385,91 @@ export class App {
         })
 
         // delete collection entities
-        this.app.post('/api/v1/milvus-delete-entities/', async (req: Request, res: Response) => {
-            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                user: req.user as User
-            })
+        this.app.post('/api/v1/collections/entities/delete/:source', async (req: Request, res: Response) => {
+            const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
-            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+            if (req.params.source === 'openai') {
+                const result = this.openaiFiles.deleteFiles(req.body.entities)
+                
+                return res.json(result)
+            }
+
+            const client = address ? new MilvusClient({ address: address as string }) : null
             if (!client) return res.status(400).send('Milvus client not found')
+            const name = getCollectionName(req.user as User, req.body.collection_name, req.params.source)
+
+            const milvusExpression = `langchain_primaryid in [${req.body.entities}]`
 
             const result = await client.deleteEntities({
                 // Return the name and schema of the collection.
-                collection_name: req.body.collection_name,
-                expr: req.body.expr
+                collection_name: name,
+                expr: milvusExpression
             })
 
             return res.json(result)
         })
 
-        // remove a collection from a given user
-        this.app.get('/api/v1/delete-collection/:name', async (req: Request, res: Response) => {
-            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                user: req.user as User
-            })
+        // delete a collection for a given user
+        this.app.delete('/api/v1/collections/delete/:source/:name', async (req: Request, res: Response) => {
+            if (req.params.source === 'openai') {
+                const results = this.openaiFiles.deleteCollection(req.user as User, req.params.name)
 
-            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+                return res.json(results)
+            }
+            const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
+
+            const client = address ? new MilvusClient({ address: address as string }) : null
             if (!client) return res.status(400).send('Milvus client not found')
+
+            const name = getCollectionName(req.user as User, req.params.name, req.params.source)
 
             const collection = await client.dropCollection({
                 // Return the name and schema of the collection.
-                collection_name: req.params.name
+                collection_name: name
             })
 
             return res.json(collection)
         })
 
         // update a collection from a given user
-        this.app.post('/api/v1/rename-collection', async (req: Request, res: Response) => {
-            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                user: req.user as User
-            })
+        this.app.post('/api/v1/collections/rename/:source', async (req: Request, res: Response) => {
+            const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
-            const client = remoteData ? new MilvusClient({ address: remoteData.milvusUrl as string }) : null
+            const client = address ? new MilvusClient({ address: address as string }) : null
             if (!client) return res.status(400).send('Milvus client not found')
+
+            const oldName = getCollectionName(req.user as User, req.body.oldName, req.params.source)
+            const newName = getCollectionName(req.user as User, req.body.newName, req.params.source)
 
             const collection = await client.renameCollection({
                 // Return the name and schema of the collection.
-                collection_name: req.body.oldName,
-                new_collection_name: req.body.newName
+                collection_name: oldName,
+                new_collection_name: newName
             })
 
             return res.json(collection)
         })
 
-        // create a collection from a given user
-        this.app.post('/api/v1/create-collection/:collectionName', async (req: Request, res: Response) => {
-            const remoteData = await this.AppDataSource.getRepository(RemoteDb).findOneBy({
-                user: req.user as User
-            })
+        // create a collection for a given user
+        this.app.post('/api/v1/collections/create/:source', async (req: Request, res: Response) => {
+            const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
             const obj = {} as RecursiveCharacterTextSplitterParams
             obj.chunkSize = 1500
             obj.chunkOverlap = 200
 
+            // TODO CMAN - make this dynamic. For now, we are just using the OpenAI embeddings
+            const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
+            // const embeddings = new HuggingFaceInferenceEmbeddings({model: 'sentence-transformers/all-MiniLM-L6-v2'}) // api key passed by env variable
+
+
             const textSplitter = new RecursiveCharacterTextSplitter(obj)
 
             const fileBase64 = req.body.files
-            const collectionName = req.params.collectionName
 
-            let alldocs = []
-            let files: string[] = []
+            const collectionName = getCollectionName(req.user as User, req.body.name, req.params.source)
+
+            let files = []
 
             if (fileBase64.startsWith('[') && fileBase64.endsWith(']')) {
                 files = JSON.parse(fileBase64)
@@ -1452,10 +1477,17 @@ export class App {
                 files = [fileBase64]
             }
 
-            for (const file of files) {
+            if (req.params.source === 'openai') {
+                const result = await this.openaiFiles.createCollection(req.user as User, collectionName, files)
+
+                return res.json(result)
+            }
+
+            const createPromises = files.map(async (file: string) => {
                 const splitDataURI = file.split(',')
                 const fileName = getFileName(file)
                 const fileExtension = fileName.split('.').pop()
+                let alldocs: Document[] = []
 
                 splitDataURI.pop()
                 const bf = Buffer.from(splitDataURI.pop() || '', 'base64')
@@ -1476,23 +1508,22 @@ export class App {
                         doc.metadata = { fileName: fileName }
                     }
                     alldocs.push(...docs)
-                    // }
                 }
-            }
 
-            // TODO CMAN - make this dynamic
-            const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
-            // const embeddings = new HuggingFaceInferenceEmbeddings({model: 'sentence-transformers/all-MiniLM-L6-v2'}) // api key passed by env variable
+                const milvusArgs = {
+                    collectionName: collectionName,
+                    url: address ? (address as string) : ''
+                }
 
-            const milvusArgs = {
-                collectionName: collectionName,
-                url: remoteData ? (remoteData.milvusUrl as string) : ''
-            }
+                const vectorStore = await MilvusUpsert.fromDocuments(alldocs, embeddings, milvusArgs)
 
-            const vectorStore = await MilvusUpsert.fromDocuments(alldocs, embeddings, milvusArgs)
+                return vectorStore
+            })
+
+            const results = await Promise.all(createPromises)
 
             // TODO CMAN - need to return something relevant
-            return res.json('ok')
+            return res.json(results)
         })
 
         // ----------------------------------------

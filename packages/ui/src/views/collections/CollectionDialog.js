@@ -33,7 +33,8 @@ import { File } from 'ui-component/file/File'
 import { IconX, IconTrash } from '@tabler/icons'
 
 // API
-import remotesApi from 'api/remotes'
+import remotesApi from 'api/remotesDb'
+import openaiDb from 'api/openaiDb'
 
 // Hooks
 import useConfirm from 'hooks/useConfirm'
@@ -42,8 +43,9 @@ import useApi from 'hooks/useApi'
 // utils
 import useNotifier from 'utils/useNotifier'
 import { HIDE_CANVAS_DIALOG, SHOW_CANVAS_DIALOG } from 'store/actions'
+import remotesDb from 'api/remotesDb'
 
-const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm }) => {
+const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfirm, dataSource }) => {
     const portalElement = document.getElementById('portal')
 
     const dispatch = useDispatch()
@@ -67,12 +69,16 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
     const [pendingUpload, setPendingUpload] = useState(false)
     const [hasUploaded, setHasUploaded] = useState(false)
 
-    const uploadFile = async (value) => {
+    const uploadFile = async (value, dataSource) => {
         try {
             setPendingUpload(true)
-            const saveResp = await remotesApi.createCollection(collectionName, {
+
+            let saveResp = null
+            saveResp = await remotesApi.createCollection(dataSource, {
+                name: collectionName,
                 files: value
             })
+
             if (saveResp.data) {
                 enqueueSnackbar({
                     message: 'File uploaded successfully',
@@ -86,12 +92,11 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                         )
                     }
                 })
-                querySpecificCollectionApi.request(collectionName)
+                querySpecificCollectionApi.request(dataSource, collectionName)
             }
             setPendingUpload(false)
             setHasUploaded(true)
         } catch (error) {
-            console.error(error)
             setPendingUpload(false)
         }
     }
@@ -151,15 +156,15 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
 
         if (dialogProps.type === 'EDIT' && dialogProps.name) {
             // When tool dialog is opened from CustomTool node in canvas
-            setCollectionName('')
-            getSpecificCollectionApi.request(dialogProps.name)
-            querySpecificCollectionApi.request(dialogProps.name)
+            setCollectionName(dialogProps.name)
+            getSpecificCollectionApi.request(dataSource, dialogProps.name)
+            querySpecificCollectionApi.request(dataSource, dialogProps.name)
             setOldCollectionName(dialogProps.name)
         } else if (dialogProps.type === 'EDIT' && dialogProps.data.name) {
             // When tool dialog is opened from CustomTool node in canvas
-            setCollectionName('')
-            getSpecificCollectionApi.request(dialogProps.data.name)
-            querySpecificCollectionApi.request(dialogProps.data.name)
+            setCollectionName(dialogProps.data.name)
+            getSpecificCollectionApi.request(dataSource, dialogProps.data.name)
+            querySpecificCollectionApi.request(dataSource, dialogProps.data.name)
             setOldCollectionName(dialogProps.data.name)
         } else if (dialogProps.type === 'ADD') {
             // When tool dialog is to add a new tool
@@ -182,7 +187,7 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                     oldName: oldCollectionName,
                     newName: collectionName
                 }
-                saveResp = await remotesApi.renameCollection(args)
+                saveResp = await remotesApi.renameCollection(dataSource, args)
             }
 
             if (saveResp ? saveResp.data : true) {
@@ -207,14 +212,12 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
 
     const deleteEntities = async (entities) => {
         try {
-            const expression = `langchain_primaryid in [${entities}]`
-
             const args = {
                 collection_name: collectionName,
-                expr: expression
+                entities: entities
             }
 
-            const delResp = await remotesApi.deleteEntities(args)
+            const delResp = await remotesDb.deleteEntities(dataSource, args)
             if (delResp.data) {
                 enqueueSnackbar({
                     message: 'File deleted',
@@ -228,7 +231,7 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                         )
                     }
                 })
-                querySpecificCollectionApi.request(collectionName)
+                querySpecificCollectionApi.request(dataSource, collectionName)
             }
         } catch (error) {
             const errorData = error.response.data || `${error.response.status}: ${error.response.statusText}`
@@ -260,7 +263,7 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
 
         if (isConfirmed) {
             try {
-                const delResp = await remotesApi.deleteCollection(collectionName)
+                const delResp = await remotesDb.deleteCollection(dataSource, collectionName)
                 if (delResp.data) {
                     enqueueSnackbar({
                         message: 'Collection deleted',
@@ -327,7 +330,7 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                         id='collectionName'
                         type='string'
                         fullWidth
-                        disabled={dialogProps.type === 'TEMPLATE'}
+                        disabled={dialogProps.type === 'TEMPLATE' || (dataSource === 'openai' && dialogProps.type !== 'ADD')}
                         placeholder='My New Collection'
                         value={collectionName}
                         name='collectionName'
@@ -338,7 +341,7 @@ const CollectionDialog = ({ show, dialogProps, onUseTemplate, onCancel, onConfir
                     <File
                         disabled={collectionName === ''}
                         fileType={'*'}
-                        onChange={(newValue) => uploadFile(newValue)}
+                        onChange={(newValue) => uploadFile(newValue, dataSource)}
                         value={'Choose a file to upload'}
                     />
                 </Box>
@@ -419,7 +422,8 @@ CollectionDialog.propTypes = {
     dialogProps: PropTypes.object,
     onUseTemplate: PropTypes.func,
     onCancel: PropTypes.func,
-    onConfirm: PropTypes.func
+    onConfirm: PropTypes.func,
+    dataSource: PropTypes.string
 }
 
 export default CollectionDialog

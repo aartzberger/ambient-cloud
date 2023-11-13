@@ -9,10 +9,7 @@ export class RemoteDb implements IRemoteDb {
     id: string
 
     @Column()
-    milvusUrl: string
-
-    @Column()
-    clientUrl: string
+    url: string
 
     @CreateDateColumn()
     createdDate: Date

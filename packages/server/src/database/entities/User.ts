@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { Entity, Column, OneToMany, PrimaryColumn, ManyToMany } from 'typeorm'
+import { Entity, Column, OneToMany, PrimaryColumn } from 'typeorm'
 import { IUser } from '../../Interface'
 import { ChatFlow } from './ChatFlow'
 import { ChatMessage } from './ChatMessage'

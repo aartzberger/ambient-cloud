@@ -9,11 +9,12 @@ import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
 import { DynamicTool } from 'langchain/tools'
 import { createRetrieverTool } from 'langchain/agents/toolkits'
 import { BaseRetriever } from 'langchain/schema/retriever'
+import { checkJsonString } from './core'
 
 // TODO CMAN - chang this for input
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY
 
-class Milvus_Existing_Collection implements INode {
+class Local_Existing_Collection implements INode {
     label: string
     name: string
     version: number
@@ -27,34 +28,15 @@ class Milvus_Existing_Collection implements INode {
     outputs: INodeOutputsValue[]
 
     constructor() {
-        this.label = 'Load Existing Collection'
-        this.name = 'milvusExistingDataCollection'
+        this.label = 'Load Local Collection'
+        this.name = 'localCollection'
         this.version = 2.0
-        this.type = 'Milvus'
+        this.type = 'LocalCollection'
         this.icon = 'collection.svg'
         this.category = 'Collections'
-        this.description = 'Load one of your existing data collections!'
+        this.description = 'Load one of your locally hosted data collections!'
         this.baseClasses = [this.type, 'VectorStoreRetriever', 'BaseRetriever', ...getBaseClasses(DynamicTool)]
-        // this.credential = {
-        //     label: 'Connect Credential',
-        //     name: 'credential',
-        //     type: 'credential',
-        //     optional: true,
-        //     credentialNames: ['milvusAuth']
-        // }
         this.inputs = [
-            // {
-            //     label: 'Embeddings',
-            //     name: 'embeddings',
-            //     type: 'Embeddings',
-            //     optional: true
-            // },
-            {
-                label: 'Server URL',
-                name: 'milvusServerUrl',
-                type: 'string',
-                placeholder: 'http://localhost:19530'
-            },
             {
                 label: 'Collection Name',
                 name: 'selectedCollection',
@@ -123,9 +105,9 @@ class Milvus_Existing_Collection implements INode {
             const RemoteDb = await appDataSource.getRepository(databaseEntities['RemoteDb']).findOneBy({
                 user: options.user
             })
-            const milvusUrl = (RemoteDb as any).milvusUrl
+            const url = (RemoteDb as any).url
 
-            const client = new MilvusClient({ address: milvusUrl })
+            const client = new MilvusClient({ address: url })
             const collectionData = await client.showCollections()
             for (let collection of collectionData.data) {
                 const data = {
@@ -140,11 +122,15 @@ class Milvus_Existing_Collection implements INode {
     }
 
     async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
-        // server setup
-        const address = nodeData.inputs?.milvusServerUrl as string
+        const RemoteDb = await options.appDataSource.getRepository(options.databaseEntities['RemoteDb']).findOneBy({
+            user: options.user
+        })
+
+        const address = (RemoteDb as any).url
         const collectionName = nodeData.inputs?.selectedCollection as string
         const milvusFilter = nodeData.inputs?.milvusFilter as string
         const retrieverToolDescription = nodeData.inputs?.description as string
+        console.log(options)
 
         // embeddings
         // const embeddings = nodeData.inputs?.embeddings
@@ -252,13 +238,4 @@ class Milvus_Existing_Collection implements INode {
     }
 }
 
-function checkJsonString(value: string): { isJson: boolean; obj: any } {
-    try {
-        const result = JSON.parse(value)
-        return { isJson: true, obj: result }
-    } catch (e) {
-        return { isJson: false, obj: null }
-    }
-}
-
-module.exports = { nodeClass: Milvus_Existing_Collection }
+module.exports = { nodeClass: Local_Existing_Collection }
