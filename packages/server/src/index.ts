@@ -15,7 +15,7 @@ import logger from './utils/logger'
 import { expressRequestLogger } from './utils/logger'
 import { v4 as uuidv4 } from 'uuid'
 import OpenAI from 'openai'
-import { Between, IsNull, FindOptionsWhere, Collection } from 'typeorm'
+import { Between, IsNull, FindOptionsWhere } from 'typeorm'
 import { MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { DynamoDB } from '@aws-sdk/client-dynamodb'
 import { OpenAiFiles, checkAssistantFiles } from './utils/openAiHelpers'
@@ -73,6 +73,7 @@ import { ChatMessage } from './database/entities/ChatMessage'
 import { Credential } from './database/entities/Credential'
 import { Tool } from './database/entities/Tool'
 import { RemoteDb } from './database/entities/RemoteDb'
+import { Collection } from './database/entities/Collection'
 import { Assistant } from './database/entities/Assistant'
 import { ChatflowPool } from './ChatflowPool'
 import { CachePool } from './CachePool'
@@ -1251,7 +1252,21 @@ export class App {
                 id: req.params.id,
                 user: req.user as User
             })
+
             return res.json(assistant)
+        })
+
+        // get collection for a specific assistnat
+        this.app.get('/api/v1/assistant-collection/:id', async (req: Request, res: Response) => {
+            const assistant = await this.AppDataSource.getRepository(Assistant).findOne({
+                where: {
+                    id: req.params.id,
+                    user: req.user as User
+                },
+                relations: ['collection']
+            })
+
+            return res.json(assistant?.collection)
         })
 
         // Get assistant object
@@ -1310,6 +1325,11 @@ export class App {
 
             const assistantDetails = JSON.parse(body.details)
 
+            const assignedCollection = await this.AppDataSource.getRepository(Collection).findOneBy({
+                user: req.user as User,
+                name: body.collection
+            })
+
             try {
                 const credential = await this.AppDataSource.getRepository(Credential).findOneBy({
                     id: body.credential,
@@ -1334,11 +1354,7 @@ export class App {
                     }
                 }
 
-                const openaiFiles = new OpenAiFiles(openAIApiKey)
-                const collectionFiles = await openaiFiles.getFiles(req.user as User, body.collection)
-
-                const allFiles = [...assistantDetails.files, ...collectionFiles.data]
-                assistantDetails.files = checkAssistantFiles(allFiles)
+                const files = JSON.parse(assignedCollection?.files || '[]')
 
                 if (!assistantDetails.id) {
                     const newAssistant = await openai.beta.assistants.create({
@@ -1347,7 +1363,7 @@ export class App {
                         instructions: assistantDetails.instructions,
                         model: assistantDetails.model,
                         tools,
-                        file_ids: (assistantDetails.files ?? []).map((file: any) => file.langchain_primaryid)
+                        file_ids: (files ?? []).map((file: any) => file.langchain_primaryid)
                     })
                     assistantDetails.id = newAssistant.id
                 } else {
@@ -1361,13 +1377,7 @@ export class App {
                         instructions: assistantDetails.instructions,
                         model: assistantDetails.model,
                         tools: filteredTools,
-                        file_ids: uniqWith(
-                            [
-                                ...retrievedAssistant.file_ids,
-                                ...(assistantDetails.files ?? []).map((file: any) => file.langchain_primaryid)
-                            ],
-                            isEqual
-                        )
+                        file_ids: (assistantDetails.files ?? []).map((file: any) => file.langchain_primaryid)
                     })
                 }
 
@@ -1383,6 +1393,10 @@ export class App {
             const newAssistant = new Assistant()
             Object.assign(newAssistant, body)
             newAssistant.user = req.user as User
+
+            if (assignedCollection) {
+                newAssistant.collection = assignedCollection
+            }
 
             const assistant = this.AppDataSource.getRepository(Assistant).create(newAssistant)
             const results = await this.AppDataSource.getRepository(Assistant).save(assistant)
@@ -1402,10 +1416,17 @@ export class App {
                 return
             }
 
+            const assignedCollection = await this.AppDataSource.getRepository(Collection).findOneBy({
+                user: req.user as User,
+                name: req.body.collection
+            })
+
             try {
                 const openAIAssistantId = JSON.parse(assistant.details)?.id
 
                 const body = req.body
+                body.collection = assignedCollection
+
                 const assistantDetails = JSON.parse(body.details)
 
                 const credential = await this.AppDataSource.getRepository(Credential).findOneBy({
@@ -1430,11 +1451,7 @@ export class App {
                     }
                 }
 
-                const openaiFiles = new OpenAiFiles(openAIApiKey)
-                const collectionFiles = await openaiFiles.getFiles(req.user as User, body.collection)
-
-                const allFiles = [...assistantDetails.files, ...collectionFiles.data]
-                assistantDetails.files = checkAssistantFiles(allFiles)
+                const files = JSON.parse(assignedCollection?.files || '[]')
 
                 const retrievedAssistant = await openai.beta.assistants.retrieve(openAIAssistantId)
                 let filteredTools = uniqWith([...retrievedAssistant.tools, ...tools], isEqual)
@@ -1446,10 +1463,7 @@ export class App {
                     instructions: assistantDetails.instructions,
                     model: assistantDetails.model,
                     tools: filteredTools,
-                    file_ids: uniqWith(
-                        [...retrievedAssistant.file_ids, ...(assistantDetails.files ?? []).map((file: any) => file.langchain_primaryid)],
-                        isEqual
-                    )
+                    file_ids: (files ?? []).map((file: any) => file.langchain_primaryid)
                 })
 
                 const newAssistantDetails = {
@@ -1461,6 +1475,10 @@ export class App {
                 body.details = JSON.stringify(newAssistantDetails)
                 Object.assign(updateAssistant, body)
                 updateAssistant.user = req.user as User
+
+                if (assignedCollection) {
+                    updateAssistant.collection = assignedCollection
+                }
 
                 this.AppDataSource.getRepository(Assistant).merge(assistant, updateAssistant)
                 const result = await this.AppDataSource.getRepository(Assistant).save(assistant)
@@ -1608,15 +1626,13 @@ export class App {
 
         // return a specific collection
         this.app.get('/api/v1/collections/:source/:name', async (req: Request, res: Response) => {
-            const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
-
-            const client = address ? new MilvusClient({ address: address as string }) : null
-            if (!client) return res.status(400).send('Milvus client not found')
-
             let collection
             if (req.params.source === 'openai') {
                 collection = await this.openaiFiles.getCollections(req.user as User)
             } else {
+                const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
+                const client = address ? new MilvusClient({ address: address as string }) : null
+                if (!client) return res.status(400).send('Milvus client not found')
                 collection = await client.describeCollection({
                     // Return the name and schema of the collection.
                     collection_name: req.params.name
@@ -1628,14 +1644,14 @@ export class App {
 
         // return a list of collections belonging to a given user
         this.app.get('/api/v1/collections/:source', async (req: Request, res: Response) => {
-            const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
-
             let collections
             let collectionNames
             try {
                 if (req.params.source === 'openai') {
                     collectionNames = await this.openaiFiles.getCollections(req.user as User)
                 } else {
+                    const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
+
                     const client = address ? new MilvusClient({ address: address as string }) : null
                     if (!client) return res.status(400).send('Milvus client not found')
                     collections = await client.showCollections()
@@ -1672,7 +1688,12 @@ export class App {
             const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
             if (req.params.source === 'openai') {
-                const result = this.openaiFiles.deleteFiles(req.body.entities)
+                const result = this.openaiFiles.deleteFiles(
+                    req.user as User,
+                    req.body.collection_name,
+                    req.body.entities,
+                    this.AppDataSource
+                )
 
                 return res.json(result)
             }
@@ -1695,7 +1716,7 @@ export class App {
         // delete a collection for a given user
         this.app.delete('/api/v1/collections/delete/:source/:name', async (req: Request, res: Response) => {
             if (req.params.source === 'openai') {
-                const results = this.openaiFiles.deleteCollection(req.user as User, req.params.name)
+                const results = this.openaiFiles.deleteCollection(req.user as User, req.params.name, this.AppDataSource)
 
                 return res.json(results)
             }
@@ -1760,7 +1781,7 @@ export class App {
             }
 
             if (req.params.source === 'openai') {
-                const result = await this.openaiFiles.createCollection(req.user as User, collectionName, files)
+                const result = await this.openaiFiles.createCollection(req.user as User, collectionName, files, this.AppDataSource)
 
                 return res.json(result)
             }

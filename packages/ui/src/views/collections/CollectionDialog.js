@@ -129,12 +129,6 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
     }, [show, dispatch])
 
     useEffect(() => {
-        if (getSpecificCollectionApi.data) {
-            setCollectionName(getSpecificCollectionApi.data.collection_name)
-        }
-    }, [getSpecificCollectionApi.data])
-
-    useEffect(() => {
         if (querySpecificCollectionApi.data) {
             const map = getUniqueFilesMap(querySpecificCollectionApi.data.data)
             if (querySpecificCollectionApi.data.data.length > 0) {

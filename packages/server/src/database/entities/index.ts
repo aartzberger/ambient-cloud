@@ -9,6 +9,7 @@ import { ApiKey } from './ApiKey'
 import { Tool } from './Tool'
 import { Assistant } from './Assistant'
 import { RemoteDb } from './RemoteDb'
+import { Collection } from './Collection'
 
 export const entities = {
     User,
@@ -21,5 +22,6 @@ export const entities = {
     ApiKey,
     Tool,
     RemoteDb,
-    Assistant
+    Assistant,
+    Collection
 }

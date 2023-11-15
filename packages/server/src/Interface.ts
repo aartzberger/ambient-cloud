@@ -9,6 +9,8 @@ import { Automation } from './database/entities/Automation'
 import { Trigger } from './database/entities/Trigger'
 import { AutomationHandler } from './database/entities/AutomationHandler'
 import { RemoteDb } from './database/entities/RemoteDb'
+import { Collection } from './database/entities/Collection'
+import { Assistant } from './database/entities/Assistant'
 
 export type MessageType = 'apiMessage' | 'userMessage'
 
@@ -30,6 +32,7 @@ export interface IUser {
     tools?: Tool[]
     apiKeys?: ApiKey[]
     remoteDb?: RemoteDb[]
+    collections?: Collection[]
     automation?: Automation[]
     trigger?: Trigger[]
     AutomationHandler?: AutomationHandler[]
@@ -125,14 +128,26 @@ export interface IRemoteDb {
     user: User
 }
 
+export interface ICollection {
+    id: string
+    name: string
+    type: string
+    files?: string
+    assistants?: Assistant[]
+    updatedDate: Date
+    createdDate: Date
+    user: User
+}
+
 export interface IAssistant {
     id: string
     details: string
     credential: string
-    collection?: string
+    collection?: Collection
     iconSrc?: string
     updatedDate: Date
     createdDate: Date
+    user: User
 }
 
 export interface ICredential {

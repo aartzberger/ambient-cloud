@@ -85,6 +85,8 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
 
     const getSpecificAssistantApi = useApi(assistantsApi.getSpecificAssistant)
     const getAssistantObjApi = useApi(assistantsApi.getAssistantObj)
+    const getAssistantCollectionApi = useApi(assistantsApi.getAssistantCollection)
+    const deleteCollectionEntitiesApi = useApi(remotesDb.deleteEntities)
 
     const [assistantId, setAssistantId] = useState('')
     const [openAIAssistantId, setOpenAIAssistantId] = useState('')
@@ -110,7 +112,6 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
             setAssistantId(getSpecificAssistantApi.data.id)
             setAssistantIcon(getSpecificAssistantApi.data.iconSrc)
             setAssistantCredential(getSpecificAssistantApi.data.credential)
-            setAssistantCollection(getSpecificAssistantApi.data.collection)
 
             const assistantDetails = JSON.parse(getSpecificAssistantApi.data.details)
             setOpenAIAssistantId(assistantDetails.id)
@@ -119,9 +120,15 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
             setAssistantModel(assistantDetails.model)
             setAssistantInstructions(assistantDetails.instructions)
             setAssistantTools(assistantDetails.tools ?? [])
-            setAssistantFiles(assistantDetails.files ?? [])
         }
     }, [getSpecificAssistantApi.data])
+
+    useEffect(() => {
+        if (getAssistantCollectionApi.data) {
+            setAssistantCollection(getAssistantCollectionApi.data.name)
+            setAssistantFiles(JSON.parse(getAssistantCollectionApi.data.files) ?? [])
+        }
+    }, [getAssistantCollectionApi.data])
 
     useEffect(() => {
         if (getAssistantObjApi.data) {
@@ -130,7 +137,6 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
             setAssistantDesc(getAssistantObjApi.data.description)
             setAssistantModel(getAssistantObjApi.data.model)
             setAssistantInstructions(getAssistantObjApi.data.instructions)
-            setAssistantFiles(getAssistantObjApi.data.files ?? [])
 
             let tools = []
             if (getAssistantObjApi.data.tools && getAssistantObjApi.data.tools.length) {
@@ -148,7 +154,6 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
             setAssistantId(dialogProps.data.id)
             setAssistantIcon(dialogProps.data.iconSrc)
             setAssistantCredential(dialogProps.data.credential)
-            setAssistantCollection(dialogProps.data.collection)
 
             const assistantDetails = JSON.parse(dialogProps.data.details)
             setOpenAIAssistantId(assistantDetails.id)
@@ -157,16 +162,17 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
             setAssistantModel(assistantDetails.model)
             setAssistantInstructions(assistantDetails.instructions)
             setAssistantTools(assistantDetails.tools ?? [])
-            setAssistantFiles(assistantDetails.files ?? [])
+
+            getAssistantCollectionApi.request(dialogProps.data.id)
         } else if (dialogProps.type === 'EDIT' && dialogProps.assistantId) {
             // When assistant dialog is opened from OpenAIAssistant node in canvas
             getSpecificAssistantApi.request(dialogProps.assistantId)
+            getAssistantCollectionApi.request(dialogProps.assistantId)
         } else if (dialogProps.type === 'ADD' && dialogProps.selectedOpenAIAssistantId && dialogProps.credential) {
             // When assistant dialog is to add new assistant from existing
             setAssistantId('')
             setAssistantIcon(`https://api.dicebear.com/7.x/bottts/svg?seed=${uuidv4()}`)
             setAssistantCredential(dialogProps.credential)
-            setAssistantCollection(dialogProps.collection ?? '')
 
             getAssistantObjApi.request(dialogProps.selectedOpenAIAssistantId, dialogProps.credential)
         } else if (dialogProps.type === 'ADD' && !dialogProps.selectedOpenAIAssistantId) {
@@ -203,6 +209,13 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dialogProps])
 
+    useEffect(() => {
+        if (deleteCollectionEntitiesApi.data) {
+            saveAssistant(false)
+            getSpecificAssistantApi.request(assistantId)
+        }
+    }, [deleteCollectionEntitiesApi.data])
+
     const addNewAssistant = async () => {
         setLoading(true)
         try {
@@ -212,8 +225,7 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                 description: assistantDesc,
                 model: assistantModel,
                 instructions: assistantInstructions,
-                tools: assistantTools,
-                files: assistantFiles
+                tools: assistantTools
             }
             const obj = {
                 details: JSON.stringify(assistantDetails),
@@ -259,7 +271,7 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
         }
     }
 
-    const saveAssistant = async () => {
+    const saveAssistant = async (runOnConfirm = true) => {
         setLoading(true)
         try {
             const assistantDetails = {
@@ -267,8 +279,7 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                 description: assistantDesc,
                 model: assistantModel,
                 instructions: assistantInstructions,
-                tools: assistantTools,
-                files: assistantFiles
+                tools: assistantTools
             }
             const obj = {
                 details: JSON.stringify(assistantDetails),
@@ -290,7 +301,8 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                         )
                     }
                 })
-                onConfirm(saveResp.data.id)
+
+                runOnConfirm && onConfirm(saveResp.data.id)
             }
             setLoading(false)
         } catch (error) {
@@ -361,8 +373,7 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
     }
 
     const onFileDeleteClick = async (fileId) => {
-        console.log('fileId', fileId)
-        await remotesDb.deleteEntities('openai', { entities: [fileId] })
+        deleteCollectionEntitiesApi.request('openai', { collection_name: assistantCollection, entities: [fileId] })
     }
 
     const component = show ? (
@@ -550,6 +561,10 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                             type: 'collection',
                             isCollection: true
                         }}
+                        onUpdate={() => {
+                            saveAssistant(false)
+                            getAssistantCollectionApi.request(openAIAssistantId)
+                        }}
                         onSelect={(newValue) => setAssistantCollection(newValue)}
                     />
                 </Box>
@@ -582,13 +597,7 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                                     marginRight: 10
                                 }}
                             >
-                                <span style={{ color: 'rgb(116,66,16)', marginRight: 10 }}>{file.fileName}</span>
-                                <IconButton
-                                    sx={{ height: 15, width: 15, p: 0 }}
-                                    onClick={() => onFileDeleteClick(file.langchain_primaryid)}
-                                >
-                                    <IconX />
-                                </IconButton>
+                                <span style={{ color: 'rgb(116,66,16)', marginRight: 10 }}>{file.fileName.split('_').pop()}</span>
                             </div>
                         ))}
                     </div>

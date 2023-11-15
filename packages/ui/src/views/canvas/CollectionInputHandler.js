@@ -5,20 +5,34 @@ import { useRef, useState } from 'react'
 import { IconButton } from '@mui/material'
 import { IconEdit } from '@tabler/icons'
 
+// collection dialog
+import CollectionDialog from '../collections/CollectionDialog'
+
 // project import
 import { AsyncDropdown } from 'ui-component/dropdown/AsyncDropdown'
 
-// API
-import remoteDb from 'api/remotesDb'
-
 // ===========================|| CollectionInputHandler ||=========================== //
 
-const CollectionInputHandler = ({ inputParam, data, onSelect, disabled = false }) => {
+const CollectionInputHandler = ({ inputParam, data, onSelect, onUpdate, disabled = false }) => {
     const ref = useRef(null)
-    const [collections, setCollections] = useState([])
+    const [showCollectionDialog, setShowCollectionDialog] = useState(false)
+    const [collectionDialogProps, setCollectionDialogProps] = useState({})
     const [selectedCollection, setSelectedCollection] = useState(data ? data : '')
 
     const addAsyncOptions = async () => {}
+
+    const edit = () => {
+        console.log(selectedCollection)
+        const dialogProp = {
+            title: 'Edit Collection',
+            type: 'EDIT',
+            cancelButtonName: 'Cancel',
+            confirmButtonName: 'Save',
+            data: { name: selectedCollection }
+        }
+        setCollectionDialogProps(dialogProp)
+        setShowCollectionDialog(true)
+    }
 
     return (
         <div ref={ref}>
@@ -41,15 +55,27 @@ const CollectionInputHandler = ({ inputParam, data, onSelect, disabled = false }
                                     }}
                                     onCreateNew={() => addAsyncOptions()}
                                 />
-                                {/* {selectedCollection && (
-                                    <IconButton title='Edit' color='primary' size='small'>
+                                {selectedCollection && (
+                                    <IconButton title='Edit' color='primary' size='small' onClick={() => edit()}>
                                         <IconEdit />
                                     </IconButton>
-                                )} */}
+                                )}
                             </div>
                         </>
                     )}
                 </>
+            )}
+            {showCollectionDialog && (
+                <CollectionDialog
+                    show={showCollectionDialog}
+                    dialogProps={collectionDialogProps}
+                    onCancel={() => setShowCollectionDialog(false)}
+                    onConfirm={() => {
+                        onUpdate()
+                        setShowCollectionDialog(false)
+                    }}
+                    dataSource={'openai'}
+                ></CollectionDialog>
             )}
         </div>
     )
@@ -59,6 +85,7 @@ CollectionInputHandler.propTypes = {
     inputParam: PropTypes.object,
     data: PropTypes.object,
     onSelect: PropTypes.func,
+    onUpdate: PropTypes.func,
     disabled: PropTypes.bool
 }
 

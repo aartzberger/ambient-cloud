@@ -19,22 +19,22 @@ const dashboard = {
             icon: icons.IconHierarchy,
             breadcrumbs: true
         },
-        {
-            id: 'automations',
-            title: 'Automations',
-            type: 'item',
-            url: '/automations',
-            icon: icons.IconSettingsAutomation,
-            breadcrumbs: true
-        },
-        {
-            id: 'tools',
-            title: 'Tools',
-            type: 'item',
-            url: '/tools',
-            icon: icons.IconTool,
-            breadcrumbs: true
-        },
+        // {
+        //     id: 'automations',
+        //     title: 'Automations',
+        //     type: 'item',
+        //     url: '/automations',
+        //     icon: icons.IconSettingsAutomation,
+        //     breadcrumbs: true
+        // },
+        // {
+        //     id: 'tools',
+        //     title: 'Tools',
+        //     type: 'item',
+        //     url: '/tools',
+        //     icon: icons.IconTool,
+        //     breadcrumbs: true
+        // },
         {
             id: 'vectorstores',
             title: 'Collections',
@@ -43,14 +43,14 @@ const dashboard = {
             icon: icons.IconDatabase,
             breadcrumbs: true
         },
-        {
-            id: 'marketplaces',
-            title: 'Templates',
-            type: 'item',
-            url: '/marketplaces',
-            icon: icons.IconTemplate,
-            breadcrumbs: true
-        },
+        // {
+        //     id: 'marketplaces',
+        //     title: 'Templates',
+        //     type: 'item',
+        //     url: '/marketplaces',
+        //     icon: icons.IconTemplate,
+        //     breadcrumbs: true
+        // },
         {
             id: 'assistants',
             title: 'Assistants',

@@ -11,6 +11,7 @@ import { Trigger } from './Trigger'
 import { AutomationHandler } from './AutomationHandler'
 import { Automation } from './Automation'
 import { Assistant } from './Assistant'
+import { Collection } from './Collection'
 
 @Entity()
 export class User implements IUser {
@@ -52,6 +53,11 @@ export class User implements IUser {
         cascade: true // This will allow you to save tools when saving a user
     })
     remotedb: RemoteDb[]
+
+    @OneToMany((type) => Collection, (collection) => collection.user, {
+        cascade: true // This will allow you to save tools when saving a user
+    })
+    collections: Collection[]
 
     @OneToMany((type) => Automation, (automation) => automation.user, {
         cascade: true // This will allow you to save tools when saving a user

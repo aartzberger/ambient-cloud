@@ -117,7 +117,6 @@ class Cloud_Existing_Collection implements INode {
         const collectionName = nodeData.inputs?.selectedCollection as string
         const milvusFilter = nodeData.inputs?.milvusFilter as string
         const retrieverToolDescription = nodeData.inputs?.description as string
-        console.log(options)
 
         // embeddings
         // const embeddings = nodeData.inputs?.embeddings

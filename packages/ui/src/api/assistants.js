@@ -2,6 +2,8 @@ import client from './client'
 
 const getAllAssistants = () => client.get('/assistants')
 
+const getAssistantCollection = (collectionid) => client.get(`/assistant-collection/${collectionid}`)
+
 const getSpecificAssistant = (id) => client.get(`/assistants/${id}`)
 
 const getAssistantObj = (id, credential) => client.get(`/openai-assistants/${id}?credential=${credential}`)
@@ -16,6 +18,7 @@ const deleteAssistant = (id) => client.delete(`/assistants/${id}`)
 
 export default {
     getAllAssistants,
+    getAssistantCollection,
     getSpecificAssistant,
     getAssistantObj,
     getAllAvailableAssistants,
