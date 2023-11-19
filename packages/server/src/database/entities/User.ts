@@ -24,6 +24,9 @@ export class User implements IUser {
     @Column()
     email: string
 
+    @Column({ nullable: true })
+    password?: string
+
     @OneToMany((type) => ChatFlow, (chatflow) => chatflow.user, {
         cascade: true // This will allow you to save chatflows when saving a user
     })

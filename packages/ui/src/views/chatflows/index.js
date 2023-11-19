@@ -13,6 +13,7 @@ import { gridSpacing } from 'store/constant'
 import WorkflowEmptySVG from 'assets/images/workflow_empty.svg'
 import { StyledButton } from 'ui-component/button/StyledButton'
 import LoginDialog from 'ui-component/dialog/LoginDialog'
+import { checkApiErrorAndHandleLogin } from '../../api/apiHelpers'
 
 // API
 import chatflowsApi from 'api/chatflows'
@@ -40,12 +41,6 @@ const Chatflows = () => {
 
     const getAllChatflowsApi = useApi(chatflowsApi.getAllChatflows)
 
-    const onLoginClick = (username, password) => {
-        localStorage.setItem('username', username)
-        localStorage.setItem('password', password)
-        navigate(0)
-    }
-
     const addNew = () => {
         navigate('/canvas')
     }
@@ -62,13 +57,7 @@ const Chatflows = () => {
 
     useEffect(() => {
         if (getAllChatflowsApi.error) {
-            if (getAllChatflowsApi.error?.response?.status === 401) {
-                setLoginDialogProps({
-                    title: 'Login',
-                    confirmButtonName: 'Login'
-                })
-                setLoginDialogOpen(true)
-            }
+            checkApiErrorAndHandleLogin(getAllChatflowsApi, setLoginDialogProps, setLoginDialogOpen)
         }
     }, [getAllChatflowsApi.error])
 
@@ -130,7 +119,7 @@ const Chatflows = () => {
                     <div>No Models Yet</div>
                 </Stack>
             )}
-            <LoginDialog show={loginDialogOpen} dialogProps={loginDialogProps} onConfirm={onLoginClick} />
+            <LoginDialog show={loginDialogOpen} dialogProps={loginDialogProps} />
         </MainCard>
     )
 }

@@ -15,11 +15,6 @@ export class Assistant implements IAssistant {
     @Column()
     credential: string
 
-    @ManyToOne((type) => Collection, (collection) => collection.assistants, {
-        cascade: true,
-    })
-    collection?: Collection
-
     @Column({ nullable: true })
     iconSrc?: string
 

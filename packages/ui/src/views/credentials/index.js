@@ -13,6 +13,8 @@ import { StyledButton } from 'ui-component/button/StyledButton'
 import CredentialListDialog from './CredentialListDialog'
 import ConfirmDialog from 'ui-component/dialog/ConfirmDialog'
 import AddEditCredentialDialog from './AddEditCredentialDialog'
+import LoginDialog from 'ui-component/dialog/LoginDialog'
+import { checkApiErrorAndHandleLogin } from 'api/apiHelpers'
 
 // API
 import credentialsApi from 'api/credentials'
@@ -50,6 +52,8 @@ const Credentials = () => {
     const [specificCredentialDialogProps, setSpecificCredentialDialogProps] = useState({})
     const [credentials, setCredentials] = useState([])
     const [componentsCredentials, setComponentsCredentials] = useState([])
+    const [loginDialogOpen, setLoginDialogOpen] = useState(false)
+    const [loginDialogProps, setLoginDialogProps] = useState({})
 
     const { confirm } = useConfirm()
 
@@ -144,6 +148,12 @@ const Credentials = () => {
         setShowSpecificCredentialDialog(false)
         getAllCredentialsApi.request()
     }
+
+    useEffect(() => {
+        if (getAllCredentialsApi.error) {
+            checkApiErrorAndHandleLogin(getAllCredentialsApi, setLoginDialogProps, setLoginDialogOpen)
+        }
+    }, [getAllCredentialsApi.error])
 
     useEffect(() => {
         getAllCredentialsApi.request()
@@ -269,6 +279,7 @@ const Credentials = () => {
                 onConfirm={onConfirm}
             ></AddEditCredentialDialog>
             <ConfirmDialog />
+            <LoginDialog show={loginDialogOpen} dialogProps={loginDialogProps} />
         </>
     )
 }

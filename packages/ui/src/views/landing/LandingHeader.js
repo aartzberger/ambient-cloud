@@ -1,47 +1,33 @@
 // material-ui
 import { useTheme } from '@mui/material/styles'
-import { Avatar, Box, ButtonBase } from '@mui/material'
+import { Box, ButtonBase } from '@mui/material'
+import { StyledButton } from 'ui-component/button/StyledButton'
 
 // icons
 import { IconLogin } from '@tabler/icons'
 
 // ==============================|| CANVAS HEADER ||============================== //
 
-const CanvasHeader = () => {
+const LandingHeader = ({ onClick, onCancel }) => {
     const theme = useTheme()
-
-    const handleLogin = () => {
-        // Redirects user to the Google OAuth endpoint for authentication
-        window.location.href = '/auth/google'
-    }
 
     return (
         <>
             <Box sx={{ flexGrow: 1 }}>{/* additional elements here */}</Box>
             <Box>
                 <ButtonBase title='Back' sx={{ borderRadius: '50%' }}>
-                    <Avatar
-                        variant='rounded'
-                        sx={{
-                            ...theme.typography.commonAvatar,
-                            ...theme.typography.mediumAvatar,
-                            transition: 'all .2s ease-in-out',
-                            background: theme.palette.secondary.light,
-                            color: theme.palette.secondary.dark,
-                            '&:hover': {
-                                background: theme.palette.secondary.dark,
-                                color: theme.palette.secondary.light
-                            }
-                        }}
-                        color='inherit'
-                        onClick={handleLogin}
-                    >
-                        <IconLogin stroke={1.5} size='1.3rem' />
-                    </Avatar>
+                    <StyledButton variant='contained' sx={{ color: 'white' }} onClick={onClick} startIcon={<IconLogin />}>
+                        Login / Signup
+                    </StyledButton>
                 </ButtonBase>
             </Box>
         </>
     )
 }
 
-export default CanvasHeader
+LandingHeader.propTypes = {
+    onClick: PropTypes.func,
+    onCancel: PropTypes.func
+}
+
+export default LandingHeader

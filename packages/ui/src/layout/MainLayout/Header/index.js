@@ -85,7 +85,7 @@ const Header = ({ handleLeftDrawerToggle }) => {
     const signOutClicked = () => {
         localStorage.removeItem('username')
         localStorage.removeItem('password')
-        navigate('/', { replace: true })
+        navigate('/logout', { replace: true })
         navigate(0)
     }
 
@@ -127,27 +127,6 @@ const Header = ({ handleLeftDrawerToggle }) => {
             </Box>
             <Box sx={{ flexGrow: 1 }} />
             <MaterialUISwitch checked={isDark} onChange={changeDarkMode} />
-            <Box sx={{ ml: 2 }}></Box>
-            <ButtonBase title='Back' sx={{ borderRadius: '50%' }}>
-                <Avatar
-                    variant='rounded'
-                    sx={{
-                        ...theme.typography.commonAvatar,
-                        ...theme.typography.mediumAvatar,
-                        transition: 'all .2s ease-in-out',
-                        background: theme.palette.secondary.light,
-                        color: theme.palette.secondary.dark,
-                        '&:hover': {
-                            background: theme.palette.secondary.dark,
-                            color: theme.palette.secondary.light
-                        }
-                    }}
-                    color='inherit'
-                    // onClick={handleLogin}
-                >
-                    <IconLogout stroke={1.5} size='1.3rem' />
-                </Avatar>
-            </ButtonBase>
             <Box sx={{ ml: 2 }}></Box>
             <ProfileSection handleLogout={signOutClicked} username={localStorage.getItem('username') ?? ''} />
         </>

@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom'
 import PropTypes from 'prop-types'
 import { useState, useEffect } from 'react'
+import PerfectScrollbar from 'react-perfect-scrollbar'
 import { useDispatch } from 'react-redux'
 import { enqueueSnackbar as enqueueSnackbarAction, closeSnackbar as closeSnackbarAction } from 'store/actions'
 import CircularProgress from '@mui/material/CircularProgress' // Import the CircularProgress component
@@ -27,14 +28,16 @@ import {
 import { StyledButton } from 'ui-component/button/StyledButton'
 import { TooltipWithParser } from 'ui-component/tooltip/TooltipWithParser'
 import ConfirmDialog from 'ui-component/dialog/ConfirmDialog'
-import { File } from 'ui-component/file/File'
+import { Dropdown } from 'ui-component/dropdown/Dropdown'
+import { initNode } from 'utils/genericHelper'
+import DocLoader from './DocLoader'
 
 // Icons
 import { IconX, IconTrash } from '@tabler/icons'
 
 // API
 import remotesApi from 'api/remotesDb'
-import openaiDb from 'api/openaiDb'
+import nodesApi from 'api/nodes'
 
 // Hooks
 import useConfirm from 'hooks/useConfirm'
@@ -61,22 +64,79 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
     const getSpecificCollectionApi = useApi(remotesApi.getSpecificCollection)
     const querySpecificCollectionApi = useApi(remotesApi.querySpecificCollection)
     const loadUnloadCollectionApi = useApi(remotesApi.loadUnloadCollection)
+    const getAllNodesApi = useApi(nodesApi.getAllComplete)
 
     const [collectionName, setCollectionName] = useState('')
     const [oldCollectionName, setOldCollectionName] = useState('')
     const [filesMap, setFilesMap] = useState(new Map())
     const [mapLoaded, setMapLoaded] = useState(false)
+    const [nodeLoaders, setNodeLoaders] = useState([])
+    const [selectedLoader, setSelectedLoader] = useState('')
+    const [nodeData, setNodeData] = useState({})
     const [pendingUpload, setPendingUpload] = useState(false)
-    const [hasUploaded, setHasUploaded] = useState(false)
+    const [dataDescription, setDataDescription] = useState('')
 
-    const uploadFile = async (value, dataSource) => {
+    const [docLoaderDialogProps, setDocLoaderDialogProps] = useState({})
+
+    const updateInputs = (value) => {
+        const node = nodeLoaders.find((node) => node.name === value)
+        const data = initNode({ ...node }, 0)
+        setNodeData(data)
+
+        const props = {
+            data,
+            inputParams: data.inputParams,
+            confirmButtonName: 'Save',
+            cancelButtonName: 'Cancel',
+            source: dataSource
+        }
+
+        setDocLoaderDialogProps(props)
+        setSelectedLoader(value)
+    }
+
+    const uploadFile = async () => {
+        if (Object.keys(nodeData).length === 0) {
+            // no file to upload
+            return true
+        }
+
+        // make sure all the required fields are filled
+        let shouldUpload = true
+        for (const param of nodeData.inputParams) {
+            if (!param.optional && !nodeData.inputs[param.name]) {
+                shouldUpload = false
+                break
+            }
+        }
+
+        if ((!shouldUpload && nodeData.inputParams.length > 0) || !dataDescription) {
+            enqueueSnackbar({
+                message: 'please fill all the required fields',
+                options: {
+                    key: new Date().getTime() + Math.random(),
+                    variant: 'error',
+                    action: (key) => (
+                        <Button style={{ color: 'white' }} onClick={() => closeSnackbar(key)}>
+                            <IconX />
+                        </Button>
+                    )
+                }
+            })
+
+            // error with input
+            return false
+        }
+
         try {
+            // upload the file
             setPendingUpload(true)
 
             let saveResp = null
             saveResp = await remotesApi.createCollection(dataSource, {
                 name: collectionName,
-                files: value
+                nodeData: nodeData,
+                dataDescription: dataDescription
             })
 
             if (saveResp.data) {
@@ -94,10 +154,15 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
                 })
                 querySpecificCollectionApi.request(dataSource, collectionName)
             }
+
             setPendingUpload(false)
-            setHasUploaded(true)
+
+            // uploaded
+            return true
         } catch (error) {
             setPendingUpload(false)
+            // some error occured
+            return false
         }
     }
 
@@ -131,9 +196,6 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
     useEffect(() => {
         if (querySpecificCollectionApi.data) {
             const map = getUniqueFilesMap(querySpecificCollectionApi.data.data)
-            if (querySpecificCollectionApi.data.data.length > 0) {
-                setHasUploaded(true)
-            }
             setFilesMap(map)
             setMapLoaded(true)
         }
@@ -144,6 +206,17 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
             console.log(loadUnloadCollectionApi.data)
         }
     }, [loadUnloadCollectionApi.data])
+
+    useEffect(() => {
+        if (getAllNodesApi.data) {
+            const docNodes = getAllNodesApi.data.filter((node) => node.category === 'Document Loaders')
+            setNodeLoaders(docNodes)
+        }
+    }, [getAllNodesApi.data])
+
+    useEffect(() => {
+        getAllNodesApi.request()
+    }, [])
 
     useEffect(() => {
         setMapLoaded(false)
@@ -167,40 +240,47 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
         }
 
         setFilesMap(new Map())
-        setHasUploaded(false)
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dialogProps])
 
     const updateCollection = async () => {
-        try {
-            let saveResp = null
+        if (collectionName !== oldCollectionName && dialogProps.type === 'EDIT') {
+            try {
+                let saveResp = null
 
-            if (oldCollectionName !== collectionName && dialogProps.type !== 'ADD') {
                 const args = {
                     oldName: oldCollectionName,
                     newName: collectionName
                 }
                 saveResp = await remotesApi.renameCollection(dataSource, args)
-            }
 
-            if (saveResp ? saveResp.data : true) {
-                enqueueSnackbar({
-                    message: 'Collection saved',
-                    options: {
-                        key: new Date().getTime() + Math.random(),
-                        variant: 'success',
-                        action: (key) => (
-                            <Button style={{ color: 'white' }} onClick={() => closeSnackbar(key)}>
-                                <IconX />
-                            </Button>
-                        )
-                    }
-                })
-                onConfirm()
+                if (saveResp ? saveResp.data : true) {
+                    enqueueSnackbar({
+                        message: 'Collection saved',
+                        options: {
+                            key: new Date().getTime() + Math.random(),
+                            variant: 'success',
+                            action: (key) => (
+                                <Button style={{ color: 'white' }} onClick={() => closeSnackbar(key)}>
+                                    <IconX />
+                                </Button>
+                            )
+                        }
+                    })
+                }
+            } catch (error) {
+                console.error(error)
             }
-        } catch (error) {
-            console.error(error)
+        }
+
+        const status = await uploadFile()
+
+        if (status) {
+            setSelectedLoader('')
+            setDataDescription('')
+            setNodeData({})
+            onConfirm()
         }
     }
 
@@ -242,6 +322,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
                     )
                 }
             })
+            setSelectedLoader('')
             onCancel()
         }
     }
@@ -288,6 +369,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
                         )
                     }
                 })
+                setSelectedLoader('')
                 onCancel()
             }
         }
@@ -298,7 +380,10 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
             fullWidth
             maxWidth='md'
             open={show}
-            onClose={onCancel}
+            onClose={() => {
+                setSelectedLoader('')
+                onCancel()
+            }}
             aria-labelledby='alert-dialog-title'
             aria-describedby='alert-dialog-description'
         >
@@ -308,103 +393,160 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
                     <div style={{ flex: 1 }} />
                 </div>
             </DialogTitle>
-            <DialogContent>
-                <Box sx={{ p: 2 }}>
-                    <Stack sx={{ position: 'relative' }} direction='row'>
-                        <Typography variant='overline'>
-                            Collection Name
-                            <span style={{ color: 'red' }}>&nbsp;*</span>
-                            <TooltipWithParser
-                                style={{ marginLeft: 10 }}
-                                title={'Collection name must be small capital letter with underscore. Ex: my_collection'}
-                            />
-                        </Typography>
-                    </Stack>
-                    <OutlinedInput
-                        id='collectionName'
-                        type='string'
-                        fullWidth
-                        disabled={dialogProps.type === 'TEMPLATE' || (dataSource === 'openai' && dialogProps.type !== 'ADD')}
-                        placeholder='My New Collection'
-                        value={collectionName}
-                        name='collectionName'
-                        onChange={(e) => updateName(e.target.value)}
-                    />
-                </Box>
-                <Box sx={{ p: 2 }}>
-                    <File
-                        disabled={collectionName === ''}
-                        fileType={'*'}
-                        onChange={(newValue) => uploadFile(newValue, dataSource)}
-                        value={'Choose a file to upload'}
-                    />
-                </Box>
-                {mapLoaded && dialogProps.type !== 'ADD' && (
-                    <TableContainer component={Paper}>
-                        <Table sx={{ minWidth: 650 }} aria-label='simple table'>
-                            <TableHead>
-                                <TableRow>
-                                    <TableCell>File Name:</TableCell>
-                                    <TableCell> </TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {Array.from(filesMap).map(([name, ids]) => (
-                                    <TableRow key={name} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                                        <TableCell component='th' scope='row'>
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center'
-                                                }}
-                                            >
-                                                {name}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <IconButton title='Delete' color='error' onClick={() => deleteEntities(ids)}>
-                                                <IconTrash />
-                                            </IconButton>
-                                        </TableCell>
+            <PerfectScrollbar
+                style={{
+                    height: '100%',
+                    maxHeight: 'calc(100vh - 220px)',
+                    overflowX: 'hidden'
+                }}
+            >
+                <DialogContent>
+                    <Box sx={{ p: 2 }}>
+                        <Stack sx={{ position: 'relative' }} direction='row'>
+                            <Typography variant='overline'>
+                                Collection Name
+                                <span style={{ color: 'red' }}>&nbsp;*</span>
+                                <TooltipWithParser
+                                    style={{ marginLeft: 10 }}
+                                    title={'Collection name must be small capital letter with underscore. Ex: my_collection'}
+                                />
+                            </Typography>
+                        </Stack>
+                        <OutlinedInput
+                            id='collectionName'
+                            type='string'
+                            fullWidth
+                            disabled={dialogProps.type === 'TEMPLATE' || (dataSource === 'openai' && dialogProps.type !== 'ADD')}
+                            placeholder='My New Collection'
+                            value={collectionName}
+                            name='collectionName'
+                            onChange={(e) => updateName(e.target.value)}
+                        />
+                    </Box>
+                    <DialogTitle sx={{ fontSize: '1rem' }} id='alert-dialog-title'>
+                        <div style={{ display: 'flex', flexDirection: 'row' }}>
+                            Insert Documents
+                            <div style={{ flex: 1 }} />
+                        </div>
+                    </DialogTitle>
+                    <Box sx={{ p: 2 }}>
+                        <Stack sx={{ position: 'relative' }} direction='row'>
+                            <Typography variant='overline'>
+                                Document Name / Description:
+                                <span style={{ color: 'red' }}>&nbsp;*</span>
+                                <TooltipWithParser
+                                    style={{ marginLeft: 10 }}
+                                    title={'Collection name must be small capital letter with underscore. Ex: my_collection'}
+                                />
+                            </Typography>
+                        </Stack>
+                        <OutlinedInput
+                            id='dataDescription'
+                            type='string'
+                            fullWidth
+                            disabled={false}
+                            placeholder='My Uploaded Data'
+                            value={dataDescription}
+                            name='dataDescription'
+                            onChange={(e) => setDataDescription(e.target.value)}
+                        />
+                    </Box>
+                    <Box sx={{ p: 2 }}>
+                        <>
+                            <Stack sx={{ position: 'relative' }} direction='row'>
+                                <Typography variant='overline'>
+                                    Document Source
+                                    <span style={{ color: 'red' }}>&nbsp;*</span>
+                                    <TooltipWithParser
+                                        style={{ marginLeft: 10 }}
+                                        title={'Select where to upload the documents from. Ex: File Upload, Google Drive, S3, etc.'}
+                                    />
+                                </Typography>
+                            </Stack>
+                        </>
+                        {nodeLoaders && (
+                            <>
+                                <Dropdown
+                                    key={selectedLoader}
+                                    name={selectedLoader}
+                                    options={nodeLoaders}
+                                    onSelect={(newValue) => updateInputs(newValue)}
+                                    value={selectedLoader ?? 'choose an option'}
+                                />
+                                {/* <StyledButton variant='contained' onClick={() => onDialogClicked()}>
+                                    Import
+                                </StyledButton> */}
+                                <DocLoader show={selectedLoader} dialogProps={docLoaderDialogProps}></DocLoader>
+                            </>
+                        )}
+                    </Box>
+                    {mapLoaded && dialogProps.type !== 'ADD' && (
+                        <TableContainer component={Paper}>
+                            <Table sx={{ minWidth: 650 }} aria-label='simple table'>
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell>Current Collection Contents:</TableCell>
+                                        <TableCell> </TableCell>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
+                                </TableHead>
+                                <TableBody>
+                                    {Array.from(filesMap).map(([name, ids]) => (
+                                        <TableRow key={name} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                            <TableCell component='th' scope='row'>
+                                                <div
+                                                    style={{
+                                                        display: 'flex',
+                                                        flexDirection: 'row',
+                                                        alignItems: 'center'
+                                                    }}
+                                                >
+                                                    {name}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <IconButton title='Delete' color='error' onClick={() => deleteEntities(ids)}>
+                                                    <IconTrash />
+                                                </IconButton>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    {dialogProps.type === 'EDIT' && (
+                        <StyledButton color='error' variant='contained' onClick={() => deleteCollection()}>
+                            Delete
+                        </StyledButton>
+                    )}
+                    {dialogProps.type !== 'TEMPLATE' && (
+                        <StyledButton disabled={false} variant='contained' onClick={() => updateCollection()}>
+                            {dialogProps.confirmButtonName}
+                        </StyledButton>
+                    )}
+                </DialogActions>
+                <ConfirmDialog />
+                {pendingUpload && ( // Conditionally render the loading spinner
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            background: 'rgba(255, 255, 255, 0.7)', // Semi-transparent overlay
+                            zIndex: 9999 // Higher z-index value to overlay other content
+                        }}
+                    >
+                        <CircularProgress color='primary' size={40} /> {/* Use the CircularProgress component */}
+                    </div>
                 )}
-            </DialogContent>
-            <DialogActions>
-                {dialogProps.type === 'EDIT' && (
-                    <StyledButton color='error' variant='contained' onClick={() => deleteCollection()}>
-                        Delete
-                    </StyledButton>
-                )}
-                {dialogProps.type !== 'TEMPLATE' && (
-                    <StyledButton disabled={!hasUploaded} variant='contained' onClick={() => updateCollection()}>
-                        {dialogProps.confirmButtonName}
-                    </StyledButton>
-                )}
-            </DialogActions>
-            <ConfirmDialog />
-            {pendingUpload && ( // Conditionally render the loading spinner
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        background: 'rgba(255, 255, 255, 0.7)', // Semi-transparent overlay
-                        zIndex: 9999 // Higher z-index value to overlay other content
-                    }}
-                >
-                    <CircularProgress color='primary' size={40} /> {/* Use the CircularProgress component */}
-                </div>
-            )}
+            </PerfectScrollbar>
         </Dialog>
     ) : null
 

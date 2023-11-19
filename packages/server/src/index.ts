@@ -18,8 +18,8 @@ import OpenAI from 'openai'
 import { Between, IsNull, FindOptionsWhere } from 'typeorm'
 import { MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { DynamoDB } from '@aws-sdk/client-dynamodb'
-import { OpenAiFiles, checkAssistantFiles } from './utils/openAiHelpers'
-import { Document } from 'langchain/document'
+import { OpenAiFiles } from './utils/openAiHelpers'
+const bcrypt = require('bcrypt')
 
 import {
     IChatFlow,
@@ -60,7 +60,6 @@ import { getDbAddress, getCollectionName } from './utils/CollectionsHelper'
 import { getApiKey, getAPIKeys, addAPIKey, updateAPIKey, deleteAPIKey, compareKeys } from './utils/apiKeyHelpers'
 import MilvusUpsert from './utils/Upsert'
 import whitelistNodes from './utils/whitelistNodes'
-import { DocumentLoaders, getFileName } from './utils/DocsLoader'
 import { cloneDeep, omit, uniqWith, isEqual } from 'lodash'
 import { getDataSource } from './DataSource'
 import { NodesPool } from './NodesPool'
@@ -235,7 +234,7 @@ export class App {
                 return next()
             }
 
-            res.redirect('/')
+            res.status(401).send('Unauthorized')
         }
 
         passport.serializeUser((user: any, done) => {
@@ -250,23 +249,70 @@ export class App {
         })
 
         // function for loging in a user or creating a new one
-        const loginOrCreateUser = async (profile: any) => {
-            const existingUser = await this.AppDataSource.getRepository(User).findOneBy({
-                id: profile.id
-            })
+        const loginOrCreateUser = async (profile: any): Promise<User | null> => {
+            if (!profile.id) {
+                // no profile id means not using oauth2
+                // do a standard login process with username and password
+                const existingUser = await this.AppDataSource.getRepository(User).findOneBy({
+                    email: profile.email
+                })
 
-            if (existingUser) {
-                // Existing user, use this user
-                return existingUser
+                if (existingUser) {
+                    const isMatch = await bcrypt.compare(profile.password, existingUser.password)
+                    if (isMatch) {
+                        // Passwords match
+                        return existingUser
+                    } else {
+                        // Passwords don't match
+                        // TODO CMAN - better error handling for wrong password
+                        return null
+                    }
+                }
+
+                // user does not exist, make a new one
+                const uniqueId = uuidv4()
+                // make sure the user has a unique id
+                const checkUser = await this.AppDataSource.getRepository(User).findOneBy({
+                    id: uniqueId
+                })
+
+                // user exists, retry
+                if (checkUser) {
+                    return (await loginOrCreateUser(profile)) as any
+                }
+
+                // New user, create a new user and then use that user
+                const saltRounds = 10
+                const hashedPassword = await bcrypt.hash(profile.password, saltRounds)
+
+                // New user, create a new user and then use that user
+                const newUser = await this.AppDataSource.getRepository(User).save({
+                    id: uniqueId,
+                    name: profile.name,
+                    email: profile.email,
+                    password: hashedPassword
+                })
+
+                return newUser
+            } else {
+                const existingUser = await this.AppDataSource.getRepository(User).findOneBy({
+                    id: profile.id
+                })
+
+                if (existingUser) {
+                    // Existing user, use this user
+                    return existingUser
+                }
+
+                // Create new user with information given from oaut2
+                const newUser = await this.AppDataSource.getRepository(User).save({
+                    id: profile.id,
+                    name: profile.displayName,
+                    email: profile.emails[0].value
+                })
+
+                return newUser
             }
-            // New user, create a new user and then use that user
-            const newUser = await this.AppDataSource.getRepository(User).save({
-                id: profile.id,
-                name: profile.displayName,
-                email: profile.emails[0].value
-            })
-
-            return newUser
         }
 
         passport.use(
@@ -288,6 +334,40 @@ export class App {
         // ----------------------------------------
         // Login
         // ----------------------------------------
+
+        // Login no oauth client
+        this.app.post('/api/v1/login', async (req, res) => {
+            const body = req.body
+            const profile = {
+                name: body.name,
+                email: body.email,
+                password: body.password
+            }
+
+            const user = await loginOrCreateUser(profile)
+
+            if (!user) {
+                return res.status(401).send('Unauthorized')
+            }
+
+            req.logIn(user, async (err) => {
+                if (err) {
+                    return res.status(500).send('Error during login')
+                }
+
+                return res.redirect('/chatflows')
+            })
+        })
+
+        // Logout route
+        this.app.get('/logout', (req, res) => {
+            // Invalidate the user session
+            // TODO CMAN - better error handling
+            req.logout(function (err) {})
+
+            res.clearCookie('connect.sid') // Clear the session cookie
+            return res.redirect('/') // Redirect after logout
+        })
 
         this.app.get('/auth/google', (req, res, next) => {
             if (DEV_MODE) {
@@ -315,6 +395,11 @@ export class App {
                         emails: [{ value: 'devuser@example.com' }]
                     }
                     const user = await loginOrCreateUser(defaultUser)
+
+                    if (!user) {
+                        return res.status(401).send('Unauthorized')
+                    }
+
                     // Manually log the user in
                     req.logIn(user, async (err) => {
                         if (err) {
@@ -391,6 +476,16 @@ export class App {
             const returnData = []
             for (const nodeName in this.nodesPool.componentNodes) {
                 if (!whitelistNodes.includes(nodeName)) continue // skip over nodes that are whitelist
+                const clonedNode = cloneDeep(this.nodesPool.componentNodes[nodeName])
+                returnData.push(clonedNode)
+            }
+            return res.json(returnData)
+        })
+
+        // Get all document loader nodes
+        this.app.get('/api/v1/nodes/complete', (req: Request, res: Response) => {
+            const returnData = []
+            for (const nodeName in this.nodesPool.componentNodes) {
                 const clonedNode = cloneDeep(this.nodesPool.componentNodes[nodeName])
                 returnData.push(clonedNode)
             }
@@ -819,7 +914,7 @@ export class App {
         })
 
         // Get all credentials
-        this.app.get('/api/v1/credentials', async (req: Request, res: Response) => {
+        this.app.get('/api/v1/credentials', ensureAuthenticated, async (req: Request, res: Response) => {
             if (req.query.credentialName) {
                 let returnCredentials = []
                 if (Array.isArray(req.query.credentialName)) {
@@ -1238,7 +1333,7 @@ export class App {
         // ----------------------------------------
 
         // Get all assistants
-        this.app.get('/api/v1/assistants', async (req: Request, res: Response) => {
+        this.app.get('/api/v1/assistants', ensureAuthenticated, async (req: Request, res: Response) => {
             const assistants = await this.AppDataSource.getRepository(Assistant).findBy({
                 user: req.user as User
             })
@@ -1254,19 +1349,6 @@ export class App {
             })
 
             return res.json(assistant)
-        })
-
-        // get collection for a specific assistnat
-        this.app.get('/api/v1/assistant-collection/:id', async (req: Request, res: Response) => {
-            const assistant = await this.AppDataSource.getRepository(Assistant).findOne({
-                where: {
-                    id: req.params.id,
-                    user: req.user as User
-                },
-                relations: ['collection']
-            })
-
-            return res.json(assistant?.collection)
         })
 
         // Get assistant object
@@ -1325,11 +1407,6 @@ export class App {
 
             const assistantDetails = JSON.parse(body.details)
 
-            const assignedCollection = await this.AppDataSource.getRepository(Collection).findOneBy({
-                user: req.user as User,
-                name: body.collection
-            })
-
             try {
                 const credential = await this.AppDataSource.getRepository(Credential).findOneBy({
                     id: body.credential,
@@ -1354,7 +1431,39 @@ export class App {
                     }
                 }
 
-                const files = JSON.parse(assignedCollection?.files || '[]')
+                if (assistantDetails.uploadFiles) {
+                    // Base64 strings
+                    let files: string[] = []
+                    const fileBase64 = assistantDetails.uploadFiles
+                    if (fileBase64.startsWith('[') && fileBase64.endsWith(']')) {
+                        files = JSON.parse(fileBase64)
+                    } else {
+                        files = [fileBase64]
+                    }
+
+                    const uploadedFiles = []
+                    for (const file of files) {
+                        const splitDataURI = file.split(',')
+                        const filename = splitDataURI.pop()?.split(':')[1] ?? ''
+                        const bf = Buffer.from(splitDataURI.pop() || '', 'base64')
+                        const filePath = path.join(getUserHome(), '.flowise', 'openai-assistant', filename)
+                        if (!fs.existsSync(path.join(getUserHome(), '.flowise', 'openai-assistant'))) {
+                            fs.mkdirSync(path.dirname(filePath), { recursive: true })
+                        }
+                        if (!fs.existsSync(filePath)) {
+                            fs.writeFileSync(filePath, bf)
+                        }
+
+                        const createdFile = await openai.files.create({
+                            file: fs.createReadStream(filePath),
+                            purpose: 'assistants'
+                        })
+                        uploadedFiles.push(createdFile)
+
+                        fs.unlinkSync(filePath)
+                    }
+                    assistantDetails.files = [...assistantDetails.files, ...uploadedFiles]
+                }
 
                 if (!assistantDetails.id) {
                     const newAssistant = await openai.beta.assistants.create({
@@ -1363,7 +1472,7 @@ export class App {
                         instructions: assistantDetails.instructions,
                         model: assistantDetails.model,
                         tools,
-                        file_ids: (files ?? []).map((file: any) => file.langchain_primaryid)
+                        file_ids: (assistantDetails.files ?? []).map((file: OpenAI.Files.FileObject) => file.id)
                     })
                     assistantDetails.id = newAssistant.id
                 } else {
@@ -1377,13 +1486,20 @@ export class App {
                         instructions: assistantDetails.instructions,
                         model: assistantDetails.model,
                         tools: filteredTools,
-                        file_ids: (assistantDetails.files ?? []).map((file: any) => file.langchain_primaryid)
+                        file_ids: uniqWith(
+                            [
+                                ...retrievedAssistant.file_ids,
+                                ...(assistantDetails.files ?? []).map((file: OpenAI.Files.FileObject) => file.id)
+                            ],
+                            isEqual
+                        )
                     })
                 }
 
                 const newAssistantDetails = {
                     ...assistantDetails
                 }
+                if (newAssistantDetails.uploadFiles) delete newAssistantDetails.uploadFiles
 
                 body.details = JSON.stringify(newAssistantDetails)
             } catch (error) {
@@ -1394,10 +1510,6 @@ export class App {
             Object.assign(newAssistant, body)
             newAssistant.user = req.user as User
 
-            if (assignedCollection) {
-                newAssistant.collection = assignedCollection
-            }
-
             const assistant = this.AppDataSource.getRepository(Assistant).create(newAssistant)
             const results = await this.AppDataSource.getRepository(Assistant).save(assistant)
 
@@ -1407,8 +1519,7 @@ export class App {
         // Update assistant
         this.app.put('/api/v1/assistants/:id', async (req: Request, res: Response) => {
             const assistant = await this.AppDataSource.getRepository(Assistant).findOneBy({
-                id: req.params.id,
-                user: req.user as User
+                id: req.params.id
             })
 
             if (!assistant) {
@@ -1416,21 +1527,15 @@ export class App {
                 return
             }
 
-            const assignedCollection = await this.AppDataSource.getRepository(Collection).findOneBy({
-                user: req.user as User,
-                name: req.body.collection
-            })
-
             try {
                 const openAIAssistantId = JSON.parse(assistant.details)?.id
 
                 const body = req.body
-                body.collection = assignedCollection
-
                 const assistantDetails = JSON.parse(body.details)
 
                 const credential = await this.AppDataSource.getRepository(Credential).findOneBy({
-                    id: body.credential
+                    id: body.credential,
+                    user: req.user as User
                 })
 
                 if (!credential) return res.status(404).send(`Credential ${body.credential} not found`)
@@ -1451,7 +1556,39 @@ export class App {
                     }
                 }
 
-                const files = JSON.parse(assignedCollection?.files || '[]')
+                if (assistantDetails.uploadFiles) {
+                    // Base64 strings
+                    let files: string[] = []
+                    const fileBase64 = assistantDetails.uploadFiles
+                    if (fileBase64.startsWith('[') && fileBase64.endsWith(']')) {
+                        files = JSON.parse(fileBase64)
+                    } else {
+                        files = [fileBase64]
+                    }
+
+                    const uploadedFiles = []
+                    for (const file of files) {
+                        const splitDataURI = file.split(',')
+                        const filename = splitDataURI.pop()?.split(':')[1] ?? ''
+                        const bf = Buffer.from(splitDataURI.pop() || '', 'base64')
+                        const filePath = path.join(getUserHome(), '.flowise', 'openai-assistant', filename)
+                        if (!fs.existsSync(path.join(getUserHome(), '.flowise', 'openai-assistant'))) {
+                            fs.mkdirSync(path.dirname(filePath), { recursive: true })
+                        }
+                        if (!fs.existsSync(filePath)) {
+                            fs.writeFileSync(filePath, bf)
+                        }
+
+                        const createdFile = await openai.files.create({
+                            file: fs.createReadStream(filePath),
+                            purpose: 'assistants'
+                        })
+                        uploadedFiles.push(createdFile)
+
+                        fs.unlinkSync(filePath)
+                    }
+                    assistantDetails.files = [...assistantDetails.files, ...uploadedFiles]
+                }
 
                 const retrievedAssistant = await openai.beta.assistants.retrieve(openAIAssistantId)
                 let filteredTools = uniqWith([...retrievedAssistant.tools, ...tools], isEqual)
@@ -1463,22 +1600,22 @@ export class App {
                     instructions: assistantDetails.instructions,
                     model: assistantDetails.model,
                     tools: filteredTools,
-                    file_ids: (files ?? []).map((file: any) => file.langchain_primaryid)
+                    file_ids: uniqWith(
+                        [...retrievedAssistant.file_ids, ...(assistantDetails.files ?? []).map((file: OpenAI.Files.FileObject) => file.id)],
+                        isEqual
+                    )
                 })
 
                 const newAssistantDetails = {
                     ...assistantDetails,
                     id: openAIAssistantId
                 }
+                if (newAssistantDetails.uploadFiles) delete newAssistantDetails.uploadFiles
 
                 const updateAssistant = new Assistant()
                 body.details = JSON.stringify(newAssistantDetails)
                 Object.assign(updateAssistant, body)
                 updateAssistant.user = req.user as User
-
-                if (assignedCollection) {
-                    updateAssistant.collection = assignedCollection
-                }
 
                 this.AppDataSource.getRepository(Assistant).merge(assistant, updateAssistant)
                 const result = await this.AppDataSource.getRepository(Assistant).save(assistant)
@@ -1603,12 +1740,6 @@ export class App {
         this.app.get('/api/v1/collections/query/:source/:name', async (req: Request, res: Response) => {
             const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
-            if (req.params.source === 'openai') {
-                const queryResult = await this.openaiFiles.getFiles(req.user as User, req.params.name)
-
-                return res.json(queryResult)
-            }
-
             const client = address ? new MilvusClient({ address: address as string }) : null
             if (!client) return res.status(400).send('Milvus client not found')
             const name = getCollectionName(req.user as User, req.params.name, req.params.source)
@@ -1626,38 +1757,29 @@ export class App {
 
         // return a specific collection
         this.app.get('/api/v1/collections/:source/:name', async (req: Request, res: Response) => {
-            let collection
-            if (req.params.source === 'openai') {
-                collection = await this.openaiFiles.getCollections(req.user as User)
-            } else {
-                const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
-                const client = address ? new MilvusClient({ address: address as string }) : null
-                if (!client) return res.status(400).send('Milvus client not found')
-                collection = await client.describeCollection({
-                    // Return the name and schema of the collection.
-                    collection_name: req.params.name
-                })
-            }
+            const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
+            const client = address ? new MilvusClient({ address: address as string }) : null
+            if (!client) return res.status(400).send('Milvus client not found')
+            const collection = await client.describeCollection({
+                // Return the name and schema of the collection.
+                collection_name: req.params.name
+            })
 
             return res.json(collection)
         })
 
         // return a list of collections belonging to a given user
-        this.app.get('/api/v1/collections/:source', async (req: Request, res: Response) => {
+        this.app.get('/api/v1/collections/:source', ensureAuthenticated, async (req: Request, res: Response) => {
             let collections
             let collectionNames
             try {
-                if (req.params.source === 'openai') {
-                    collectionNames = await this.openaiFiles.getCollections(req.user as User)
-                } else {
-                    const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
+                const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
-                    const client = address ? new MilvusClient({ address: address as string }) : null
-                    if (!client) return res.status(400).send('Milvus client not found')
-                    collections = await client.showCollections()
+                const client = address ? new MilvusClient({ address: address as string }) : null
+                if (!client) return res.status(400).send('Milvus client not found')
+                collections = await client.showCollections()
 
-                    collectionNames = (collections as any).collection_names
-                }
+                collectionNames = (collections as any).collection_names
             } catch (e) {
                 logger.error(e)
                 return res.status(400).send('Collections not found')
@@ -1686,17 +1808,6 @@ export class App {
         // delete collection entities
         this.app.post('/api/v1/collections/entities/delete/:source', async (req: Request, res: Response) => {
             const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
-
-            if (req.params.source === 'openai') {
-                const result = this.openaiFiles.deleteFiles(
-                    req.user as User,
-                    req.body.collection_name,
-                    req.body.entities,
-                    this.AppDataSource
-                )
-
-                return res.json(result)
-            }
 
             const client = address ? new MilvusClient({ address: address as string }) : null
             if (!client) return res.status(400).send('Milvus client not found')
@@ -1757,6 +1868,7 @@ export class App {
         // create a collection for a given user
         this.app.post('/api/v1/collections/create/:source', async (req: Request, res: Response) => {
             const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
+            const collectionName = getCollectionName(req.user as User, req.body.name, req.params.source)
 
             const obj = {} as RecursiveCharacterTextSplitterParams
             obj.chunkSize = 1500
@@ -1766,67 +1878,39 @@ export class App {
             const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
             // const embeddings = new HuggingFaceInferenceEmbeddings({model: 'sentence-transformers/all-MiniLM-L6-v2'}) // api key passed by env variable
 
-            const textSplitter = new RecursiveCharacterTextSplitter(obj)
+            const defaultSplitter = new RecursiveCharacterTextSplitter(obj)
 
-            const fileBase64 = req.body.files
-
-            const collectionName = getCollectionName(req.user as User, req.body.name, req.params.source)
-
-            let files = []
-
-            if (fileBase64.startsWith('[') && fileBase64.endsWith(']')) {
-                files = JSON.parse(fileBase64)
-            } else {
-                files = [fileBase64]
+            const additionalInfo = {
+                textSplitter: defaultSplitter,
+                metadata: { fileName: req.body.dataDescription }
             }
 
-            if (req.params.source === 'openai') {
-                const result = await this.openaiFiles.createCollection(req.user as User, collectionName, files, this.AppDataSource)
+            const nodeData = req.body.nodeData
+            nodeData.inputs = { ...nodeData.inputs, ...additionalInfo }
 
-                return res.json(result)
+            const node = { ...this.nodesPool.componentNodes[req.params.name] } || null
+            const nodeInstanceFilePath = this.nodesPool.componentNodes[nodeData.name].filePath as string
+            const nodeModule = await import(nodeInstanceFilePath)
+            const nodeInstance = new nodeModule.nodeClass()
+
+            if (!node) return res.status(400).send('Node not found')
+
+            const options = {
+                appDataSource: this.AppDataSource,
+                databaseEntities: databaseEntities
             }
 
-            const createPromises = files.map(async (file: string) => {
-                const splitDataURI = file.split(',')
-                const fileName = getFileName(file)
-                const fileExtension = fileName.split('.').pop()
-                let alldocs: Document[] = []
+            const alldocs = await nodeInstance.init(nodeData, '', options)
 
-                splitDataURI.pop()
-                const bf = Buffer.from(splitDataURI.pop() || '', 'base64')
+            const milvusArgs = {
+                collectionName: collectionName,
+                url: address ? (address as string) : ''
+            }
 
-                const documentLoader = DocumentLoaders.get(fileExtension) as any
-
-                const loader = new documentLoader(new Blob([bf]))
-
-                if (textSplitter) {
-                    const docs = await loader.loadAndSplit(textSplitter)
-                    for (const doc of docs) {
-                        doc.metadata = { fileName: fileName }
-                    }
-                    alldocs.push(...docs)
-                } else {
-                    const docs = await loader.load()
-                    for (const doc of docs) {
-                        doc.metadata = { fileName: fileName }
-                    }
-                    alldocs.push(...docs)
-                }
-
-                const milvusArgs = {
-                    collectionName: collectionName,
-                    url: address ? (address as string) : ''
-                }
-
-                const vectorStore = await MilvusUpsert.fromDocuments(alldocs, embeddings, milvusArgs)
-
-                return vectorStore
-            })
-
-            const results = await Promise.all(createPromises)
+            const vectorStore = await MilvusUpsert.fromDocuments(alldocs, embeddings, milvusArgs)
 
             // TODO CMAN - need to return something relevant
-            return res.json(results)
+            return res.json('ok')
         })
 
         // ----------------------------------------
@@ -2040,7 +2124,7 @@ export class App {
         // ----------------------------------------
 
         // Get api keys
-        this.app.get('/api/v1/apikey', async (req: Request, res: Response) => {
+        this.app.get('/api/v1/apikey', ensureAuthenticated, async (req: Request, res: Response) => {
             const keys = await getAPIKeys(req.user as User, this.AppDataSource)
             return res.json(keys)
         })

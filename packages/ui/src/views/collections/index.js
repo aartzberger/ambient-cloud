@@ -13,6 +13,8 @@ import { gridSpacing } from 'store/constant'
 import ToolEmptySVG from 'assets/images/tools_empty.svg'
 import { StyledButton } from 'ui-component/button/StyledButton'
 import CollectionDialog from './CollectionDialog'
+import LoginDialog from 'ui-component/dialog/LoginDialog'
+import { checkApiErrorAndHandleLogin } from '../../api/apiHelpers'
 
 // API
 import remotesApi from 'api/remotesDb'
@@ -35,11 +37,6 @@ const sourceOptions = [
         label: 'Local',
         name: 'local',
         description: 'Data on your local machine'
-    },
-    {
-        label: 'OpenAi',
-        name: 'openai',
-        description: 'Data hosted on OpenAi'
     }
 ]
 
@@ -51,7 +48,10 @@ const Collections = () => {
 
     const [showDialog, setShowDialog] = useState(false)
     const [dialogProps, setDialogProps] = useState({})
+    const [docLoaderDialogProps, setDocLoaderDialogProps] = useState({})
     const [dataSource, setDataSource] = useState(sourceOptions[0].name ?? '')
+    const [loginDialogOpen, setLoginDialogOpen] = useState(false)
+    const [loginDialogProps, setLoginDialogProps] = useState({})
 
     const onUploadFile = (file) => {
         try {
@@ -118,6 +118,18 @@ const Collections = () => {
         getAllCollectionsApi.request(dataSource)
     }
 
+    const onImport = (props) => {
+        setDocLoaderDialogProps(props)
+        setShowDialog(false)
+        setTimeout(() => setShowDocLoaderDialog(true), 300)
+    }
+
+    useEffect(() => {
+        if (getAllCollectionsApi.error) {
+            checkApiErrorAndHandleLogin(getAllCredentialsApi, setLoginDialogProps, setLoginDialogOpen)
+        }
+    }, [getAllCollectionsApi.error])
+
     useEffect(() => {
         getAllCollectionsApi.request(dataSource)
 
@@ -140,7 +152,7 @@ const Collections = () => {
                                 fullWidth // This can be used instead of sx={{ width: '100%' }}
                             />
                         </Grid>
-                        <Grid item>
+                        <Grid item xs={1} sm={2}>
                             <StyledButton variant='contained' sx={{ color: 'white' }} onClick={addNew} startIcon={<IconPlus />}>
                                 Create
                             </StyledButton>
@@ -170,8 +182,10 @@ const Collections = () => {
                 dialogProps={dialogProps}
                 onCancel={() => setShowDialog(false)}
                 onConfirm={onConfirm}
+                onImport={onImport}
                 dataSource={dataSource}
             ></CollectionDialog>
+            <LoginDialog show={loginDialogOpen} dialogProps={loginDialogProps} />
         </>
     )
 }

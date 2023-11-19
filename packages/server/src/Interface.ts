@@ -26,6 +26,7 @@ export interface IUser {
     id: string
     name: string
     email: string
+    password?: string
     chatflows?: ChatFlow[]
     chatmessages?: ChatMessage[]
     credentials?: Credential[]
@@ -133,7 +134,6 @@ export interface ICollection {
     name: string
     type: string
     files?: string
-    assistants?: Assistant[]
     updatedDate: Date
     createdDate: Date
     user: User
@@ -143,7 +143,6 @@ export interface IAssistant {
     id: string
     details: string
     credential: string
-    collection?: Collection
     iconSrc?: string
     updatedDate: Date
     createdDate: Date

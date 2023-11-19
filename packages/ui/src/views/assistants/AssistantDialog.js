@@ -13,7 +13,7 @@ import ConfirmDialog from 'ui-component/dialog/ConfirmDialog'
 import { Dropdown } from 'ui-component/dropdown/Dropdown'
 import { MultiDropdown } from 'ui-component/dropdown/MultiDropdown'
 import CredentialInputHandler from 'views/canvas/CredentialInputHandler'
-import CollectionInputHandler from 'views/canvas/CollectionInputHandler'
+import { File } from 'ui-component/file/File'
 import { BackdropLoader } from 'ui-component/loading/BackdropLoader'
 
 // Icons
@@ -21,7 +21,6 @@ import { IconX } from '@tabler/icons'
 
 // API
 import assistantsApi from 'api/assistants'
-import remotesDb from 'api/remotesDb'
 
 // Hooks
 import useConfirm from 'hooks/useConfirm'
@@ -33,7 +32,7 @@ import { HIDE_CANVAS_DIALOG, SHOW_CANVAS_DIALOG } from 'store/actions'
 
 const assistantAvailableModels = [
     {
-        label: 'gpt-4-1106-preview',
+        label: 'gpt-4-1106-preview (with retrieval)',
         name: 'gpt-4-1106-preview'
     },
     {
@@ -53,7 +52,7 @@ const assistantAvailableModels = [
         name: 'gpt-3.5-turbo'
     },
     {
-        label: 'gpt-3.5-turbo-1106',
+        label: 'gpt-3.5-turbo-1106 (with retrieval)',
         name: 'gpt-3.5-turbo-1106'
     },
     {
@@ -85,21 +84,19 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
 
     const getSpecificAssistantApi = useApi(assistantsApi.getSpecificAssistant)
     const getAssistantObjApi = useApi(assistantsApi.getAssistantObj)
-    const getAssistantCollectionApi = useApi(assistantsApi.getAssistantCollection)
-    const deleteCollectionEntitiesApi = useApi(remotesDb.deleteEntities)
 
     const [assistantId, setAssistantId] = useState('')
     const [openAIAssistantId, setOpenAIAssistantId] = useState('')
     const [assistantName, setAssistantName] = useState('')
     const [assistantDesc, setAssistantDesc] = useState('')
-    const [assistantIcon, setAssistantIcon] = useState(`https://api.dicebear.com/7.x/bottts/svg?seed=${uuidv4()}`)
+    const [assistantIcon, setAssistantIcon] = useState(`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${uuidv4()}`)
     const [assistantModel, setAssistantModel] = useState('')
     const [assistantCredential, setAssistantCredential] = useState('')
     const [assistantInstructions, setAssistantInstructions] = useState('')
     const [assistantTools, setAssistantTools] = useState(['code_interpreter', 'retrieval'])
     const [assistantFiles, setAssistantFiles] = useState([])
+    const [uploadAssistantFiles, setUploadAssistantFiles] = useState('')
     const [loading, setLoading] = useState(false)
-    const [assistantCollection, setAssistantCollection] = useState('')
 
     useEffect(() => {
         if (show) dispatch({ type: SHOW_CANVAS_DIALOG })
@@ -120,15 +117,9 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
             setAssistantModel(assistantDetails.model)
             setAssistantInstructions(assistantDetails.instructions)
             setAssistantTools(assistantDetails.tools ?? [])
+            setAssistantFiles(assistantDetails.files ?? [])
         }
     }, [getSpecificAssistantApi.data])
-
-    useEffect(() => {
-        if (getAssistantCollectionApi.data) {
-            setAssistantCollection(getAssistantCollectionApi.data.name)
-            setAssistantFiles(JSON.parse(getAssistantCollectionApi.data.files) ?? [])
-        }
-    }, [getAssistantCollectionApi.data])
 
     useEffect(() => {
         if (getAssistantObjApi.data) {
@@ -137,6 +128,7 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
             setAssistantDesc(getAssistantObjApi.data.description)
             setAssistantModel(getAssistantObjApi.data.model)
             setAssistantInstructions(getAssistantObjApi.data.instructions)
+            setAssistantFiles(getAssistantObjApi.data.files ?? [])
 
             let tools = []
             if (getAssistantObjApi.data.tools && getAssistantObjApi.data.tools.length) {
@@ -162,25 +154,22 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
             setAssistantModel(assistantDetails.model)
             setAssistantInstructions(assistantDetails.instructions)
             setAssistantTools(assistantDetails.tools ?? [])
-
-            getAssistantCollectionApi.request(dialogProps.data.id)
+            setAssistantFiles(assistantDetails.files ?? [])
         } else if (dialogProps.type === 'EDIT' && dialogProps.assistantId) {
             // When assistant dialog is opened from OpenAIAssistant node in canvas
             getSpecificAssistantApi.request(dialogProps.assistantId)
-            getAssistantCollectionApi.request(dialogProps.assistantId)
         } else if (dialogProps.type === 'ADD' && dialogProps.selectedOpenAIAssistantId && dialogProps.credential) {
             // When assistant dialog is to add new assistant from existing
             setAssistantId('')
-            setAssistantIcon(`https://api.dicebear.com/7.x/bottts/svg?seed=${uuidv4()}`)
+            setAssistantIcon(`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${uuidv4()}`)
             setAssistantCredential(dialogProps.credential)
 
             getAssistantObjApi.request(dialogProps.selectedOpenAIAssistantId, dialogProps.credential)
         } else if (dialogProps.type === 'ADD' && !dialogProps.selectedOpenAIAssistantId) {
             // When assistant dialog is to add a blank new assistant
             setAssistantId('')
-            setAssistantIcon(`https://api.dicebear.com/7.x/bottts/svg?seed=${uuidv4()}`)
+            setAssistantIcon(`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${uuidv4()}`)
             setAssistantCredential('')
-            setAssistantCollection('')
 
             setOpenAIAssistantId('')
             setAssistantName('')
@@ -188,14 +177,14 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
             setAssistantModel('')
             setAssistantInstructions('')
             setAssistantTools(['code_interpreter', 'retrieval'])
+            setUploadAssistantFiles('')
             setAssistantFiles([])
         }
 
         return () => {
             setAssistantId('')
-            setAssistantIcon(`https://api.dicebear.com/7.x/bottts/svg?seed=${uuidv4()}`)
+            setAssistantIcon(`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${uuidv4()}`)
             setAssistantCredential('')
-            setAssistantCollection('')
 
             setOpenAIAssistantId('')
             setAssistantName('')
@@ -203,18 +192,12 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
             setAssistantModel('')
             setAssistantInstructions('')
             setAssistantTools(['code_interpreter', 'retrieval'])
+            setUploadAssistantFiles('')
             setAssistantFiles([])
             setLoading(false)
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dialogProps])
-
-    useEffect(() => {
-        if (deleteCollectionEntitiesApi.data) {
-            saveAssistant(false)
-            getSpecificAssistantApi.request(assistantId)
-        }
-    }, [deleteCollectionEntitiesApi.data])
 
     const addNewAssistant = async () => {
         setLoading(true)
@@ -225,13 +208,14 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                 description: assistantDesc,
                 model: assistantModel,
                 instructions: assistantInstructions,
-                tools: assistantTools
+                tools: assistantTools,
+                files: assistantFiles,
+                uploadFiles: uploadAssistantFiles
             }
             const obj = {
                 details: JSON.stringify(assistantDetails),
                 iconSrc: assistantIcon,
-                credential: assistantCredential,
-                collection: assistantCollection
+                credential: assistantCredential
             }
 
             const createResp = await assistantsApi.createNewAssistant(obj)
@@ -271,7 +255,7 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
         }
     }
 
-    const saveAssistant = async (runOnConfirm = true) => {
+    const saveAssistant = async () => {
         setLoading(true)
         try {
             const assistantDetails = {
@@ -279,13 +263,14 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                 description: assistantDesc,
                 model: assistantModel,
                 instructions: assistantInstructions,
-                tools: assistantTools
+                tools: assistantTools,
+                files: assistantFiles,
+                uploadFiles: uploadAssistantFiles
             }
             const obj = {
                 details: JSON.stringify(assistantDetails),
                 iconSrc: assistantIcon,
-                credential: assistantCredential,
-                collection: assistantCollection
+                credential: assistantCredential
             }
             const saveResp = await assistantsApi.updateAssistant(assistantId, obj)
             if (saveResp.data) {
@@ -301,8 +286,7 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                         )
                     }
                 })
-
-                runOnConfirm && onConfirm(saveResp.data.id)
+                onConfirm(saveResp.data.id)
             }
             setLoading(false)
         } catch (error) {
@@ -373,7 +357,7 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
     }
 
     const onFileDeleteClick = async (fileId) => {
-        deleteCollectionEntitiesApi.request('openai', { collection_name: assistantCollection, entities: [fileId] })
+        setAssistantFiles(assistantFiles.filter((file) => file.id !== fileId))
     }
 
     const component = show ? (
@@ -429,40 +413,6 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                         value={assistantDesc}
                         name='assistantDesc'
                         onChange={(e) => setAssistantDesc(e.target.value)}
-                    />
-                </Box>
-                <Box sx={{ p: 2 }}>
-                    <Stack sx={{ position: 'relative' }} direction='row'>
-                        <Typography variant='overline'>Assistant Icon Src</Typography>
-                    </Stack>
-                    <div
-                        style={{
-                            width: 100,
-                            height: 100,
-                            borderRadius: '50%',
-                            backgroundColor: 'white'
-                        }}
-                    >
-                        <img
-                            style={{
-                                width: '100%',
-                                height: '100%',
-                                padding: 5,
-                                borderRadius: '50%',
-                                objectFit: 'contain'
-                            }}
-                            alt={assistantName}
-                            src={assistantIcon}
-                        />
-                    </div>
-                    <OutlinedInput
-                        id='assistantIcon'
-                        type='string'
-                        fullWidth
-                        placeholder={`https://api.dicebear.com/7.x/bottts/svg?seed=${uuidv4()}`}
-                        value={assistantIcon}
-                        name='assistantIcon'
-                        onChange={(e) => setAssistantIcon(e.target.value)}
                     />
                 </Box>
                 <Box sx={{ p: 2 }}>
@@ -550,31 +500,11 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                 </Box>
                 <Box sx={{ p: 2 }}>
                     <Stack sx={{ position: 'relative' }} direction='row'>
-                        <Typography variant='overline'>Add Collection</Typography>
-                    </Stack>
-                    <CollectionInputHandler
-                        key={assistantCollection}
-                        data={assistantCollection ? assistantCollection : {}}
-                        inputParam={{
-                            label: 'Connect Collection',
-                            name: 'collection',
-                            type: 'collection',
-                            isCollection: true
-                        }}
-                        onUpdate={() => {
-                            saveAssistant(false)
-                            getAssistantCollectionApi.request(openAIAssistantId)
-                        }}
-                        onSelect={(newValue) => setAssistantCollection(newValue)}
-                    />
-                </Box>
-                <Box sx={{ p: 2 }}>
-                    <Stack sx={{ position: 'relative' }} direction='row'>
                         <Typography variant='overline'>
                             Knowledge Files
                             <TooltipWithParser
                                 style={{ marginLeft: 10 }}
-                                title='These are the files that the assistant will have access to. MAX: 20 files'
+                                title='Allow assistant to use the content from uploaded files for retrieval and code interpreter. MAX: 20 files'
                             />
                         </Typography>
                     </Stack>
@@ -597,10 +527,19 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                                     marginRight: 10
                                 }}
                             >
-                                <span style={{ color: 'rgb(116,66,16)', marginRight: 10 }}>{file.fileName.split('_').pop()}</span>
+                                <span style={{ color: 'rgb(116,66,16)', marginRight: 10 }}>{file.filename}</span>
+                                <IconButton sx={{ height: 15, width: 15, p: 0 }} onClick={() => onFileDeleteClick(file.id)}>
+                                    <IconX />
+                                </IconButton>
                             </div>
                         ))}
                     </div>
+                    <File
+                        key={uploadAssistantFiles}
+                        fileType='*'
+                        onChange={(newValue) => setUploadAssistantFiles(newValue)}
+                        value={uploadAssistantFiles ?? 'Choose a file to upload'}
+                    />
                 </Box>
             </DialogContent>
             <DialogActions>

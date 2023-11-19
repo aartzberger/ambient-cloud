@@ -25,6 +25,8 @@ import MainCard from 'ui-component/cards/MainCard'
 import { StyledButton } from 'ui-component/button/StyledButton'
 import APIKeyDialog from './APIKeyDialog'
 import ConfirmDialog from 'ui-component/dialog/ConfirmDialog'
+import LoginDialog from 'ui-component/dialog/LoginDialog'
+import { checkApiErrorAndHandleLogin } from '../../api/apiHelpers'
 
 // API
 import apiKeyApi from 'api/apikey'
@@ -57,6 +59,8 @@ const APIKey = () => {
     const [apiKeys, setAPIKeys] = useState([])
     const [anchorEl, setAnchorEl] = useState(null)
     const [showApiKeys, setShowApiKeys] = useState([])
+    const [loginDialogOpen, setLoginDialogOpen] = useState(false)
+    const [loginDialogProps, setLoginDialogProps] = useState({})
     const openPopOver = Boolean(anchorEl)
 
     const { confirm } = useConfirm()
@@ -154,6 +158,12 @@ const APIKey = () => {
         setShowDialog(false)
         getAllAPIKeysApi.request()
     }
+
+    useEffect(() => {
+        if (getAllAPIKeysApi.error) {
+            checkApiErrorAndHandleLogin(getAllAPIKeysApi, setLoginDialogProps, setLoginDialogOpen)
+        }
+    }, [getAllAPIKeysApi.error])
 
     useEffect(() => {
         getAllAPIKeysApi.request()
@@ -272,6 +282,7 @@ const APIKey = () => {
                 onConfirm={onConfirm}
             ></APIKeyDialog>
             <ConfirmDialog />
+            <LoginDialog show={loginDialogOpen} dialogProps={loginDialogProps} />
         </>
     )
 }

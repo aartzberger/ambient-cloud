@@ -3,7 +3,7 @@ const config = {
     basename: '',
     defaultPath: '/login',
     fontFamily: `'Roboto', sans-serif`,
-    borderRadius: 12
+    borderRadius: 8
 }
 
 export default config
