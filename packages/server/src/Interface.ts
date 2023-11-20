@@ -11,6 +11,7 @@ import { AutomationHandler } from './database/entities/AutomationHandler'
 import { RemoteDb } from './database/entities/RemoteDb'
 import { Collection } from './database/entities/Collection'
 import { Assistant } from './database/entities/Assistant'
+import { Subscription } from './database/entities/Subscription'
 
 export type MessageType = 'apiMessage' | 'userMessage'
 
@@ -27,6 +28,10 @@ export interface IUser {
     name: string
     email: string
     password?: string
+    oauthType?: string
+    oauthId?: string
+    customerId: string
+    subscription?: Subscription
     chatflows?: ChatFlow[]
     chatmessages?: ChatMessage[]
     credentials?: Credential[]
@@ -36,7 +41,20 @@ export interface IUser {
     collections?: Collection[]
     automation?: Automation[]
     trigger?: Trigger[]
+    assistants?: Assistant[]
     AutomationHandler?: AutomationHandler[]
+}
+
+export interface ISubscription {
+    id: string
+    status: string
+    subscriptionId: string
+    details: any
+    product: any
+    usage: any
+    updatedDate: Date
+    createdDate: Date
+    user: User
 }
 
 export interface IChatFlow {

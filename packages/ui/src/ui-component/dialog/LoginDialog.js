@@ -35,7 +35,8 @@ const LoginDialog = ({ show, dialogProps }) => {
         const userInto = {
             name,
             email,
-            password
+            password,
+            signup: showSignUp // If true, then user is signing up if they do not exist
         }
 
         const response = await authApi.loginUser(userInto)

@@ -1,6 +1,6 @@
 import axios from 'axios'
 import querystring from 'querystring'
-import express, { Request, Response, NextFunction, query } from 'express'
+import express, { Request, Response, NextFunction } from 'express'
 import session from 'express-session'
 import passport from 'passport'
 const GoogleStrategy = require('passport-google-oauth20').Strategy
@@ -19,7 +19,7 @@ import { Between, IsNull, FindOptionsWhere } from 'typeorm'
 import { MilvusClient } from '@zilliz/milvus2-sdk-node'
 import { DynamoDB } from '@aws-sdk/client-dynamodb'
 import { OpenAiFiles } from './utils/openAiHelpers'
-const bcrypt = require('bcrypt')
+import { StripeSubscription, loginOrCreateUser } from './utils/subscriptionMethods'
 
 import {
     IChatFlow,
@@ -64,6 +64,7 @@ import { cloneDeep, omit, uniqWith, isEqual } from 'lodash'
 import { getDataSource } from './DataSource'
 import { NodesPool } from './NodesPool'
 import { User } from './database/entities/User'
+import { Subscription } from './database/entities/Subscription'
 import { ChatFlow } from './database/entities/ChatFlow'
 import { Automation } from './database/entities/Automation'
 import { Trigger } from './database/entities/Trigger'
@@ -105,6 +106,7 @@ export class App {
     cachePool: CachePool
     AppDataSource = getDataSource()
     openaiFiles = new OpenAiFiles()
+    subscriptionMethod = new StripeSubscription()
 
     constructor() {
         this.app = express()
@@ -248,73 +250,6 @@ export class App {
             done(null, user)
         })
 
-        // function for loging in a user or creating a new one
-        const loginOrCreateUser = async (profile: any): Promise<User | null> => {
-            if (!profile.id) {
-                // no profile id means not using oauth2
-                // do a standard login process with username and password
-                const existingUser = await this.AppDataSource.getRepository(User).findOneBy({
-                    email: profile.email
-                })
-
-                if (existingUser) {
-                    const isMatch = await bcrypt.compare(profile.password, existingUser.password)
-                    if (isMatch) {
-                        // Passwords match
-                        return existingUser
-                    } else {
-                        // Passwords don't match
-                        // TODO CMAN - better error handling for wrong password
-                        return null
-                    }
-                }
-
-                // user does not exist, make a new one
-                const uniqueId = uuidv4()
-                // make sure the user has a unique id
-                const checkUser = await this.AppDataSource.getRepository(User).findOneBy({
-                    id: uniqueId
-                })
-
-                // user exists, retry
-                if (checkUser) {
-                    return (await loginOrCreateUser(profile)) as any
-                }
-
-                // New user, create a new user and then use that user
-                const saltRounds = 10
-                const hashedPassword = await bcrypt.hash(profile.password, saltRounds)
-
-                // New user, create a new user and then use that user
-                const newUser = await this.AppDataSource.getRepository(User).save({
-                    id: uniqueId,
-                    name: profile.name,
-                    email: profile.email,
-                    password: hashedPassword
-                })
-
-                return newUser
-            } else {
-                const existingUser = await this.AppDataSource.getRepository(User).findOneBy({
-                    id: profile.id
-                })
-
-                if (existingUser) {
-                    // Existing user, use this user
-                    return existingUser
-                }
-
-                // Create new user with information given from oaut2
-                const newUser = await this.AppDataSource.getRepository(User).save({
-                    id: profile.id,
-                    name: profile.displayName,
-                    email: profile.emails[0].value
-                })
-
-                return newUser
-            }
-        }
-
         passport.use(
             new GoogleStrategy(
                 {
@@ -324,9 +259,23 @@ export class App {
                 },
                 async (accessToken: any, refreshToken: any, profile: any, done: any) => {
                     // Check if user exists in the database
-                    const user = await loginOrCreateUser(profile)
+                    profile.loginType = 'google'
+                    const loginData = {
+                        id: profile.id,
+                        name: profile.displayName,
+                        email: profile.emails[0].value,
+                        oauthType: 'google'
+                    }
 
-                    return done(null, user)
+                    // for oauth, always sign up the user if they don't exist
+                    const loginResponse = await loginOrCreateUser(true, loginData, this.subscriptionMethod, this.AppDataSource)
+
+                    if (loginResponse.code !== 200) {
+                        // TODO CMAN - better error handling for improperly logged in user
+                        return done(null, false)
+                    }
+
+                    return done(null, loginResponse.user)
                 }
             )
         )
@@ -336,21 +285,61 @@ export class App {
         // ----------------------------------------
 
         // Login no oauth client
-        this.app.post('/api/v1/login', async (req, res) => {
+        this.app.post('/api/v1/login', async (req, res, next) => {
+            if (DEV_MODE) {
+                // Simulate a successful authentication with default user values
+                const defaultUser = {
+                    id: '123456789',
+                    name: 'Dev User',
+                    email: 'devuser@example.com',
+                    oauthType: 'dev'
+                }
+                // for dev user, always sign up the user if they don't exist
+                const loginResponse = await loginOrCreateUser(true, defaultUser, this.subscriptionMethod, this.AppDataSource)
+
+                if (loginResponse.code !== 200) {
+                    return res.status(loginResponse.code).send(loginResponse.error)
+                }
+
+                logger.info('🔧 [server]: DEV_MODE logged in')
+
+                // Manually log the user in
+                req.logIn(loginResponse.user as User, async (err) => {
+                    if (err) {
+                        return next(err)
+                    }
+
+                    // Directly call to add the milvus and client url to the database (these are from ENV)
+                    try {
+                        await handleRemoteDb({
+                            id: (loginResponse.user as User).id,
+                            url: `http://server.ambientware.co:${DEV_MILVUS_PORT}`
+                        })
+                    } catch (error) {
+                        logger.error('❌ [server]: Error in handleRemoteDb:', error)
+                    }
+
+                    return res.redirect('/chatflows')
+                })
+
+                // prevent further action
+                return
+            }
+
             const body = req.body
             const profile = {
                 name: body.name,
                 email: body.email,
                 password: body.password
             }
+            // only sign up the user if the information is provided from signup form... not login form
+            const loginResponse = await loginOrCreateUser(req.body.signup, profile, this.subscriptionMethod, this.AppDataSource)
 
-            const user = await loginOrCreateUser(profile)
-
-            if (!user) {
-                return res.status(401).send('Unauthorized')
+            if (loginResponse.code !== 200) {
+                return res.status(loginResponse.code).send(loginResponse.error)
             }
 
-            req.logIn(user, async (err) => {
+            req.logIn(loginResponse.user as User, async (err) => {
                 if (err) {
                     return res.status(500).send('Error during login')
                 }
@@ -387,40 +376,6 @@ export class App {
         this.app.get(
             '/api/v1/auth/google/callback',
             async (req, res, next) => {
-                if (DEV_MODE) {
-                    // Simulate a successful authentication with default user values
-                    const defaultUser = {
-                        id: '123456789',
-                        displayName: 'Dev User',
-                        emails: [{ value: 'devuser@example.com' }]
-                    }
-                    const user = await loginOrCreateUser(defaultUser)
-
-                    if (!user) {
-                        return res.status(401).send('Unauthorized')
-                    }
-
-                    // Manually log the user in
-                    req.logIn(user, async (err) => {
-                        if (err) {
-                            return next(err)
-                        }
-
-                        // Directly call to add the milvus and client url to the database (these are from ENV)
-                        try {
-                            const result = await handleRemoteDb({
-                                id: user.id,
-                                url: `http://server.ambientware.co:${DEV_MILVUS_PORT}`
-                            })
-                        } catch (error) {
-                            logger.error('❌ [server]: Error in handleRemoteDb:', error)
-                        }
-
-                        return res.redirect('/chatflows')
-                    })
-                    // Prevent further execution
-                    return
-                }
                 passport.authenticate('google', { failureRedirect: '/' })(req, res, next)
             },
             (req, res) => {
@@ -431,6 +386,92 @@ export class App {
                 }
             }
         )
+
+        // ----------------------------------------
+        // Payment and subscription handling (with Stripe)
+        // ----------------------------------------
+
+        // get all subscirption levels/products
+        this.app.get('/api/v1/subscriptions', ensureAuthenticated, async (req, res) => {
+            try {
+                const subscriptions = await this.subscriptionMethod.getSubscriptionOptions()
+
+                // check if the user has a subscription
+                const user = req.user as User
+                const userSubscription = await this.AppDataSource.getRepository(Subscription).findOneBy({
+                    user: user
+                })
+
+                if (userSubscription) {
+                    // if the user has a subscription, add the subscription status to the subscription object
+                    const subscription = subscriptions?.find((sub) => sub.priceId === userSubscription.details.plan.id)
+                    if (subscription) {
+                        subscription.current = true
+                    }
+                }
+
+                // The list method is paginated, you can iterate through additional pages
+                // or use auto-pagination to fetch additional payment-link beyond the initial list
+                return res.json(subscriptions) // This will be an array of payment-link objects
+            } catch (error) {
+                logger.error(`Error retrieving prices: ${error}`)
+                return res.status(404).send(`Error retrieving prices: ${error}`)
+            }
+        })
+
+        // get subscription status for a user
+        this.app.get('/api/v1/subscriptions/user', ensureAuthenticated, async (req, res) => {
+            const user = req.user as User
+            const userSubscription = await this.AppDataSource.getRepository(Subscription).findOneBy({
+                user: user
+            })
+
+            const details = {
+                name: user.name,
+                status: userSubscription?.status,
+                plan: userSubscription?.product.name
+            }
+
+            res.status(200).json(details)
+        })
+
+        // get checkout session for a subscription and user
+        this.app.post('/api/v1/subscriptions/checkout', async (req, res) => {
+            const session = await this.subscriptionMethod.createSession(req.user as User, req.body.priceId)
+
+            res.status(200).json({ url: session?.url || '' })
+        })
+
+        // get subscription portal for a user
+        this.app.get('/api/v1/subscriptions/portal', async (req, res) => {
+            const portalSession = await this.subscriptionMethod.getCustomerPortal(req.user as User)
+
+            res.status(200).json({ url: portalSession?.url || '' })
+        })
+
+        this.app.get('/api/v1/subscriptions/status', async (req, res) => {
+            res.redirect('/chatflows')
+        })
+
+        // get all subscirption levels/products
+        this.app.post('/api/v1/subscriptions/event', async (req, res) => {
+            const eventData = await this.subscriptionMethod.handleEvent(req.body, this.AppDataSource)
+
+            return res.status(200).send('ok')
+        })
+
+        // get all products
+        this.app.get('/api/v1/subscriptions/products', async (req, res) => {
+            try {
+                // will return all products (max 100)
+                const products = await this.subscriptionMethod.getAllProducts()
+
+                return res.json(products) // This will be an list of product objects
+            } catch (error) {
+                logger.error(`Error retrieving products: ${error}`)
+                return res.status(404).send(`Error retrieving products: ${error}`)
+            }
+        })
 
         // ----------------------------------------
         // Oauth for various services
@@ -1789,7 +1830,7 @@ export class App {
             // it will be problematic with lots of collections
             if (req.params.source === 'cloud') {
                 collectionNames = collectionNames.filter((name: string) => {
-                    return name.includes((req.user as User)?.id as string)
+                    return name.includes(String((req.user as User)?.id).replace(/-/g, '_'))
                 })
             }
 
@@ -1826,11 +1867,6 @@ export class App {
 
         // delete a collection for a given user
         this.app.delete('/api/v1/collections/delete/:source/:name', async (req: Request, res: Response) => {
-            if (req.params.source === 'openai') {
-                const results = this.openaiFiles.deleteCollection(req.user as User, req.params.name, this.AppDataSource)
-
-                return res.json(results)
-            }
             const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
             const client = address ? new MilvusClient({ address: address as string }) : null

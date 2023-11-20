@@ -9,10 +9,12 @@ import { ApiKey } from './ApiKey'
 import { Tool } from './Tool'
 import { Assistant } from './Assistant'
 import { RemoteDb } from './RemoteDb'
+import { Subscription } from './Subscription'
 import { Collection } from './Collection'
 
 export const entities = {
     User,
+    Subscription,
     ChatFlow,
     Automation,
     Trigger,

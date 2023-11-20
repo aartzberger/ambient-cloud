@@ -23,7 +23,7 @@ export const getDbAddress = async (user: User, source: string, dataSource: DataS
 
 export const getCollectionName = (user: User, name: string, source: string) => {
     if (source === 'cloud') {
-        return `${name}_${user.id}`
+        return `${name}_${String(user.id).replace(/-/g, '_')}`
     } else {
         return name
     }

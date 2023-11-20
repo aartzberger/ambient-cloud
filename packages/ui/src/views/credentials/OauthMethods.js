@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types'
 import { StyledButton } from 'ui-component/button/StyledButton'
 
 const GoogleOauth2 = ({ onConfirm }) => {

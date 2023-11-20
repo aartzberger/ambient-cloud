@@ -1,6 +1,7 @@
 /* eslint-disable */
-import { Entity, Column, OneToMany, PrimaryColumn } from 'typeorm'
+import { Entity, Column, OneToMany, PrimaryGeneratedColumn, OneToOne, JoinColumn } from 'typeorm'
 import { IUser } from '../../Interface'
+import { Subscription } from './Subscription'
 import { ChatFlow } from './ChatFlow'
 import { ChatMessage } from './ChatMessage'
 import { Credential } from './Credential'
@@ -15,17 +16,32 @@ import { Collection } from './Collection'
 
 @Entity()
 export class User implements IUser {
-    @PrimaryColumn()
+    @PrimaryGeneratedColumn('uuid')
     id: string
 
     @Column()
     name: string
 
     @Column()
+    customerId: string
+
+    @Column()
     email: string
 
     @Column({ nullable: true })
     password?: string
+
+    @Column({ nullable: true })
+    oauthType?: string
+
+    @Column({ nullable: true })
+    oauthId?: string
+
+    @OneToOne((type) => Subscription, (subscirption) => subscirption.user, {
+        cascade: true // This will allow you to save chatflows when saving a user
+    })
+    @JoinColumn()
+    subscription: Subscription
 
     @OneToMany((type) => ChatFlow, (chatflow) => chatflow.user, {
         cascade: true // This will allow you to save chatflows when saving a user
