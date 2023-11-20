@@ -9,12 +9,12 @@ import { Box, Typography, Button, IconButton, Dialog, DialogActions, DialogConte
 
 import { StyledButton } from 'ui-component/button/StyledButton'
 import { TooltipWithParser } from 'ui-component/tooltip/TooltipWithParser'
-import ConfirmDialog from 'ui-component/dialog/ConfirmDialog'
 import { Dropdown } from 'ui-component/dropdown/Dropdown'
 import { MultiDropdown } from 'ui-component/dropdown/MultiDropdown'
 import CredentialInputHandler from 'views/canvas/CredentialInputHandler'
 import { File } from 'ui-component/file/File'
 import { BackdropLoader } from 'ui-component/loading/BackdropLoader'
+import DeleteConfirmDialog from './DeleteConfirmDialog'
 
 // Icons
 import { IconX } from '@tabler/icons'
@@ -23,7 +23,6 @@ import { IconX } from '@tabler/icons'
 import assistantsApi from 'api/assistants'
 
 // Hooks
-import useConfirm from 'hooks/useConfirm'
 import useApi from 'hooks/useApi'
 
 // utils
@@ -71,14 +70,8 @@ const assistantAvailableModels = [
 
 const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
     const portalElement = document.getElementById('portal')
-
-    const dispatch = useDispatch()
-
-    // ==============================|| Snackbar ||============================== //
-
     useNotifier()
-    const { confirm } = useConfirm()
-
+    const dispatch = useDispatch()
     const enqueueSnackbar = (...args) => dispatch(enqueueSnackbarAction(...args))
     const closeSnackbar = (...args) => dispatch(closeSnackbarAction(...args))
 
@@ -89,7 +82,7 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
     const [openAIAssistantId, setOpenAIAssistantId] = useState('')
     const [assistantName, setAssistantName] = useState('')
     const [assistantDesc, setAssistantDesc] = useState('')
-    const [assistantIcon, setAssistantIcon] = useState(`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${uuidv4()}`)
+    const [assistantIcon, setAssistantIcon] = useState(`https://api.dicebear.com/7.x/bottts/svg?seed=${uuidv4()}`)
     const [assistantModel, setAssistantModel] = useState('')
     const [assistantCredential, setAssistantCredential] = useState('')
     const [assistantInstructions, setAssistantInstructions] = useState('')
@@ -97,6 +90,8 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
     const [assistantFiles, setAssistantFiles] = useState([])
     const [uploadAssistantFiles, setUploadAssistantFiles] = useState('')
     const [loading, setLoading] = useState(false)
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+    const [deleteDialogProps, setDeleteDialogProps] = useState({})
 
     useEffect(() => {
         if (show) dispatch({ type: SHOW_CANVAS_DIALOG })
@@ -123,20 +118,7 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
 
     useEffect(() => {
         if (getAssistantObjApi.data) {
-            setOpenAIAssistantId(getAssistantObjApi.data.id)
-            setAssistantName(getAssistantObjApi.data.name)
-            setAssistantDesc(getAssistantObjApi.data.description)
-            setAssistantModel(getAssistantObjApi.data.model)
-            setAssistantInstructions(getAssistantObjApi.data.instructions)
-            setAssistantFiles(getAssistantObjApi.data.files ?? [])
-
-            let tools = []
-            if (getAssistantObjApi.data.tools && getAssistantObjApi.data.tools.length) {
-                for (const tool of getAssistantObjApi.data.tools) {
-                    tools.push(tool.type)
-                }
-            }
-            setAssistantTools(tools)
+            syncData(getAssistantObjApi.data)
         }
     }, [getAssistantObjApi.data])
 
@@ -161,14 +143,14 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
         } else if (dialogProps.type === 'ADD' && dialogProps.selectedOpenAIAssistantId && dialogProps.credential) {
             // When assistant dialog is to add new assistant from existing
             setAssistantId('')
-            setAssistantIcon(`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${uuidv4()}`)
+            setAssistantIcon(`https://api.dicebear.com/7.x/bottts/svg?seed=${uuidv4()}`)
             setAssistantCredential(dialogProps.credential)
 
             getAssistantObjApi.request(dialogProps.selectedOpenAIAssistantId, dialogProps.credential)
         } else if (dialogProps.type === 'ADD' && !dialogProps.selectedOpenAIAssistantId) {
             // When assistant dialog is to add a blank new assistant
             setAssistantId('')
-            setAssistantIcon(`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${uuidv4()}`)
+            setAssistantIcon(`https://api.dicebear.com/7.x/bottts/svg?seed=${uuidv4()}`)
             setAssistantCredential('')
 
             setOpenAIAssistantId('')
@@ -183,7 +165,7 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
 
         return () => {
             setAssistantId('')
-            setAssistantIcon(`https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${uuidv4()}`)
+            setAssistantIcon(`https://api.dicebear.com/7.x/bottts/svg?seed=${uuidv4()}`)
             setAssistantCredential('')
 
             setOpenAIAssistantId('')
@@ -198,6 +180,23 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dialogProps])
+
+    const syncData = (data) => {
+        setOpenAIAssistantId(data.id)
+        setAssistantName(data.name)
+        setAssistantDesc(data.description)
+        setAssistantModel(data.model)
+        setAssistantInstructions(data.instructions)
+        setAssistantFiles(data.files ?? [])
+
+        let tools = []
+        if (data.tools && data.tools.length) {
+            for (const tool of data.tools) {
+                tools.push(tool.type)
+            }
+        }
+        setAssistantTools(tools)
+    }
 
     const addNewAssistant = async () => {
         setLoading(true)
@@ -309,41 +308,17 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
         }
     }
 
-    const deleteAssistant = async () => {
-        const confirmPayload = {
-            title: `Delete Assistant`,
-            description: `Delete Assistant ${assistantName}?`,
-            confirmButtonName: 'Delete',
-            cancelButtonName: 'Cancel'
-        }
-        const isConfirmed = await confirm(confirmPayload)
-
-        if (isConfirmed) {
-            try {
-                const delResp = await assistantsApi.deleteAssistant(assistantId)
-                if (delResp.data) {
-                    enqueueSnackbar({
-                        message: 'Assistant deleted',
-                        options: {
-                            key: new Date().getTime() + Math.random(),
-                            variant: 'success',
-                            action: (key) => (
-                                <Button style={{ color: 'white' }} onClick={() => closeSnackbar(key)}>
-                                    <IconX />
-                                </Button>
-                            )
-                        }
-                    })
-                    onConfirm()
-                }
-            } catch (error) {
-                const errorData = error.response.data || `${error.response.status}: ${error.response.statusText}`
+    const onSyncClick = async () => {
+        setLoading(true)
+        try {
+            const getResp = await assistantsApi.getAssistantObj(openAIAssistantId, assistantCredential)
+            if (getResp.data) {
+                syncData(getResp.data)
                 enqueueSnackbar({
-                    message: `Failed to delete Assistant: ${errorData}`,
+                    message: 'Assistant successfully synced!',
                     options: {
                         key: new Date().getTime() + Math.random(),
-                        variant: 'error',
-                        persist: true,
+                        variant: 'success',
                         action: (key) => (
                             <Button style={{ color: 'white' }} onClick={() => closeSnackbar(key)}>
                                 <IconX />
@@ -351,8 +326,71 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                         )
                     }
                 })
-                onCancel()
             }
+            setLoading(false)
+        } catch (error) {
+            const errorData = error.response.data || `${error.response.status}: ${error.response.statusText}`
+            enqueueSnackbar({
+                message: `Failed to sync Assistant: ${errorData}`,
+                options: {
+                    key: new Date().getTime() + Math.random(),
+                    variant: 'error',
+                    persist: true,
+                    action: (key) => (
+                        <Button style={{ color: 'white' }} onClick={() => closeSnackbar(key)}>
+                            <IconX />
+                        </Button>
+                    )
+                }
+            })
+            setLoading(false)
+        }
+    }
+
+    const onDeleteClick = () => {
+        setDeleteDialogProps({
+            title: `Delete Assistant`,
+            description: `Delete Assistant ${assistantName}?`,
+            cancelButtonName: 'Cancel'
+        })
+        setDeleteDialogOpen(true)
+    }
+
+    const deleteAssistant = async (isDeleteBoth) => {
+        setDeleteDialogOpen(false)
+        try {
+            const delResp = await assistantsApi.deleteAssistant(assistantId, isDeleteBoth)
+            if (delResp.data) {
+                enqueueSnackbar({
+                    message: 'Assistant deleted',
+                    options: {
+                        key: new Date().getTime() + Math.random(),
+                        variant: 'success',
+                        action: (key) => (
+                            <Button style={{ color: 'white' }} onClick={() => closeSnackbar(key)}>
+                                <IconX />
+                            </Button>
+                        )
+                    }
+                })
+                onConfirm()
+            }
+        } catch (error) {
+            const errorData = error.response.data || `${error.response.status}: ${error.response.statusText}`
+            enqueueSnackbar({
+                message: `Failed to delete Assistant: ${errorData}`,
+                options: {
+                    key: new Date().getTime() + Math.random(),
+                    variant: 'error',
+                    persist: true,
+                    action: (key) => (
+                        <Button style={{ color: 'white' }} onClick={() => closeSnackbar(key)}>
+                            <IconX />
+                        </Button>
+                    )
+                }
+            })
+            onCancel()
         }
     }
 
@@ -413,6 +451,40 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                         value={assistantDesc}
                         name='assistantDesc'
                         onChange={(e) => setAssistantDesc(e.target.value)}
+                    />
+                </Box>
+                <Box sx={{ p: 2 }}>
+                    <Stack sx={{ position: 'relative' }} direction='row'>
+                        <Typography variant='overline'>Assistant Icon Src</Typography>
+                    </Stack>
+                    <div
+                        style={{
+                            width: 100,
+                            height: 100,
+                            borderRadius: '50%',
+                            backgroundColor: 'white'
+                        }}
+                    >
+                        <img
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                padding: 5,
+                                borderRadius: '50%',
+                                objectFit: 'contain'
+                            }}
+                            alt={assistantName}
+                            src={assistantIcon}
+                        />
+                    </div>
+                    <OutlinedInput
+                        id='assistantIcon'
+                        type='string'
+                        fullWidth
+                        placeholder={`https://api.dicebear.com/7.x/bottts/svg?seed=${uuidv4()}`}
+                        value={assistantIcon}
+                        name='assistantIcon'
+                        onChange={(e) => setAssistantIcon(e.target.value)}
                     />
                 </Box>
                 <Box sx={{ p: 2 }}>
@@ -544,7 +616,12 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
             </DialogContent>
             <DialogActions>
                 {dialogProps.type === 'EDIT' && (
-                    <StyledButton color='error' variant='contained' onClick={() => deleteAssistant()}>
+                    <StyledButton color='secondary' variant='contained' onClick={() => onSyncClick()}>
+                        Sync
+                    </StyledButton>
+                )}
+                {dialogProps.type === 'EDIT' && (
+                    <StyledButton color='error' variant='contained' onClick={() => onDeleteClick()}>
                         Delete
                     </StyledButton>
                 )}
@@ -556,7 +633,13 @@ const AssistantDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                     {dialogProps.confirmButtonName}
                 </StyledButton>
             </DialogActions>
-            <ConfirmDialog />
+            <DeleteConfirmDialog
+                show={deleteDialogOpen}
+                dialogProps={deleteDialogProps}
+                onCancel={() => setDeleteDialogOpen(false)}
+                onDelete={() => deleteAssistant()}
+                onDeleteBoth={() => deleteAssistant(true)}
+            />
             {loading && <BackdropLoader open={loading} />}
         </Dialog>
     ) : null

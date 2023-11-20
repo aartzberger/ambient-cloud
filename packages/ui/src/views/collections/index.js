@@ -60,7 +60,8 @@ const Collections = () => {
                 type: 'IMPORT',
                 cancelButtonName: 'Cancel',
                 confirmButtonName: 'Save',
-                data: JSON.parse(file)
+                data: JSON.parse(file),
+                dataSource: dataSource
             }
             setDialogProps(dialogProp)
             setShowDialog(true)
@@ -90,7 +91,8 @@ const Collections = () => {
             title: 'Add New Collection',
             type: 'ADD',
             cancelButtonName: 'Cancel',
-            confirmButtonName: 'Add'
+            confirmButtonName: 'Add',
+            dataSource: dataSource
         }
         setDialogProps(dialogProp)
         setShowDialog(true)
@@ -102,7 +104,8 @@ const Collections = () => {
             type: 'EDIT',
             cancelButtonName: 'Cancel',
             confirmButtonName: 'Save',
-            data: selectedCollection
+            data: selectedCollection,
+            dataSource: dataSource
         }
         setDialogProps(dialogProp)
         setShowDialog(true)
@@ -183,7 +186,6 @@ const Collections = () => {
                 onCancel={() => setShowDialog(false)}
                 onConfirm={onConfirm}
                 onImport={onImport}
-                dataSource={dataSource}
             ></CollectionDialog>
             <LoginDialog show={loginDialogOpen} dialogProps={loginDialogProps} />
         </>

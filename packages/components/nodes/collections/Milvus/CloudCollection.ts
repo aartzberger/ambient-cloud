@@ -100,10 +100,15 @@ class Cloud_Existing_Collection implements INode {
 
             const client = new MilvusClient({ address: url })
             const collectionData = await client.showCollections()
-            for (let collection of collectionData.data) {
+
+            const collections = collectionData.data.filter((col) => {
+                return col.name.includes(String(options.req.user?.id).replace(/-/g, '_'))
+            })
+
+            for (let collection of collections) {
                 const data = {
                     label: collection.name.split('_')[0],
-                    name: collection.name,
+                    name: collection.name
                     // description: collection.description
                 } as INodeOptionsValue
                 returnData.push(data)

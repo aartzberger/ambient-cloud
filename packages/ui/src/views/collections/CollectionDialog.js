@@ -48,7 +48,7 @@ import useNotifier from 'utils/useNotifier'
 import { HIDE_CANVAS_DIALOG, SHOW_CANVAS_DIALOG } from 'store/actions'
 import remotesDb from 'api/remotesDb'
 
-const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }) => {
+const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
     const portalElement = document.getElementById('portal')
 
     const dispatch = useDispatch()
@@ -88,7 +88,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
             inputParams: data.inputParams,
             confirmButtonName: 'Save',
             cancelButtonName: 'Cancel',
-            source: dataSource
+            source: dialogProps.dataSource
         }
 
         setDocLoaderDialogProps(props)
@@ -133,7 +133,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
             setPendingUpload(true)
 
             let saveResp = null
-            saveResp = await remotesApi.createCollection(dataSource, {
+            saveResp = await remotesApi.createCollection(dialogProps.dataSource, {
                 name: collectionName,
                 nodeData: nodeData,
                 dataDescription: dataDescription
@@ -152,7 +152,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
                         )
                     }
                 })
-                querySpecificCollectionApi.request(dataSource, collectionName)
+                querySpecificCollectionApi.request(dialogProps.dataSource, collectionName)
             }
 
             setPendingUpload(false)
@@ -224,14 +224,14 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
         if (dialogProps.type === 'EDIT' && dialogProps.data) {
             // When tool dialog is opened from CustomTool node in canvas
             setCollectionName(dialogProps.data.name)
-            getSpecificCollectionApi.request(dataSource, dialogProps.data.name)
-            querySpecificCollectionApi.request(dataSource, dialogProps.data.name)
+            getSpecificCollectionApi.request(dialogProps.data.dataSource, dialogProps.data.name)
+            querySpecificCollectionApi.request(dialogProps.data.dataSource, dialogProps.data.name)
             setOldCollectionName(dialogProps.data.name)
         } else if (dialogProps.type === 'EDIT' && dialogProps.name) {
             // When tool dialog is opened from CustomTool node in canvas
             setCollectionName(dialogProps.name)
-            getSpecificCollectionApi.request(dataSource, dialogProps.name)
-            querySpecificCollectionApi.request(dataSource, dialogProps.name)
+            getSpecificCollectionApi.request(dialogProps.dataSource, dialogProps.name)
+            querySpecificCollectionApi.request(dialogProps.dataSource, dialogProps.name)
             setOldCollectionName(dialogProps.name)
         } else if (dialogProps.type === 'ADD') {
             // When tool dialog is to add a new tool
@@ -253,7 +253,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
                     oldName: oldCollectionName,
                     newName: collectionName
                 }
-                saveResp = await remotesApi.renameCollection(dataSource, args)
+                saveResp = await remotesApi.renameCollection(dialogProps.dataSource, args)
 
                 if (saveResp ? saveResp.data : true) {
                     enqueueSnackbar({
@@ -291,7 +291,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
                 entities: entities
             }
 
-            const delResp = await remotesDb.deleteEntities(dataSource, args)
+            const delResp = await remotesDb.deleteEntities(dialogProps.dataSource, args)
             if (delResp.data) {
                 enqueueSnackbar({
                     message: 'File deleted',
@@ -305,7 +305,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
                         )
                     }
                 })
-                querySpecificCollectionApi.request(dataSource, collectionName)
+                querySpecificCollectionApi.request(dialogProps.dataSource, collectionName)
             }
         } catch (error) {
             const errorData = error.response.data || `${error.response.status}: ${error.response.statusText}`
@@ -338,7 +338,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
 
         if (isConfirmed) {
             try {
-                const delResp = await remotesDb.deleteCollection(dataSource, collectionName)
+                const delResp = await remotesDb.deleteCollection(dialogProps.dataSource, collectionName)
                 if (delResp.data) {
                     enqueueSnackbar({
                         message: 'Collection deleted',
@@ -416,7 +416,9 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm, dataSource }
                             id='collectionName'
                             type='string'
                             fullWidth
-                            disabled={dialogProps.type === 'TEMPLATE' || (dataSource === 'openai' && dialogProps.type !== 'ADD')}
+                            disabled={
+                                dialogProps.type === 'TEMPLATE' || (dialogProps.dataSource === 'openai' && dialogProps.type !== 'ADD')
+                            }
                             placeholder='My New Collection'
                             value={collectionName}
                             name='collectionName'
@@ -557,8 +559,7 @@ CollectionDialog.propTypes = {
     show: PropTypes.bool,
     dialogProps: PropTypes.object,
     onCancel: PropTypes.func,
-    onConfirm: PropTypes.func,
-    dataSource: PropTypes.string
+    onConfirm: PropTypes.func
 }
 
 export default CollectionDialog

@@ -1,7 +1,6 @@
 /* eslint-disable */
-import { Entity, Column, CreateDateColumn, UpdateDateColumn, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn, ManyToMany, OneToMany } from 'typeorm'
+import { Entity, Column, CreateDateColumn, UpdateDateColumn, PrimaryGeneratedColumn, ManyToOne } from 'typeorm'
 import { IAssistant } from '../../Interface'
-import { Collection } from './Collection'
 import { User } from './User' // import the User entity
 
 @Entity()

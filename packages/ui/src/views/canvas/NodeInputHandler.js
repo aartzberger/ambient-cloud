@@ -55,7 +55,6 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
     const [expandDialogProps, setExpandDialogProps] = useState({})
     const [showAsyncOptionDialog, setAsyncOptionEditDialog] = useState('')
     const [asyncOptionEditDialogProps, setAsyncOptionEditDialogProps] = useState({})
-    const [asyncCollectionEditDialogProps, setAsyncCollectionEditDialogProps] = useState({})
     const [reloadTimestamp, setReloadTimestamp] = useState(Date.now().toString())
     const [showFormatPromptValuesDialog, setShowFormatPromptValuesDialog] = useState(false)
     const [formatPromptValuesDialogProps, setFormatPromptValuesDialogProps] = useState({})
@@ -116,7 +115,8 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
                 type: 'EDIT',
                 cancelButtonName: 'Cancel',
                 confirmButtonName: 'Save',
-                name: inputValue
+                name: inputValue.split('_')[0], // incase of cloud collection where after _ is unique id
+                dataSource: data.name === 'cloudCollection' ? 'cloud' : 'local'
             })
         } else if (inputParamName === 'selectedAssistant') {
             setAsyncOptionEditDialogProps({
@@ -143,7 +143,8 @@ const NodeInputHandler = ({ inputAnchor, inputParam, data, disabled = false, isA
                 title: 'Add New Collection',
                 type: 'ADD',
                 cancelButtonName: 'Cancel',
-                confirmButtonName: 'Add'
+                confirmButtonName: 'Add',
+                dataSource: data.name === 'cloudCollection' ? 'cloud' : 'local'
             })
         } else if (inputParamName === 'selectedAssistant') {
             setAsyncOptionEditDialogProps({

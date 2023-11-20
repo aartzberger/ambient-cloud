@@ -171,6 +171,7 @@ export class App {
                 '/api/v1/node-icon/',
                 '/api/v1/components-credentials-icon/',
                 '/api/v1/chatflows-streaming',
+                '/api/v1/openai-assistants-file',
                 '/api/v1/ip'
             ]
             this.app.use((req, res, next) => {
@@ -1385,10 +1386,8 @@ export class App {
         // Get specific assistant
         this.app.get('/api/v1/assistants/:id', async (req: Request, res: Response) => {
             const assistant = await this.AppDataSource.getRepository(Assistant).findOneBy({
-                id: req.params.id,
-                user: req.user as User
+                id: req.params.id
             })
-
             return res.json(assistant)
         })
 
@@ -1396,8 +1395,7 @@ export class App {
         this.app.get('/api/v1/openai-assistants/:id', async (req: Request, res: Response) => {
             const credentialId = req.query.credential as string
             const credential = await this.AppDataSource.getRepository(Credential).findOneBy({
-                id: credentialId,
-                user: req.user as User
+                id: credentialId
             })
 
             if (!credential) return res.status(404).send(`Credential ${credentialId} not found`)
@@ -1423,8 +1421,7 @@ export class App {
         this.app.get('/api/v1/openai-assistants', async (req: Request, res: Response) => {
             const credentialId = req.query.credential as string
             const credential = await this.AppDataSource.getRepository(Credential).findOneBy({
-                id: credentialId,
-                user: req.user as User
+                id: credentialId
             })
 
             if (!credential) return res.status(404).send(`Credential ${credentialId} not found`)
@@ -1450,8 +1447,7 @@ export class App {
 
             try {
                 const credential = await this.AppDataSource.getRepository(Credential).findOneBy({
-                    id: body.credential,
-                    user: req.user as User
+                    id: body.credential
                 })
 
                 if (!credential) return res.status(404).send(`Credential ${body.credential} not found`)
@@ -1523,8 +1519,8 @@ export class App {
 
                     await openai.beta.assistants.update(assistantDetails.id, {
                         name: assistantDetails.name,
-                        description: assistantDetails.description,
-                        instructions: assistantDetails.instructions,
+                        description: assistantDetails.description ?? '',
+                        instructions: assistantDetails.instructions ?? '',
                         model: assistantDetails.model,
                         tools: filteredTools,
                         file_ids: uniqWith(
@@ -1575,8 +1571,7 @@ export class App {
                 const assistantDetails = JSON.parse(body.details)
 
                 const credential = await this.AppDataSource.getRepository(Credential).findOneBy({
-                    id: body.credential,
-                    user: req.user as User
+                    id: body.credential
                 })
 
                 if (!credential) return res.status(404).send(`Credential ${body.credential} not found`)
@@ -1656,7 +1651,6 @@ export class App {
                 const updateAssistant = new Assistant()
                 body.details = JSON.stringify(newAssistantDetails)
                 Object.assign(updateAssistant, body)
-                updateAssistant.user = req.user as User
 
                 this.AppDataSource.getRepository(Assistant).merge(assistant, updateAssistant)
                 const result = await this.AppDataSource.getRepository(Assistant).save(assistant)
@@ -1670,8 +1664,7 @@ export class App {
         // Delete assistant
         this.app.delete('/api/v1/assistants/:id', async (req: Request, res: Response) => {
             const assistant = await this.AppDataSource.getRepository(Assistant).findOneBy({
-                id: req.params.id,
-                user: req.user as User
+                id: req.params.id
             })
 
             if (!assistant) {
@@ -1697,13 +1690,21 @@ export class App {
 
                 const results = await this.AppDataSource.getRepository(Assistant).delete({ id: req.params.id })
 
-                await openai.beta.assistants.del(assistantDetails.id)
+                if (req.query.isDeleteBoth) await openai.beta.assistants.del(assistantDetails.id)
 
                 return res.json(results)
             } catch (error: any) {
                 if (error.status === 404 && error.type === 'invalid_request_error') return res.send('OK')
                 return res.status(500).send(`Error deleting assistant: ${error}`)
             }
+        })
+
+        // Download file from assistant
+        this.app.post('/api/v1/openai-assistants-file', async (req: Request, res: Response) => {
+            const filePath = path.join(getUserHome(), '.flowise', 'openai-assistant', req.body.fileName)
+            res.setHeader('Content-Disposition', 'attachment; filename=' + path.basename(filePath))
+            const fileStream = fs.createReadStream(filePath)
+            fileStream.pipe(res)
         })
 
         // ----------------------------------------
@@ -2526,6 +2527,7 @@ export class App {
             }
             if (result?.sourceDocuments) apiMessage.sourceDocuments = JSON.stringify(result.sourceDocuments)
             if (result?.usedTools) apiMessage.usedTools = JSON.stringify(result.usedTools)
+            if (result?.fileAnnotations) apiMessage.fileAnnotations = JSON.stringify(result.fileAnnotations)
             await this.addChatMessage(apiMessage, req.user as User)
 
             logger.debug(`❌ [server]: Finished running ${nodeToExecuteData.label} (${nodeToExecuteData.id})`)
