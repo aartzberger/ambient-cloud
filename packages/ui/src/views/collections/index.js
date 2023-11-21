@@ -18,6 +18,7 @@ import { checkApiErrorAndHandleLogin } from '../../api/apiHelpers'
 
 // API
 import remotesApi from 'api/remotesDb'
+import credentialsApi from 'api/credentials'
 
 // Hooks
 import useApi from 'hooks/useApi'
@@ -45,6 +46,7 @@ const Collections = () => {
     const customization = useSelector((state) => state.customization)
 
     const getAllCollectionsApi = useApi(remotesApi.getUserCollections)
+    const getAllCredentialsApi = useApi(credentialsApi.getAllCredentials)
 
     const [showDialog, setShowDialog] = useState(false)
     const [dialogProps, setDialogProps] = useState({})

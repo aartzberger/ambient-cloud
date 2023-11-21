@@ -45,7 +45,8 @@ function createFieldTypeForMetadata(documents: any, primaryFieldName: any) {
                 data_type: DataType.VarChar,
                 type_params: {
                     max_length: textFieldMaxLength.toString()
-                }
+                },
+                is_partition_key: key === 'partition' ? true : false
             })
         } else if (type === 'number') {
             fields.push({

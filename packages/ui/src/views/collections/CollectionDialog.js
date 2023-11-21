@@ -61,7 +61,6 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
     const enqueueSnackbar = (...args) => dispatch(enqueueSnackbarAction(...args))
     const closeSnackbar = (...args) => dispatch(closeSnackbarAction(...args))
 
-    const getSpecificCollectionApi = useApi(remotesApi.getSpecificCollection)
     const querySpecificCollectionApi = useApi(remotesApi.querySpecificCollection)
     const loadUnloadCollectionApi = useApi(remotesApi.loadUnloadCollection)
     const getAllNodesApi = useApi(nodesApi.getAllComplete)
@@ -75,6 +74,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
     const [nodeData, setNodeData] = useState({})
     const [pendingUpload, setPendingUpload] = useState(false)
     const [dataDescription, setDataDescription] = useState('')
+    const [dataSource, setDataSource] = useState('')
 
     const [docLoaderDialogProps, setDocLoaderDialogProps] = useState({})
 
@@ -88,7 +88,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
             inputParams: data.inputParams,
             confirmButtonName: 'Save',
             cancelButtonName: 'Cancel',
-            source: dialogProps.dataSource
+            source: dataSource
         }
 
         setDocLoaderDialogProps(props)
@@ -133,7 +133,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
             setPendingUpload(true)
 
             let saveResp = null
-            saveResp = await remotesApi.createCollection(dialogProps.dataSource, {
+            saveResp = await remotesApi.createCollection(dataSource, {
                 name: collectionName,
                 nodeData: nodeData,
                 dataDescription: dataDescription
@@ -152,7 +152,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                         )
                     }
                 })
-                querySpecificCollectionApi.request(dialogProps.dataSource, collectionName)
+                querySpecificCollectionApi.request(dataSource, collectionName)
             }
 
             setPendingUpload(false)
@@ -224,19 +224,20 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
         if (dialogProps.type === 'EDIT' && dialogProps.data) {
             // When tool dialog is opened from CustomTool node in canvas
             setCollectionName(dialogProps.data.name)
-            getSpecificCollectionApi.request(dialogProps.data.dataSource, dialogProps.data.name)
-            querySpecificCollectionApi.request(dialogProps.data.dataSource, dialogProps.data.name)
+            querySpecificCollectionApi.request(dialogProps.dataSource, dialogProps.data.name)
             setOldCollectionName(dialogProps.data.name)
+            setDataSource(dialogProps.dataSource)
         } else if (dialogProps.type === 'EDIT' && dialogProps.name) {
             // When tool dialog is opened from CustomTool node in canvas
             setCollectionName(dialogProps.name)
-            getSpecificCollectionApi.request(dialogProps.dataSource, dialogProps.name)
             querySpecificCollectionApi.request(dialogProps.dataSource, dialogProps.name)
             setOldCollectionName(dialogProps.name)
+            setDataSource(dialogProps.dataSource)
         } else if (dialogProps.type === 'ADD') {
             // When tool dialog is to add a new tool
             setCollectionName('')
             setOldCollectionName('')
+            setDataSource(dialogProps.dataSource)
         }
 
         setFilesMap(new Map())
@@ -291,7 +292,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                 entities: entities
             }
 
-            const delResp = await remotesDb.deleteEntities(dialogProps.dataSource, args)
+            const delResp = await remotesDb.deleteEntities(dataSource, args)
             if (delResp.data) {
                 enqueueSnackbar({
                     message: 'File deleted',
@@ -305,7 +306,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                         )
                     }
                 })
-                querySpecificCollectionApi.request(dialogProps.dataSource, collectionName)
+                querySpecificCollectionApi.request(dataSource, collectionName)
             }
         } catch (error) {
             const errorData = error.response.data || `${error.response.status}: ${error.response.statusText}`
@@ -338,7 +339,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
 
         if (isConfirmed) {
             try {
-                const delResp = await remotesDb.deleteCollection(dialogProps.dataSource, collectionName)
+                const delResp = await remotesDb.deleteCollection(dataSource, collectionName)
                 if (delResp.data) {
                     enqueueSnackbar({
                         message: 'Collection deleted',
@@ -408,7 +409,9 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                                 <span style={{ color: 'red' }}>&nbsp;*</span>
                                 <TooltipWithParser
                                     style={{ marginLeft: 10 }}
-                                    title={'Collection name must be small capital letter with underscore. Ex: my_collection'}
+                                    title={
+                                        'Collection name cannot be changed after creation! Collection name must be small capital letter with underscore. Ex: my_collection'
+                                    }
                                 />
                             </Typography>
                         </Stack>
@@ -416,9 +419,7 @@ const CollectionDialog = ({ show, dialogProps, onCancel, onConfirm }) => {
                             id='collectionName'
                             type='string'
                             fullWidth
-                            disabled={
-                                dialogProps.type === 'TEMPLATE' || (dialogProps.dataSource === 'openai' && dialogProps.type !== 'ADD')
-                            }
+                            disabled={dialogProps.type === 'TEMPLATE' || dialogProps.type !== 'ADD'} // TODO CMAN - allow partition name update
                             placeholder='My New Collection'
                             value={collectionName}
                             name='collectionName'

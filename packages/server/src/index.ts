@@ -56,7 +56,7 @@ import {
     clearSessionMemoryFromViewMessageDialog,
     getUserHome
 } from './utils'
-import { getDbAddress, getCollectionName } from './utils/CollectionsHelper'
+import { getDbAddress, getPartitionName } from './utils/CollectionsHelper'
 import { getApiKey, getAPIKeys, addAPIKey, updateAPIKey, deleteAPIKey, compareKeys } from './utils/apiKeyHelpers'
 import MilvusUpsert from './utils/Upsert'
 import whitelistNodes from './utils/whitelistNodes'
@@ -1708,7 +1708,7 @@ export class App {
         })
 
         // ----------------------------------------
-        // RemoteDb
+        // Collections
         // ----------------------------------------
 
         // handle create or update remotedb
@@ -1756,156 +1756,218 @@ export class App {
         this.app.post('/api/v1/collections/load-unload/:source', async (req: Request, res: Response) => {
             const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
-            const client = address ? new MilvusClient({ address: address as string }) : null
-            if (!client) return res.status(400).send('Milvus client not found')
-
-            const load = req.body.load
-            const name = getCollectionName(req.user as User, req.body.collection, req.params.source)
-
-            let status
-            if (load) {
-                status = await client.loadCollection({
-                    // Return the name and schema of the collection.
-                    collection_name: name
-                })
-            } else {
-                status = await client.releaseCollection({
-                    // Return the name and schema of the collection.
-                    collection_name: name
-                })
+            const clientConfig = {
+                address: address as string,
+                token: process.env.MILVUS_TOKEN || ''
             }
 
-            return res.json(status)
+            try {
+                const client = address ? new MilvusClient(clientConfig) : null
+                if (!client) return res.status(400).send('Milvus client not found')
+
+                const load = req.body.load
+                const name = getPartitionName(req.user as User, req.body.collection, req.params.source)
+
+                let status
+                if (load) {
+                    status = await client.loadCollection({
+                        // Return the name and schema of the collection.
+                        collection_name: name
+                    })
+                } else {
+                    status = await client.releaseCollection({
+                        // Return the name and schema of the collection.
+                        collection_name: name
+                    })
+                }
+
+                if (status.code !== 0) return res.status(400).send(status.reason)
+
+                return res.json(status)
+            } catch (e) {
+                logger.error(e)
+                return res.status(400).send('Error loading/unloading collection')
+            }
         })
 
         // query collection name to get docs info
         this.app.get('/api/v1/collections/query/:source/:name', async (req: Request, res: Response) => {
             const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
-            const client = address ? new MilvusClient({ address: address as string }) : null
-            if (!client) return res.status(400).send('Milvus client not found')
-            const name = getCollectionName(req.user as User, req.params.name, req.params.source)
+            const clientConfig = {
+                address: address as string,
+                token: process.env.MILVUS_TOKEN || ''
+            }
 
-            const queryResult = await client.query({
-                // Return the name and schema of the collection.
-                collection_name: name,
-                expr: '',
-                output_fields: ['fileName'],
-                limit: 15000
-            })
+            try {
+                const client = address ? new MilvusClient(clientConfig) : null
+                if (!client) return res.status(400).send('Milvus client not found')
+                const name = getPartitionName(req.user as User, req.params.name, req.params.source)
 
-            return res.json(queryResult)
-        })
+                const queryResult = await client.query({
+                    // Return the name and schema of the collection.
+                    collection_name: 'ambient',
+                    filter: `partition in ['${name}']`,
+                    output_fields: ['fileName']
+                })
 
-        // return a specific collection
-        this.app.get('/api/v1/collections/:source/:name', async (req: Request, res: Response) => {
-            const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
-            const client = address ? new MilvusClient({ address: address as string }) : null
-            if (!client) return res.status(400).send('Milvus client not found')
-            const collection = await client.describeCollection({
-                // Return the name and schema of the collection.
-                collection_name: req.params.name
-            })
+                if (queryResult.status.code !== 0) return res.status(400).send(queryResult.status.reason)
 
-            return res.json(collection)
+                return res.json(queryResult)
+            } catch (e) {
+                logger.error(e)
+                return res.status(400).send('Error querying collection')
+            }
         })
 
         // return a list of collections belonging to a given user
         this.app.get('/api/v1/collections/:source', ensureAuthenticated, async (req: Request, res: Response) => {
-            let collections
             let collectionNames
+
+            const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
+
+            const clientConfig = {
+                address: address as string,
+                token: process.env.MILVUS_TOKEN || ''
+            }
+
             try {
-                const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
-
-                const client = address ? new MilvusClient({ address: address as string }) : null
+                const client = address ? new MilvusClient(clientConfig) : null
                 if (!client) return res.status(400).send('Milvus client not found')
-                collections = await client.showCollections()
+                // collections = await client.showCollections()
 
-                collectionNames = (collections as any).collection_names
+                const collections = await client.query({
+                    // Return the name and schema of the collection.
+                    collection_name: 'ambient',
+                    filter: `user in ['${String((req.user as User).id)}']`,
+                    output_fields: ['partition']
+                })
+
+                if (collections.status.code !== 0) return res.status(400).send(collections.status.reason)
+
+                collectionNames = collections.data.map((collection: any) => collection.partition)
+                collectionNames = new Set(collectionNames) // keep only unique occurances
+
+                const returnData: INodeOptionsValue[] = []
+                for (let collection of collectionNames) {
+                    const name = getPartitionName(req.user as User, collection, req.params.source)
+                    const data = {
+                        name: name.split('_').shift() // this will remove the user id from cloud collections
+                    } as INodeOptionsValue
+                    returnData.push(data)
+                }
+
+                return res.json(returnData)
             } catch (e) {
                 logger.error(e)
-                return res.status(400).send('Collections not found')
+                return res.status(400).send('Error getting collections')
             }
-
-            // TODO CMAN - this is currently O(1) time... need to improve this
-            // it will be problematic with lots of collections
-            if (req.params.source === 'cloud') {
-                collectionNames = collectionNames.filter((name: string) => {
-                    return name.includes(String((req.user as User)?.id).replace(/-/g, '_'))
-                })
-            }
-
-            const returnData: INodeOptionsValue[] = []
-            for (let collection of collectionNames) {
-                const name = getCollectionName(req.user as User, collection, req.params.source)
-                const data = {
-                    name: name.split('_').shift() // this will remove the user id from cloud collections
-                } as INodeOptionsValue
-                returnData.push(data)
-            }
-
-            return res.json(returnData)
         })
 
         // delete collection entities
         this.app.post('/api/v1/collections/entities/delete/:source', async (req: Request, res: Response) => {
             const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
-            const client = address ? new MilvusClient({ address: address as string }) : null
-            if (!client) return res.status(400).send('Milvus client not found')
-            const name = getCollectionName(req.user as User, req.body.collection_name, req.params.source)
+            const clientConfig = {
+                address: address as string,
+                token: process.env.MILVUS_TOKEN || ''
+            }
 
-            const milvusExpression = `langchain_primaryid in [${req.body.entities}]`
+            try {
+                const client = address ? new MilvusClient(clientConfig) : null
+                if (!client) return res.status(400).send('Milvus client not found')
 
-            const result = await client.deleteEntities({
-                // Return the name and schema of the collection.
-                collection_name: name,
-                expr: milvusExpression
-            })
+                const milvusExpression = `langchain_primaryid in [${req.body.entities}]`
 
-            return res.json(result)
+                const result = await client.deleteEntities({
+                    // Return the name and schema of the collection.
+                    collection_name: 'ambient',
+                    expr: milvusExpression
+                })
+
+                if (result.status.code !== 0) return res.status(400).send(result.status.reason)
+
+                return res.json(result)
+            } catch (e) {
+                logger.error(e)
+                return res.status(400).send('Error deleting entities')
+            }
         })
 
         // delete a collection for a given user
         this.app.delete('/api/v1/collections/delete/:source/:name', async (req: Request, res: Response) => {
             const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
-            const client = address ? new MilvusClient({ address: address as string }) : null
-            if (!client) return res.status(400).send('Milvus client not found')
+            const clientConfig = {
+                address: address as string,
+                token: process.env.MILVUS_TOKEN || ''
+            }
 
-            const name = getCollectionName(req.user as User, req.params.name, req.params.source)
+            try {
+                const client = address ? new MilvusClient(clientConfig) : null
+                if (!client) return res.status(400).send('Milvus client not found')
 
-            const collection = await client.dropCollection({
-                // Return the name and schema of the collection.
-                collection_name: name
-            })
+                const name = getPartitionName(req.user as User, req.params.name, req.params.source)
 
-            return res.json(collection)
+                const queryResult = await client.query({
+                    // Return the name and schema of the collection.
+                    collection_name: 'ambient',
+                    filter: `partition in ['${name}']`,
+                    output_fields: ['fileName']
+                })
+
+                if (queryResult.status.code !== 0) return res.status(400).send(queryResult.status.reason)
+
+                const ids = queryResult.data.map((doc: any) => doc.langchain_primaryid)
+
+                const milvusExpression = `langchain_primaryid in [${ids}]`
+
+                const result = await client.deleteEntities({
+                    // Return the name and schema of the collection.
+                    collection_name: 'ambient',
+                    expr: milvusExpression
+                })
+
+                return res.json(result)
+            } catch (e) {
+                logger.error(e)
+                return res.status(400).send('Error deleting collection')
+            }
         })
 
         // update a collection from a given user
         this.app.post('/api/v1/collections/rename/:source', async (req: Request, res: Response) => {
             const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
 
-            const client = address ? new MilvusClient({ address: address as string }) : null
-            if (!client) return res.status(400).send('Milvus client not found')
+            const clientConfig = {
+                address: address as string,
+                token: process.env.MILVUS_TOKEN || ''
+            }
 
-            const oldName = getCollectionName(req.user as User, req.body.oldName, req.params.source)
-            const newName = getCollectionName(req.user as User, req.body.newName, req.params.source)
+            try {
+                const client = address ? new MilvusClient(clientConfig) : null
+                if (!client) return res.status(400).send('Milvus client not found')
 
-            const collection = await client.renameCollection({
-                // Return the name and schema of the collection.
-                collection_name: oldName,
-                new_collection_name: newName
-            })
+                const oldName = getPartitionName(req.user as User, req.body.oldName, req.params.source)
+                const newName = getPartitionName(req.user as User, req.body.newName, req.params.source)
 
-            return res.json(collection)
+                const collection = await client.renameCollection({
+                    // Return the name and schema of the collection.
+                    collection_name: oldName,
+                    new_collection_name: newName
+                })
+
+                return res.json(collection)
+            } catch (e) {
+                logger.error(e)
+                return res.status(400).send('Error updating/renaming collection')
+            }
         })
 
         // create a collection for a given user
         this.app.post('/api/v1/collections/create/:source', async (req: Request, res: Response) => {
             const address = await getDbAddress(req.user as User, req.params.source, this.AppDataSource)
-            const collectionName = getCollectionName(req.user as User, req.body.name, req.params.source)
+            const partitionName = getPartitionName(req.user as User, req.body.name, req.params.source)
 
             const obj = {} as RecursiveCharacterTextSplitterParams
             obj.chunkSize = 1500
@@ -1915,11 +1977,13 @@ export class App {
             const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
             // const embeddings = new HuggingFaceInferenceEmbeddings({model: 'sentence-transformers/all-MiniLM-L6-v2'}) // api key passed by env variable
 
+            if (!embeddings) return res.status(400).send('Embeddings not found')
+
             const defaultSplitter = new RecursiveCharacterTextSplitter(obj)
 
             const additionalInfo = {
                 textSplitter: defaultSplitter,
-                metadata: { fileName: req.body.dataDescription }
+                metadata: { fileName: req.body.dataDescription, partition: partitionName, user: String((req.user as User).id) }
             }
 
             const nodeData = req.body.nodeData
@@ -1940,14 +2004,24 @@ export class App {
             const alldocs = await nodeInstance.init(nodeData, '', options)
 
             const milvusArgs = {
-                collectionName: collectionName,
-                url: address ? (address as string) : ''
+                collectionName: 'ambient',
+                url: address ? (address as string) : '',
+                clientConfig: {
+                    address: address as string,
+                    token: process.env.MILVUS_TOKEN || ''
+                }
             }
 
-            const vectorStore = await MilvusUpsert.fromDocuments(alldocs, embeddings, milvusArgs)
+            try {
+                const vectorStore = await MilvusUpsert.fromDocuments(alldocs, embeddings, milvusArgs)
+                if (!vectorStore) return res.status(400).send('Vector store failed to create')
 
-            // TODO CMAN - need to return something relevant
-            return res.json('ok')
+                // TODO CMAN - need to return something relevant
+                return res.json('ok')
+            } catch (e) {
+                logger.error(e)
+                return res.status(400).send('Error creating collection')
+            }
         })
 
         // ----------------------------------------

@@ -98,17 +98,28 @@ class Cloud_Existing_Collection implements INode {
 
             const url = default_url
 
-            const client = new MilvusClient({ address: url })
-            const collectionData = await client.showCollections()
+            const clientConfig = {
+                address: url as string,
+                token: process.env.MILVUS_TOKEN || ''
+            }
 
-            const collections = collectionData.data.filter((col) => {
-                return col.name.includes(String(options.req.user?.id).replace(/-/g, '_'))
+            const client = new MilvusClient(clientConfig)
+
+            const collections = await client.query({
+                // Return the name and schema of the collection.
+                collection_name: 'ambient',
+                filter: `user in ['${String(options.req.user.id)}']`,
+                output_fields: ['partition'],
+                limit: 15000
             })
 
-            for (let collection of collections) {
+            let collectionNames = collections.data.map((collection: any) => collection.partition) as any
+            collectionNames = new Set(collectionNames) // keep only unique occurances
+
+            for (let name of collectionNames) {
                 const data = {
-                    label: collection.name.split('_')[0],
-                    name: collection.name
+                    label: name.split('_')[0],
+                    name: name
                     // description: collection.description
                 } as INodeOptionsValue
                 returnData.push(data)
@@ -119,7 +130,7 @@ class Cloud_Existing_Collection implements INode {
 
     async init(nodeData: INodeData, _: string, options: ICommonObject): Promise<any> {
         const address = default_url
-        const collectionName = nodeData.inputs?.selectedCollection as string
+        const partitionName = nodeData.inputs?.selectedCollection as string
         const milvusFilter = nodeData.inputs?.milvusFilter as string
         const retrieverToolDescription = nodeData.inputs?.description as string
 
@@ -130,6 +141,8 @@ class Cloud_Existing_Collection implements INode {
         const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
         const topK = nodeData.inputs?.topK as string
 
+        console.log('cman', partitionName)
+
         // output
         const output = nodeData.outputs?.output as string
 
@@ -137,15 +150,22 @@ class Cloud_Existing_Collection implements INode {
         const k = topK ? parseInt(topK, 10) : 10
 
         // init MilvusLibArgs
-        const milVusArgs: MilvusLibArgs = {
-            url: address,
-            collectionName: collectionName
+        const milvusArgs: MilvusLibArgs = {
+            collectionName: 'ambient',
+            url: address ? (address as string) : '',
+            clientConfig: {
+                address: address as string,
+                token: process.env.MILVUS_TOKEN || ''
+            }
         }
 
-        const vectorStore = await Milvus.fromExistingCollection(embeddings, milVusArgs)
+        const vectorStore = await Milvus.fromExistingCollection(embeddings, milvusArgs)
 
         // Avoid Illegal Invocation
         vectorStore.similaritySearchVectorWithScore = async (query: number[], k: number, filter?: string) => {
+            // if there is no partision name, return empty array
+            if (!partitionName) return []
+
             const hasColResp = await vectorStore.client.hasCollection({
                 collection_name: vectorStore.collectionName
             })
@@ -155,8 +175,6 @@ class Cloud_Existing_Collection implements INode {
             if (hasColResp.value === false) {
                 throw new Error(`Collection not found: ${vectorStore.collectionName}, please create collection before search.`)
             }
-
-            const filterStr = milvusFilter ?? filter ?? ''
 
             await vectorStore.grabCollectionFields()
 
@@ -181,7 +199,7 @@ class Cloud_Existing_Collection implements INode {
                 output_fields: outputFields,
                 vector_type: DataType.FloatVector,
                 vectors: [query],
-                filter: filterStr
+                filter: `partition in ['${partitionName}']`
             })
             if (searchResp.status.error_code !== ErrorCode.SUCCESS) {
                 throw new Error(`Error searching data: ${JSON.stringify(searchResp)}`)
@@ -217,7 +235,7 @@ class Cloud_Existing_Collection implements INode {
             return vectorStore
         } else if (output === 'retrieverTool') {
             // TODO CMAN - should default to a collection description
-            const name = collectionName + '_retriever_tool'
+            const name = partitionName + '_retriever_tool'
             const description = retrieverToolDescription
             const retriever = vectorStore.asRetriever(k)
             const tool = createRetrieverTool(retriever as BaseRetriever, {

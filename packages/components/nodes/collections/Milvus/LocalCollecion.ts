@@ -107,12 +107,27 @@ class Local_Existing_Collection implements INode {
             })
             const url = (RemoteDb as any).url
 
-            const client = new MilvusClient({ address: url })
-            const collectionData = await client.showCollections()
-            for (let collection of collectionData.data) {
+            const clientConfig = {
+                address: url as string
+            }
+
+            const client = new MilvusClient(clientConfig)
+
+            const collections = await client.query({
+                // Return the name and schema of the collection.
+                collection_name: 'ambient',
+                filter: `user in ['${String(options.req.user.id)}']`,
+                output_fields: ['partition'],
+                limit: 15000
+            })
+
+            let collectionNames = collections.data.map((collection: any) => collection.partition) as any
+            collectionNames = new Set(collectionNames) // keep only unique occurances
+
+            for (let name of collectionNames) {
                 const data = {
-                    label: collection.name,
-                    name: collection.name
+                    label: name,
+                    name: name
                     // description: collection.description
                 } as INodeOptionsValue
                 returnData.push(data)
@@ -127,7 +142,7 @@ class Local_Existing_Collection implements INode {
         })
 
         const address = (RemoteDb as any).url
-        const collectionName = nodeData.inputs?.selectedCollection as string
+        const partitionName = nodeData.inputs?.selectedCollection as string
         const milvusFilter = nodeData.inputs?.milvusFilter as string
         const retrieverToolDescription = nodeData.inputs?.description as string
         console.log(options)
@@ -148,13 +163,16 @@ class Local_Existing_Collection implements INode {
         // init MilvusLibArgs
         const milVusArgs: MilvusLibArgs = {
             url: address,
-            collectionName: collectionName
+            collectionName: 'ambient'
         }
 
         const vectorStore = await Milvus.fromExistingCollection(embeddings, milVusArgs)
 
         // Avoid Illegal Invocation
         vectorStore.similaritySearchVectorWithScore = async (query: number[], k: number, filter?: string) => {
+            // if there is no partision name, return empty array
+            if (!partitionName) return []
+            
             const hasColResp = await vectorStore.client.hasCollection({
                 collection_name: vectorStore.collectionName
             })
@@ -164,8 +182,6 @@ class Local_Existing_Collection implements INode {
             if (hasColResp.value === false) {
                 throw new Error(`Collection not found: ${vectorStore.collectionName}, please create collection before search.`)
             }
-
-            const filterStr = milvusFilter ?? filter ?? ''
 
             await vectorStore.grabCollectionFields()
 
@@ -190,7 +206,7 @@ class Local_Existing_Collection implements INode {
                 output_fields: outputFields,
                 vector_type: DataType.FloatVector,
                 vectors: [query],
-                filter: filterStr
+                filter: `partition in ['${partitionName}']`
             })
             if (searchResp.status.error_code !== ErrorCode.SUCCESS) {
                 throw new Error(`Error searching data: ${JSON.stringify(searchResp)}`)
@@ -226,7 +242,7 @@ class Local_Existing_Collection implements INode {
             return vectorStore
         } else if (output === 'retrieverTool') {
             // TODO CMAN - should default to a collection description
-            const name = collectionName + '_retriever_tool'
+            const name = partitionName + '_retriever_tool'
             const description = retrieverToolDescription
             const retriever = vectorStore.asRetriever(k)
             const tool = createRetrieverTool(retriever as BaseRetriever, {
