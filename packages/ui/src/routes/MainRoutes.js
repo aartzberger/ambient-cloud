@@ -26,7 +26,7 @@ const Credentials = Loadable(lazy(() => import('views/credentials')))
 const Stores = Loadable(lazy(() => import('views/collections')))
 
 // automations routing
-const Automations = Loadable(lazy(() => import('views/automations')))
+const Customize = Loadable(lazy(() => import('views/customizations')))
 
 // ==============================|| MAIN ROUTING ||============================== //
 
@@ -47,8 +47,8 @@ const MainRoutes = {
             element: <Stores />
         },
         {
-            path: '/automations',
-            element: <Automations />
+            path: '/customize',
+            element: <Customize />
         },
         {
             path: '/apikey',

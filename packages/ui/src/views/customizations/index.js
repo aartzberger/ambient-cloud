@@ -1,12 +1,11 @@
-import { useEffect, useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState, useRef, createElement } from 'react'
 import { useSelector } from 'react-redux'
 import PropTypes from 'prop-types'
 
 // material-ui
 import { Grid, Box, Stack, Tabs, Tab, Button } from '@mui/material'
 import { useTheme } from '@mui/material/styles'
-import { IconArrowBigRightLines, IconArrowBearRight2, IconPlus, IconFileImport } from '@tabler/icons'
+import { IconTool, IconArrowBigRightLines, IconArrowBearRight2, IconPlus, IconFileImport } from '@tabler/icons'
 
 // project imports
 import MainCard from 'ui-component/cards/MainCard'
@@ -16,12 +15,12 @@ import WorkflowEmptySVG from 'assets/images/workflow_empty.svg'
 import HandlerDialog from './HandlerDialog'
 import TriggerDialog from './TriggerDialog'
 import { StyledButton } from 'ui-component/button/StyledButton'
+import ToolDialog from '../tools/ToolDialog'
 
 // API
-import automationsApi from 'api/automations'
 import handlersApi from 'api/automationhandlers'
 import triggersApi from 'api/triggers'
-import chatflowApi from 'api/chatflows'
+import toolsApi from 'api/tools'
 
 // Hooks
 import useApi from 'hooks/useApi'
@@ -47,10 +46,9 @@ TabPanel.propTypes = {
     value: PropTypes.number.isRequired
 }
 
-// ==============================|| Automation Builder ||============================== //
+// ==============================|| Customization Builder ||============================== //
 
-const Automations = () => {
-    const navigate = useNavigate()
+const Customize = () => {
     const inputRef = useRef(null)
 
     const theme = useTheme()
@@ -58,15 +56,10 @@ const Automations = () => {
 
     const [isTriggersLoading, setTriggersLoading] = useState(true)
     const [isHandlersLoading, setHandlersLoading] = useState(true)
-    const [isAutomationsLoading, setAutomationsLoading] = useState(true)
-    const [isChatflowsLoading, setChatflowsLoading] = useState(true)
-    const tabItems = ['Triggers', 'Handlers']
+    const [isToolsLoading, setToolsLoading] = useState(true)
+    const tabItems = ['Tools', 'Triggers', 'Handlers']
+    const tabIcons = [IconTool, IconArrowBigRightLines, IconArrowBearRight2]
     const [value, setValue] = useState(0)
-
-    // keep track of all the returned data
-    const [chatflowData, setChatflowData] = useState()
-    const [handlerData, setHandlerData] = useState()
-    const [triggerData, setTriggerData] = useState()
 
     // for triggers dialog
     const [showTriggerDialog, setShowTriggerDialog] = useState(false)
@@ -74,11 +67,13 @@ const Automations = () => {
     // for handlers dialog
     const [showHandlerDialog, setShowHandlerDialog] = useState(false)
     const [handlerDialogProps, setHandlerDialogProps] = useState({})
+    // for tools dialog
+    const [showToolDialog, setShowToolDialog] = useState(false)
+    const [toolDialogProps, setToolDialogProps] = useState({})
 
     const getAllTriggersApi = useApi(triggersApi.getAllTriggers)
     const getAllHandlersApi = useApi(handlersApi.getAllAutomationHandlers)
-    const getAllAutomationsApi = useApi(automationsApi.getAllAutomations)
-    const getAllChatflowsApi = useApi(chatflowApi.getAllChatflows)
+    const getAllToolsApi = useApi(toolsApi.getAllTools)
 
     const goToDialog = (selected) => {
         const dialogProp = {
@@ -93,6 +88,11 @@ const Automations = () => {
         } else if (tabItems[value] === 'Handlers') {
             setHandlerDialogProps(dialogProp)
             setShowHandlerDialog(true)
+        } else if (tabItems[value] === 'Tools') {
+            dialogProp.cancelButtonName = 'Cancel'
+            dialogProp.confirmButtonName = 'Save'
+            setToolDialogProps(dialogProp)
+            setShowToolDialog(true)
         }
     }
 
@@ -114,6 +114,11 @@ const Automations = () => {
         } else if (tabItems[value] === 'Handlers') {
             setHandlerDialogProps(dialogProp)
             setShowHandlerDialog(true)
+        } else if (tabItems[value] === 'Tools') {
+            dialogProp.cancelButtonName = 'Cancel'
+            dialogProp.confirmButtonName = 'Add'
+            setToolDialogProps(dialogProp)
+            setShowToolDialog(true)
         }
     }
 
@@ -133,33 +138,12 @@ const Automations = () => {
         reader.readAsText(file)
     }
 
-    const addLabel = (data) => {
-        if (!data) return data // This will return early if data is null or undefined
-
-        if (Array.isArray(data)) {
-            data.forEach((item) => {
-                item.label = item.name
-            })
-        }
-
-        return data
-    }
-
     useEffect(() => {
         getAllTriggersApi.request()
         getAllHandlersApi.request()
-        getAllAutomationsApi.request()
-        getAllChatflowsApi.request()
+        getAllToolsApi.request()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
-
-    useEffect(() => {
-        setAutomationsLoading(getAllAutomationsApi.loading)
-    }, [getAllAutomationsApi.loading])
-
-    useEffect(() => {
-        setChatflowsLoading(getAllChatflowsApi.loading)
-    }, [getAllChatflowsApi.loading])
 
     useEffect(() => {
         setTriggersLoading(getAllTriggersApi.loading)
@@ -170,49 +154,44 @@ const Automations = () => {
     }, [getAllHandlersApi.loading])
 
     useEffect(() => {
-        setChatflowData(addLabel(getAllChatflowsApi.data))
-        setHandlerData(addLabel(getAllHandlersApi.data))
-        setTriggerData(addLabel(getAllTriggersApi.data))
-    }, [getAllHandlersApi.data, getAllTriggersApi.data, getAllChatflowsApi.data])
+        setToolsLoading(getAllToolsApi.loading)
+    }, [getAllToolsApi.loading])
 
-    const editTrigger = (selectedTrigger) => {
+    const edit = (name, data) => {
         const dialogProp = {
-            title: 'Edit Trigger',
+            title: `Edit ${name}`,
             type: 'EDIT',
             cancelButtonName: 'Cancel',
             confirmButtonName: 'Save',
-            data: selectedTrigger
+            data: data
         }
-        setTriggerlDialogProps(dialogProp)
-        setShowTriggerDialog(true)
-    }
 
-    const editHandler = (selectedHandler) => {
-        const dialogProp = {
-            title: 'Edit Handler',
-            type: 'EDIT',
-            cancelButtonName: 'Cancel',
-            confirmButtonName: 'Save',
-            data: selectedHandler
+        if (name === 'Trigger') {
+            setTriggerlDialogProps(dialogProp)
+            setShowTriggerDialog(true)
+        } else if (name === 'Handler') {
+            setHandlerDialogProps(dialogProp)
+            setShowHandlerDialog(true)
+        } else if (name === 'Tool') {
+            setToolDialogProps(dialogProp)
+            setShowToolDialog(true)
         }
-        setHandlerDialogProps(dialogProp)
-        setShowHandlerDialog(true)
     }
 
     const onConfirm = () => {
         setShowHandlerDialog(false)
         setShowTriggerDialog(false)
-        getAllAutomationsApi.request()
+        setShowToolDialog(false)
         getAllTriggersApi.request()
         getAllHandlersApi.request()
-        getAllChatflowsApi.request()
+        getAllToolsApi.request()
     }
 
     return (
         <>
             <MainCard sx={{ background: customization.isDarkMode ? theme.palette.common.black : '' }}>
                 <Stack flexDirection='row'>
-                    <h1>Automation Builder&nbsp;</h1>
+                    <h1>Custom Actions&nbsp;</h1>
                     <Box sx={{ flexGrow: 1 }} />
                     <Box sx={{ mb: 1.25 }}>
                         <Button variant='outlined' sx={{ mr: 2 }} onClick={() => inputRef.current.click()} startIcon={<IconFileImport />}>
@@ -228,7 +207,7 @@ const Automations = () => {
                     {tabItems.map((item, index) => (
                         <Tab
                             key={index}
-                            icon={index === 0 ? <IconArrowBigRightLines /> : <IconArrowBearRight2 />}
+                            icon={createElement(tabIcons[index])}
                             iconPosition='start'
                             label={<span style={{ fontSize: '1.1rem' }}>{item}</span>}
                         />
@@ -242,7 +221,7 @@ const Automations = () => {
                                 <Grid container spacing={gridSpacing}>
                                     {getAllTriggersApi.data.map((data, index) => (
                                         <Grid key={index} item lg={3} md={4} sm={6} xs={12}>
-                                            <ItemCard data={data} onClick={() => editTrigger(data)} />
+                                            <ItemCard data={data} onClick={() => edit('Trigger', data)} />
                                         </Grid>
                                     ))}
                                 </Grid>
@@ -264,7 +243,7 @@ const Automations = () => {
                                 <Grid container spacing={gridSpacing}>
                                     {getAllHandlersApi.data.map((data, index) => (
                                         <Grid key={index} item lg={3} md={4} sm={6} xs={12}>
-                                            <ItemCard data={data} onClick={() => editHandler(data)} />
+                                            <ItemCard data={data} onClick={() => edit('Handler', data)} />
                                         </Grid>
                                     ))}
                                 </Grid>
@@ -278,6 +257,28 @@ const Automations = () => {
                                         />
                                     </Box>
                                     <div>No Handlers Yet</div>
+                                </Stack>
+                            ))}
+                        {item === 'Tools' &&
+                            !isToolsLoading &&
+                            (getAllToolsApi.data && getAllToolsApi.data.length > 0 ? (
+                                <Grid container spacing={gridSpacing}>
+                                    {getAllToolsApi.data.map((data, index) => (
+                                        <Grid key={index} item lg={3} md={4} sm={6} xs={12}>
+                                            <ItemCard data={data} onClick={() => edit('Tool', data)} />
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            ) : (
+                                <Stack sx={{ alignItems: 'center', justifyContent: 'center' }} flexDirection='column'>
+                                    <Box sx={{ p: 2, height: 'auto' }}>
+                                        <img
+                                            style={{ objectFit: 'cover', height: '30vh', width: 'auto' }}
+                                            src={WorkflowEmptySVG}
+                                            alt='WorkflowEmptySVG'
+                                        />
+                                    </Box>
+                                    <div>No Tools Yet</div>
                                 </Stack>
                             ))}
                     </TabPanel>
@@ -298,8 +299,14 @@ const Automations = () => {
                 onConfirm={onConfirm}
                 onUseTemplate={(selected) => goToDialog(selected)}
             ></TriggerDialog>
+            <ToolDialog
+                show={showToolDialog}
+                dialogProps={toolDialogProps}
+                onCancel={() => setShowToolDialog(false)}
+                onConfirm={onConfirm}
+            ></ToolDialog>
         </>
     )
 }
 
-export default Automations
+export default Customize

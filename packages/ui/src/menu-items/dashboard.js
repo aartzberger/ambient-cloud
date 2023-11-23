@@ -20,14 +20,6 @@ const dashboard = {
             breadcrumbs: true
         },
         // {
-        //     id: 'automations',
-        //     title: 'Automations',
-        //     type: 'item',
-        //     url: '/automations',
-        //     icon: icons.IconSettingsAutomation,
-        //     breadcrumbs: true
-        // },
-        // {
         //     id: 'tools',
         //     title: 'Tools',
         //     type: 'item',
@@ -41,6 +33,14 @@ const dashboard = {
             type: 'item',
             url: '/vectorstores',
             icon: icons.IconDatabase,
+            breadcrumbs: true
+        },
+        {
+            id: 'customize',
+            title: 'Custom Actions',
+            type: 'item',
+            url: '/customize',
+            icon: icons.IconSettingsAutomation,
             breadcrumbs: true
         },
         // {
