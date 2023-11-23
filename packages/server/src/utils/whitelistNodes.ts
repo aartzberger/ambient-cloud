@@ -165,6 +165,7 @@ const whitelistNodes = [
     // 'upstashRedisBackedChatMemory',
     // 'upstashRedisCache',
     // 'vectaraExistingIndex',
+    // 'vectaraQAChain',
     // 'vectaraUpload',
     // 'vectaraUpsert',
     'vectorDBQAChain',

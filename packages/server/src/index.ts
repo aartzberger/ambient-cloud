@@ -73,7 +73,6 @@ import { ChatMessage } from './database/entities/ChatMessage'
 import { Credential } from './database/entities/Credential'
 import { Tool } from './database/entities/Tool'
 import { RemoteDb } from './database/entities/RemoteDb'
-import { Collection } from './database/entities/Collection'
 import { Assistant } from './database/entities/Assistant'
 import { ChatflowPool } from './ChatflowPool'
 import { CachePool } from './CachePool'
@@ -82,7 +81,6 @@ import { createRateLimiter, getRateLimiter, initializeRateLimiter } from './util
 import { handleAutomationInterval, removeAutomationInterval } from './utils/scheduler'
 import { RecursiveCharacterTextSplitter, RecursiveCharacterTextSplitterParams } from 'langchain/text_splitter'
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
-import PredictionHandler from './PredictionHandler'
 
 // import { HuggingFaceInferenceEmbeddings } from 'langchain/embeddings/hf'
 
@@ -720,8 +718,12 @@ export class App {
             this.AppDataSource.getRepository(ChatFlow).merge(chatflow, updateChatFlow)
             const result = await this.AppDataSource.getRepository(ChatFlow).save(chatflow)
 
-            // Update chatflowpool inSync to false, to build Langchain again because data has been changed
-            this.chatflowPool.updateInSync(chatflow.id, false)
+            // chatFlowPool is initialized only when a flow is opened
+            // if the user attempts to rename/update category without opening any flow, chatFlowPool will be undefined
+            if (this.chatflowPool) {
+                // Update chatflowpool inSync to false, to build Langchain again because data has been changed
+                this.chatflowPool.updateInSync(chatflow.id, false)
+            }
 
             return res.json(result)
         })
@@ -2390,7 +2392,7 @@ export class App {
      * @param {Server} socketIO
      * @param {boolean} isInternal
      */
-    async processPrediction(req: Request, res: Response, socketIO?: Server, isInternal: boolean = false) {
+    async processPrediction(req: Request, res: Response, socketIO?: Server, isInternal: boolean = false, isAutomation: boolean = false) {
         try {
             const chatflowid = req.params.id
             let incomingInput: IncomingInput = req.body
@@ -2767,20 +2769,41 @@ export class App {
                         continue
                     }
 
-                    let { status, result } = await PredictionHandler(
-                        input,
-                        chatflow,
-                        isInternal,
-                        chatflowid,
-                        this.chatflowPool,
-                        this.nodesPool,
-                        this.AppDataSource,
-                        this.cachePool,
-                        socketIO
-                    )
+                    let predResult = {
+                        status: 200,
+                        data: {}
+                    }
 
-                    if (status === false) {
-                        return res.status(404).send(result)
+                    // create a mock request objectf
+                    const tmpReq = {
+                        params: { id: chatflowid },
+                        body: input
+                    } as Partial<Request>
+
+                    // Create a mock response object
+                    const tmpRes = {
+                        send: (response) => {
+                            predResult.data = response
+                            return tmpRes // Enable chaining by returning the mock itself
+                        },
+                        status: (statusCode) => {
+                            predResult.status = statusCode
+                            return tmpRes // Enable chaining by returning the mock itself
+                        },
+                        json: (response) => {
+                            predResult.data = response
+                            return tmpRes // Enable chaining by returning the mock itself
+                        }
+                        // ... other methods as needed
+                    } as Partial<Response>
+
+                    await this.processPrediction(tmpReq as Request, tmpRes as Response, socketIO, isInternal, true)
+
+                    const result = predResult.data
+                    const status = predResult.status
+
+                    if (status !== 200) {
+                        return res.status(status as any).send(result)
                     } else {
                         // combine the outputs
                         if (definedQuestions) {

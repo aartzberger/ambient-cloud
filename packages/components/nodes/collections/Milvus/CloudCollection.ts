@@ -141,8 +141,6 @@ class Cloud_Existing_Collection implements INode {
         const embeddings = new OpenAIEmbeddings({ openAIApiKey: OPENAI_API_KEY })
         const topK = nodeData.inputs?.topK as string
 
-        console.log('cman', partitionName)
-
         // output
         const output = nodeData.outputs?.output as string
 
