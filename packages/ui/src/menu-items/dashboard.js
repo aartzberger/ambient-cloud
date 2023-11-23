@@ -60,6 +60,14 @@ const dashboard = {
             breadcrumbs: true
         },
         {
+            id: 'assistants',
+            title: 'Assistants',
+            type: 'item',
+            url: '/assistants',
+            icon: icons.IconRobot,
+            breadcrumbs: true
+        },
+        {
             id: 'credentials',
             title: 'Credentials',
             type: 'item',

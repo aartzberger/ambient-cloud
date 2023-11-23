@@ -62,6 +62,22 @@ const Chatflows = () => {
         )
     }
 
+    const handleChange = (event, nextView) => {
+        localStorage.setItem('flowDisplayStyle', nextView)
+        setView(nextView)
+    }
+
+    const onSearchChange = (event) => {
+        setSearch(event.target.value)
+    }
+
+    function filterFlows(data) {
+        return (
+            data.name.toLowerCase().indexOf(search.toLowerCase()) > -1 ||
+            (data.category && data.category.toLowerCase().indexOf(search.toLowerCase()) > -1)
+        )
+    }
+
     const addNew = () => {
         navigate('/canvas')
     }

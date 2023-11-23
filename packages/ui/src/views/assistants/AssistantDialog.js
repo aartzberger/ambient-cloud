@@ -31,7 +31,7 @@ import { HIDE_CANVAS_DIALOG, SHOW_CANVAS_DIALOG } from 'store/actions'
 
 const assistantAvailableModels = [
     {
-        label: 'gpt-4-1106-preview (with retrieval)',
+        label: 'gpt-4-1106-preview',
         name: 'gpt-4-1106-preview'
     },
     {
@@ -51,7 +51,7 @@ const assistantAvailableModels = [
         name: 'gpt-3.5-turbo'
     },
     {
-        label: 'gpt-3.5-turbo-1106 (with retrieval)',
+        label: 'gpt-3.5-turbo-1106',
         name: 'gpt-3.5-turbo-1106'
     },
     {
