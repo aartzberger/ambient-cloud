@@ -119,7 +119,7 @@ function APIKeyRow(props) {
                         </IconButton>
                     )}
                 </TableCell>
-                <TableCell>{props.apiKey.createdAt}</TableCell>
+                <TableCell>{props.apiKey.createdDate}</TableCell>
                 <TableCell>
                     <IconButton title='Edit' color='primary' onClick={props.onEditClick}>
                         <IconEdit />

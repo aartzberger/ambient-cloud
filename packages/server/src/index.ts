@@ -2269,19 +2269,19 @@ export class App {
         // Add new api key
         this.app.post('/api/v1/apikey', async (req: Request, res: Response) => {
             const keys = await addAPIKey(req.body.keyName, req.user as User, this.AppDataSource)
-            return addChatflowsCount(keys, res)
+            return addChatflowsCount([keys], res)
         })
 
         // Update api key
         this.app.put('/api/v1/apikey/:id', async (req: Request, res: Response) => {
             const keys = await updateAPIKey(req.params.id, req.body.keyName, req.user as User, this.AppDataSource)
-            return addChatflowsCount(keys, res)
+            return addChatflowsCount([keys], res)
         })
 
         // Delete new api key
         this.app.delete('/api/v1/apikey/:id', async (req: Request, res: Response) => {
             const keys = await deleteAPIKey(req.params.id, req.user as User, this.AppDataSource)
-            return addChatflowsCount(keys, res)
+            return addChatflowsCount([keys], res)
         })
 
         // Verify api key

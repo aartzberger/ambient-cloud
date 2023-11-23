@@ -14,8 +14,8 @@ import ItemCard from 'ui-component/cards/ItemCard'
 import { gridSpacing } from 'store/constant'
 import WorkflowEmptySVG from 'assets/images/workflow_empty.svg'
 import ToolDialog from 'views/tools/ToolDialog'
-import TriggerDialog from 'views/automations/TriggerDialog'
-import HandlerDialog from 'views/automations/HandlerDialog'
+import TriggerDialog from 'views/customizations/TriggerDialog'
+import HandlerDialog from 'views/customizations/HandlerDialog'
 
 // API
 import marketplacesApi from 'api/marketplaces'
