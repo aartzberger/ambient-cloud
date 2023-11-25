@@ -166,6 +166,7 @@ export class App {
                 '/api/v1/chatflows/apikey/',
                 '/api/v1/public-chatflows',
                 '/api/v1/prediction/',
+                '/api/v1/vector/upsert/',
                 '/api/v1/node-icon/',
                 '/api/v1/components-credentials-icon/',
                 '/api/v1/chatflows-streaming',
@@ -2132,6 +2133,23 @@ export class App {
         })
 
         // ----------------------------------------
+        // Upsert
+        // ----------------------------------------
+
+        this.app.post(
+            '/api/v1/vector/upsert/:id',
+            upload.array('files'),
+            (req: Request, res: Response, next: NextFunction) => getRateLimiter(req, res, next),
+            async (req: Request, res: Response) => {
+                await this.buildChatflow(req, res, undefined, false, true)
+            }
+        )
+
+        this.app.post('/api/v1/vector/internal-upsert/:id', async (req: Request, res: Response) => {
+            await this.buildChatflow(req, res, undefined, true, true)
+        })
+
+        // ----------------------------------------
         // Prediction
         // ----------------------------------------
 
@@ -2141,13 +2159,13 @@ export class App {
             upload.array('files'),
             (req: Request, res: Response, next: NextFunction) => getRateLimiter(req, res, next),
             async (req: Request, res: Response) => {
-                await this.processPrediction(req, res, socketIO)
+                await this.buildChatflow(req, res, socketIO)
             }
         )
 
         // Send input message and get prediction result (Internal)
         this.app.post('/api/v1/internal-prediction/:id', async (req: Request, res: Response) => {
-            await this.processPrediction(req, res, socketIO, true)
+            await this.buildChatflow(req, res, socketIO, true)
         })
 
         // ----------------------------------------
@@ -2410,13 +2428,14 @@ export class App {
     }
 
     /**
-     * Process Prediction
+     * Build Chatflow
      * @param {Request} req
      * @param {Response} res
      * @param {Server} socketIO
      * @param {boolean} isInternal
+     * @param {boolean} isUpsert
      */
-    async processPrediction(req: Request, res: Response, socketIO?: Server, isInternal: boolean = false, isAutomation: boolean = false) {
+    async buildChatflow(req: Request, res: Response, socketIO?: Server, isInternal: boolean = false, isUpsert: boolean = false) {
         try {
             const chatflowid = req.params.id
             let incomingInput: IncomingInput = req.body
@@ -2457,7 +2476,8 @@ export class App {
                     question: req.body.question ?? 'hello',
                     overrideConfig,
                     history: [],
-                    socketIOClientId: req.body.socketIOClientId
+                    socketIOClientId: req.body.socketIOClientId,
+                    stopNodeId: req.body.stopNodeId
                 }
             }
 
@@ -2482,7 +2502,8 @@ export class App {
                         this.chatflowPool.activeChatflows[chatflowid].overrideConfig,
                         incomingInput.overrideConfig
                     ) &&
-                    !isStartNodeDependOnInput(this.chatflowPool.activeChatflows[chatflowid].startingNodes, nodes)
+                    !isStartNodeDependOnInput(this.chatflowPool.activeChatflows[chatflowid].startingNodes, nodes) &&
+                    !isUpsert
                 )
             }
 
@@ -2502,14 +2523,15 @@ export class App {
                 const endingNodeData = nodes.find((nd) => nd.id === endingNodeId)?.data
                 if (!endingNodeData) return res.status(500).send(`Ending node ${endingNodeId} data not found`)
 
-                if (endingNodeData && endingNodeData.category !== 'Chains' && endingNodeData.category !== 'Agents') {
+                if (endingNodeData && endingNodeData.category !== 'Chains' && endingNodeData.category !== 'Agents' && !isUpsert) {
                     return res.status(500).send(`Ending node must be either a Chain or Agent`)
                 }
 
                 if (
                     endingNodeData.outputs &&
                     Object.keys(endingNodeData.outputs).length &&
-                    !Object.values(endingNodeData.outputs).includes(endingNodeData.name)
+                    !Object.values(endingNodeData.outputs).includes(endingNodeData.name) &&
+                    !isUpsert
                 ) {
                     return res
                         .status(500)
@@ -2539,8 +2561,11 @@ export class App {
                     chatflowid,
                     this.AppDataSource,
                     incomingInput?.overrideConfig,
-                    this.cachePool
+                    this.cachePool,
+                    isUpsert,
+                    incomingInput.stopNodeId
                 )
+                if (isUpsert) return res.status(201).send('Successfully Upserted')
 
                 const nodeToExecute = reactFlowNodes.find((node: IReactFlowNode) => node.id === endingNodeId)
                 if (!nodeToExecute) return res.status(404).send(`Node ${endingNodeId} not found`)
@@ -2786,9 +2811,6 @@ export class App {
                 let combinedOutupts = ''
                 // loop though all the inputs and run the prediction. combine them into single output
                 for (const input of inputs) {
-                    // TODO CMAN - this should be incorperated into the processPrediction function
-                    // doing so will ensure consistency between the two
-                    // I just don't have time to do it right now
                     if (input.question === '' || input.question === null) {
                         continue
                     }
@@ -2821,7 +2843,7 @@ export class App {
                         // ... other methods as needed
                     } as Partial<Response>
 
-                    await this.processPrediction(tmpReq as Request, tmpRes as Response, socketIO, isInternal, true)
+                    await this.buildChatflow(tmpReq as Request, tmpRes as Response, socketIO, isInternal, true)
 
                     const result = predResult.data
                     const status = predResult.status
