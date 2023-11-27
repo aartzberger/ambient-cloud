@@ -3,7 +3,7 @@ import { initializeAgentExecutorWithOptions, AgentExecutor, InitializeAgentExecu
 import { Tool } from 'langchain/tools'
 import { BufferMemory, BufferMemoryInput } from 'langchain/memory'
 import { getBaseClasses, mapChatHistory } from '../../../src/utils'
-import { BaseLanguageModel } from 'langchain/base_language'
+import { BaseChatModel } from 'langchain/chat_models/base'
 import { flatten } from 'lodash'
 import { additionalCallbacks } from '../../../src/handler'
 
@@ -29,7 +29,7 @@ class ConversationalAgent_Agents implements INode {
     constructor() {
         this.label = 'Conversational Agent'
         this.name = 'conversationalAgent'
-        this.version = 1.0
+        this.version = 2.0
         this.type = 'AgentExecutor'
         this.category = 'Agents'
         this.icon = 'agent.svg'
@@ -45,7 +45,7 @@ class ConversationalAgent_Agents implements INode {
             {
                 label: 'Language Model',
                 name: 'model',
-                type: 'BaseLanguageModel'
+                type: 'BaseChatModel'
             },
             {
                 label: 'Memory',
@@ -67,7 +67,7 @@ class ConversationalAgent_Agents implements INode {
     }
 
     async init(nodeData: INodeData): Promise<any> {
-        const model = nodeData.inputs?.model as BaseLanguageModel
+        const model = nodeData.inputs?.model as BaseChatModel
         let tools = nodeData.inputs?.tools as Tool[]
         tools = flatten(tools)
         const externalMemory = nodeData.inputs?.memory as BufferMemory
@@ -111,14 +111,16 @@ class ConversationalAgent_Agents implements INode {
     async run(nodeData: INodeData, input: string, options: ICommonObject): Promise<string> {
         const executor = nodeData.instance as AgentExecutor
 
-        const callbacks = await additionalCallbacks(nodeData, options)
-
         if (options && options.chatHistory && executor.memory) {
             ;(executor.memory as any).memoryKey = 'chat_history'
             ;(executor.memory as any).outputKey = 'output'
             ;(executor.memory as any).inputKey = 'input'
             ;(executor.memory as any).chatHistory = mapChatHistory(options)
         }
+
+        ;(executor.memory as any).returnMessages = true // Return true for BaseChatModel
+
+        const callbacks = await additionalCallbacks(nodeData, options)
 
         const result = await executor.call({ input }, [...callbacks])
         return result?.output
