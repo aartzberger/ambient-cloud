@@ -44,7 +44,6 @@ import {
     mapMimeTypeToInputField,
     findAvailableConfigs,
     isSameOverrideConfig,
-    replaceAllAPIKeys,
     isFlowValidForStream,
     databaseEntities,
     transformToCredentialEntity,
@@ -96,6 +95,7 @@ const DEPLOYED_URL = process.env.DEPLOYED_URL
 const GOOGLE_CLIENT_ID = '530294522870-o17j0nite5q2tcslg0tsn1li9bh4rtv3.apps.googleusercontent.com'
 const GOOGLE_CLIENT_SECRET = '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'
 const DEFAULT_GOOGLE_CALLBACK = `${DEPLOYED_URL}/api/v1/auth/google/callback`
+import { replaceAllAPIKeys } from './utils/apiKey'
 
 export class App {
     app: express.Application
