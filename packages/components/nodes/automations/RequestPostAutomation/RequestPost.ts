@@ -85,8 +85,11 @@ class RequestPostAutomation implements IAutomationNode {
         // return the base input
         const outputKey = nodeData.inputs?.outputKey
 
-        // return the output to zapier
-        res.status(200).send({ outputKey: output })
+        const responseObj: any = {}
+        responseObj[outputKey] = output
+
+        // return the output
+        res.json(responseObj)
 
         return { status: true, output: 'ok' }
     }

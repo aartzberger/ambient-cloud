@@ -27,7 +27,6 @@ const AccountDialog = ({ show, onCancel, showSubs }) => {
 
         Promise.all([subscriptionDetails])
             .then(([subscriptionDetails]) => {
-                console.log('subscriptionDetails', subscriptionDetails.data)
                 setData(subscriptionDetails.data)
             })
             .catch((error) => {

@@ -9,8 +9,13 @@ import GoogleImage from 'assets/images/google-login-white.png'
 // API
 import authApi from '../../api/auth'
 
-const LoginDialog = ({ show, dialogProps }) => {
+const LoginDialog = ({ show, onClose, dialogProps }) => {
     const portalElement = document.getElementById('portal')
+    const accessInput = {
+        label: 'Access Code',
+        name: 'Access Code',
+        type: 'string'
+    }
     const nameInput = {
         label: 'Name',
         name: 'name',
@@ -26,6 +31,8 @@ const LoginDialog = ({ show, dialogProps }) => {
         name: 'password',
         type: 'password'
     }
+
+    const [accessCodeVal, setAccessCodeVal] = useState('')
     const [nameVal, setNameVal] = useState('')
     const [emailVal, setEmailVal] = useState('')
     const [passwordVal, setPasswordVal] = useState('')
@@ -36,6 +43,7 @@ const LoginDialog = ({ show, dialogProps }) => {
             name,
             email,
             password,
+            accessCode: accessCodeVal,
             signup: showSignUp // If true, then user is signing up if they do not exist
         }
 
@@ -59,6 +67,9 @@ const LoginDialog = ({ show, dialogProps }) => {
                 }
             }}
             open={show}
+            onClose={() => {
+                onClose && onClose()
+            }}
             fullWidth
             maxWidth='xs'
             aria-labelledby='alert-dialog-title'
@@ -80,6 +91,10 @@ const LoginDialog = ({ show, dialogProps }) => {
                 <div style={{ marginTop: 20 }}></div>
                 <Typography>Password</Typography>
                 <Input inputParam={passwordInput} onChange={(newValue) => setPasswordVal(newValue)} value={passwordVal} />
+                <div style={{ marginTop: 20 }}></div>
+                {/* TODO CMAN - This can be removed after beta testing */}
+                <Typography>Access Code</Typography>
+                <Input inputParam={accessInput} onChange={(newValue) => setAccessCodeVal(newValue)} value={accessCodeVal} />
                 <div style={{ marginTop: 20 }}></div>
                 <ButtonBase onClick={() => setShowSignUp(!showSignUp)} style={{ padding: 0, minWidth: 'auto' }}>
                     <Typography component='span' sx={{ textDecoration: 'underline', cursor: 'pointer' }}>
@@ -118,6 +133,7 @@ const LoginDialog = ({ show, dialogProps }) => {
 
 LoginDialog.propTypes = {
     show: PropTypes.bool,
+    onClose: PropTypes.func,
     dialogProps: PropTypes.object
 }
 

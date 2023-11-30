@@ -1,0 +1,800 @@
+{
+  "nodes": [
+    {
+      "width": 300,
+      "height": 409,
+      "id": "planAndExecuteAgent_0",
+      "position": {
+        "x": 976.9332157640117,
+        "y": 344.67975045613576
+      },
+      "type": "customNode",
+      "data": {
+        "id": "planAndExecuteAgent_0",
+        "label": "Plan and Execute  Agent",
+        "version": 1,
+        "name": "planAndExecuteAgent",
+        "type": "AgentExecutor",
+        "baseClasses": [
+          "AgentExecutor",
+          "BaseChain",
+          "Runnable"
+        ],
+        "category": "Agents",
+        "description": "An agent that uses OpenAI's Function Calling functionality to pick the tool and args to call",
+        "inputParams": [
+          {
+            "label": "System Message",
+            "name": "systemMessage",
+            "type": "string",
+            "rows": 4,
+            "optional": true,
+            "additionalParams": true,
+            "id": "planAndExecuteAgent_0-input-systemMessage-string"
+          }
+        ],
+        "inputAnchors": [
+          {
+            "label": "Allowed Tools",
+            "name": "tools",
+            "type": "Tool",
+            "list": true,
+            "id": "planAndExecuteAgent_0-input-tools-Tool"
+          },
+          {
+            "label": "OpenAI Chat Model",
+            "name": "model",
+            "description": "Only works with gpt-3.5-turbo-0613 and gpt-4-0613. Refer <a target=\"_blank\" href=\"https://platform.openai.com/docs/guides/gpt/function-calling\">docs</a> for more info",
+            "type": "BaseChatModel",
+            "id": "planAndExecuteAgent_0-input-model-BaseChatModel"
+          },
+          {
+            "label": "Memory",
+            "name": "memory",
+            "type": "BaseChatMemory",
+            "optional": true,
+            "id": "planAndExecuteAgent_0-input-memory-BaseChatMemory"
+          }
+        ],
+        "inputs": {
+          "tools": [
+            "{{requestsPost_0.data.instance}}",
+            "{{agentTool_0.data.instance}}",
+            "{{cloudCollection_0.data.instance}}"
+          ],
+          "model": "{{chatOpenAI_0.data.instance}}",
+          "memory": "",
+          "systemMessage": ""
+        },
+        "outputAnchors": [
+          {
+            "id": "planAndExecuteAgent_0-output-planAndExecuteAgent-AgentExecutor|BaseChain|Runnable",
+            "name": "planAndExecuteAgent",
+            "label": "AgentExecutor",
+            "type": "AgentExecutor | BaseChain | Runnable"
+          }
+        ],
+        "outputs": {},
+        "selected": false
+      },
+      "selected": false,
+      "positionAbsolute": {
+        "x": 976.9332157640117,
+        "y": 344.67975045613576
+      },
+      "dragging": false
+    },
+    {
+      "width": 300,
+      "height": 257,
+      "id": "agentTool_0",
+      "position": {
+        "x": 569.8482006720781,
+        "y": -0.35991551507086683
+      },
+      "type": "customNode",
+      "data": {
+        "id": "agentTool_0",
+        "label": "Agent Tool",
+        "version": 1,
+        "name": "agentTool",
+        "type": "AgentTool",
+        "baseClasses": [
+          "AgentTool",
+          "Tool",
+          "Tool",
+          "StructuredTool",
+          "Runnable"
+        ],
+        "category": "Tools",
+        "description": "Use another agent you have made as a tool",
+        "inputParams": [
+          {
+            "label": "Agent",
+            "name": "model",
+            "type": "asyncOptions",
+            "loadMethod": "listAgents",
+            "id": "agentTool_0-input-model-asyncOptions"
+          },
+          {
+            "label": "Agent Description",
+            "name": "description",
+            "type": "string",
+            "rows": 6,
+            "placeholder": "This agent has access to the following tools:\n\n- Tool 1\n- Tool 2\n- Tool 3\n\nIt can be used to do the following:\n\n- Task 1\n- Task 2\n- Task 3",
+            "id": "agentTool_0-input-description-string"
+          }
+        ],
+        "inputAnchors": [],
+        "inputs": {
+          "model": "",
+          "description": ""
+        },
+        "outputAnchors": [
+          {
+            "id": "agentTool_0-output-agentTool-AgentTool|Tool|Tool|StructuredTool|Runnable",
+            "name": "agentTool",
+            "label": "AgentTool",
+            "type": "AgentTool | Tool | Tool | StructuredTool | Runnable"
+          }
+        ],
+        "outputs": {},
+        "selected": false
+      },
+      "selected": false,
+      "positionAbsolute": {
+        "x": 569.8482006720781,
+        "y": -0.35991551507086683
+      },
+      "dragging": false
+    },
+    {
+      "width": 300,
+      "height": 257,
+      "id": "requestsPost_0",
+      "position": {
+        "x": 178.8878022981765,
+        "y": 134.98506957638008
+      },
+      "type": "customNode",
+      "data": {
+        "id": "requestsPost_0",
+        "label": "Requests Post",
+        "version": 1,
+        "name": "requestsPost",
+        "type": "RequestsPost",
+        "baseClasses": [
+          "RequestsPost",
+          "Tool",
+          "StructuredTool",
+          "Runnable"
+        ],
+        "category": "Tools",
+        "description": "Execute HTTP POST requests",
+        "inputParams": [
+          {
+            "label": "URL",
+            "name": "url",
+            "type": "string",
+            "description": "Agent will make call to this exact URL. If not specified, agent will try to figure out itself from AIPlugin if provided",
+            "additionalParams": true,
+            "optional": true,
+            "id": "requestsPost_0-input-url-string"
+          },
+          {
+            "label": "Body",
+            "name": "body",
+            "type": "json",
+            "description": "JSON body for the POST request. If not specified, agent will try to figure out itself from AIPlugin if provided",
+            "additionalParams": true,
+            "optional": true,
+            "id": "requestsPost_0-input-body-json"
+          },
+          {
+            "label": "Description",
+            "name": "description",
+            "type": "string",
+            "rows": 4,
+            "default": "Use this when you want to POST to a website.\nInput should be a json string with two keys: \"url\" and \"data\".\nThe value of \"url\" should be a string, and the value of \"data\" should be a dictionary of \nkey-value pairs you want to POST to the url as a JSON body.\nBe careful to always use double quotes for strings in the json string\nThe output will be the text response of the POST request.",
+            "description": "Acts like a prompt to tell agent when it should use this tool",
+            "additionalParams": true,
+            "optional": true,
+            "id": "requestsPost_0-input-description-string"
+          },
+          {
+            "label": "Headers",
+            "name": "headers",
+            "type": "json",
+            "additionalParams": true,
+            "optional": true,
+            "id": "requestsPost_0-input-headers-json"
+          }
+        ],
+        "inputAnchors": [],
+        "inputs": {
+          "url": "",
+          "body": "",
+          "description": "Use this when you want to POST to a website.\nInput should be a json string with two keys: \"url\" and \"data\".\nThe value of \"url\" should be a string, and the value of \"data\" should be a dictionary of \nkey-value pairs you want to POST to the url as a JSON body.\nBe careful to always use double quotes for strings in the json string\nThe output will be the text response of the POST request.",
+          "headers": ""
+        },
+        "outputAnchors": [
+          {
+            "id": "requestsPost_0-output-requestsPost-RequestsPost|Tool|StructuredTool|Runnable",
+            "name": "requestsPost",
+            "label": "RequestsPost",
+            "type": "RequestsPost | Tool | StructuredTool | Runnable"
+          }
+        ],
+        "outputs": {},
+        "selected": false
+      },
+      "selected": false,
+      "positionAbsolute": {
+        "x": 178.8878022981765,
+        "y": 134.98506957638008
+      },
+      "dragging": false
+    },
+    {
+      "width": 300,
+      "height": 307,
+      "id": "chatOpenAI_0",
+      "position": {
+        "x": 478.86411192242747,
+        "y": 547.8791330463258
+      },
+      "type": "customNode",
+      "data": {
+        "id": "chatOpenAI_0",
+        "label": "ChatOpenAI",
+        "version": 2,
+        "name": "chatOpenAI",
+        "type": "ChatOpenAI",
+        "baseClasses": [
+          "ChatOpenAI",
+          "BaseChatModel",
+          "BaseLanguageModel",
+          "Runnable"
+        ],
+        "category": "Chat Models",
+        "description": "Wrapper around OpenAI large language models that use the Chat endpoint",
+        "inputParams": [
+          {
+            "label": "Connect Credential",
+            "name": "credential",
+            "type": "credential",
+            "credentialNames": [
+              "openAIApi"
+            ],
+            "id": "chatOpenAI_0-input-credential-credential"
+          },
+          {
+            "label": "Model Name",
+            "name": "modelName",
+            "type": "options",
+            "options": [
+              {
+                "label": "gpt-4",
+                "name": "gpt-4"
+              },
+              {
+                "label": "gpt-4-1106-preview",
+                "name": "gpt-4-1106-preview"
+              },
+              {
+                "label": "gpt-4-vision-preview",
+                "name": "gpt-4-vision-preview"
+              },
+              {
+                "label": "gpt-4-0613",
+                "name": "gpt-4-0613"
+              },
+              {
+                "label": "gpt-4-32k",
+                "name": "gpt-4-32k"
+              },
+              {
+                "label": "gpt-4-32k-0613",
+                "name": "gpt-4-32k-0613"
+              },
+              {
+                "label": "gpt-3.5-turbo",
+                "name": "gpt-3.5-turbo"
+              },
+              {
+                "label": "gpt-3.5-turbo-1106",
+                "name": "gpt-3.5-turbo-1106"
+              },
+              {
+                "label": "gpt-3.5-turbo-0613",
+                "name": "gpt-3.5-turbo-0613"
+              },
+              {
+                "label": "gpt-3.5-turbo-16k",
+                "name": "gpt-3.5-turbo-16k"
+              },
+              {
+                "label": "gpt-3.5-turbo-16k-0613",
+                "name": "gpt-3.5-turbo-16k-0613"
+              }
+            ],
+            "default": "gpt-3.5-turbo",
+            "optional": true,
+            "id": "chatOpenAI_0-input-modelName-options"
+          },
+          {
+            "label": "Temperature",
+            "name": "temperature",
+            "type": "number",
+            "step": 0.1,
+            "default": 0.9,
+            "optional": true,
+            "id": "chatOpenAI_0-input-temperature-number"
+          },
+          {
+            "label": "Max Tokens",
+            "name": "maxTokens",
+            "type": "number",
+            "step": 1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOpenAI_0-input-maxTokens-number"
+          },
+          {
+            "label": "Top Probability",
+            "name": "topP",
+            "type": "number",
+            "step": 0.1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOpenAI_0-input-topP-number"
+          },
+          {
+            "label": "Frequency Penalty",
+            "name": "frequencyPenalty",
+            "type": "number",
+            "step": 0.1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOpenAI_0-input-frequencyPenalty-number"
+          },
+          {
+            "label": "Presence Penalty",
+            "name": "presencePenalty",
+            "type": "number",
+            "step": 0.1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOpenAI_0-input-presencePenalty-number"
+          },
+          {
+            "label": "Timeout",
+            "name": "timeout",
+            "type": "number",
+            "step": 1,
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOpenAI_0-input-timeout-number"
+          },
+          {
+            "label": "BasePath",
+            "name": "basepath",
+            "type": "string",
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOpenAI_0-input-basepath-string"
+          },
+          {
+            "label": "BaseOptions",
+            "name": "baseOptions",
+            "type": "json",
+            "optional": true,
+            "additionalParams": true,
+            "id": "chatOpenAI_0-input-baseOptions-json"
+          }
+        ],
+        "inputAnchors": [
+          {
+            "label": "Cache",
+            "name": "cache",
+            "type": "BaseCache",
+            "optional": true,
+            "id": "chatOpenAI_0-input-cache-BaseCache"
+          }
+        ],
+        "inputs": {
+          "cache": "",
+          "modelName": "gpt-3.5-turbo",
+          "temperature": 0.9,
+          "maxTokens": "",
+          "topP": "",
+          "frequencyPenalty": "",
+          "presencePenalty": "",
+          "timeout": "",
+          "basepath": "",
+          "baseOptions": ""
+        },
+        "outputAnchors": [
+          {
+            "id": "chatOpenAI_0-output-chatOpenAI-ChatOpenAI|BaseChatModel|BaseLanguageModel|Runnable",
+            "name": "chatOpenAI",
+            "label": "ChatOpenAI",
+            "type": "ChatOpenAI | BaseChatModel | BaseLanguageModel | Runnable"
+          }
+        ],
+        "outputs": {},
+        "selected": false
+      },
+      "selected": false,
+      "positionAbsolute": {
+        "x": 478.86411192242747,
+        "y": 547.8791330463258
+      },
+      "dragging": false
+    },
+    {
+      "width": 300,
+      "height": 257,
+      "id": "gmailAutomation_0",
+      "position": {
+        "x": 1441.5163894677967,
+        "y": -3.194408905757882
+      },
+      "type": "customNode",
+      "data": {
+        "id": "gmailAutomation_0",
+        "label": "Gmail Automation",
+        "version": 1,
+        "name": "gmailAutomation",
+        "type": "Automation",
+        "baseClasses": [
+          "Automation"
+        ],
+        "category": "Automations",
+        "description": "Automated response to Gmail emails. Default handler replies to sender of the email.",
+        "inputParams": [
+          {
+            "label": "Connect Credential",
+            "name": "credential",
+            "type": "credential",
+            "credentialNames": [
+              "googleApi"
+            ],
+            "id": "gmailAutomation_0-input-credential-credential"
+          },
+          {
+            "label": "Automation Enabled",
+            "name": "automationEnabled",
+            "type": "boolean",
+            "default": false,
+            "optional": true,
+            "id": "gmailAutomation_0-input-automationEnabled-boolean"
+          },
+          {
+            "label": "Automation Name",
+            "name": "automationName",
+            "type": "string",
+            "optional": false,
+            "id": "gmailAutomation_0-input-automationName-string"
+          },
+          {
+            "label": "Fetch Interval",
+            "description": "Interval (minutes) or time of day (HH:MM military) to run the automation.",
+            "name": "triggerInterval",
+            "type": "string",
+            "optional": false,
+            "id": "gmailAutomation_0-input-triggerInterval-string"
+          },
+          {
+            "label": "Monitored Mailbox",
+            "name": "monitoredMailbox",
+            "type": "string",
+            "optional": false,
+            "id": "gmailAutomation_0-input-monitoredMailbox-string"
+          },
+          {
+            "label": "Response Subject",
+            "name": "responseSubject",
+            "type": "string",
+            "default": "Thanks for your email!",
+            "optional": false,
+            "id": "gmailAutomation_0-input-responseSubject-string"
+          },
+          {
+            "label": "Pre-Defined Questions",
+            "name": "definedQuestions",
+            "type": "string",
+            "rows": 6,
+            "placeholder": "start each question with \"-\" and a space. For example: - What is 1 + 1?",
+            "additionalParams": true,
+            "id": "gmailAutomation_0-input-definedQuestions-string"
+          },
+          {
+            "label": "Automation URL - make POST requets to this URL to trigger the automation",
+            "name": "automationUrl",
+            "type": "uniqueUrl",
+            "default": "https://app-ambient.ngrok.app/api/v1/automations/run/",
+            "additionalParams": true,
+            "optional": true,
+            "disabled": true,
+            "id": "gmailAutomation_0-input-automationUrl-uniqueUrl"
+          }
+        ],
+        "inputAnchors": [],
+        "inputs": {
+          "automationEnabled": "",
+          "automationName": "",
+          "triggerInterval": "",
+          "monitoredMailbox": "",
+          "responseSubject": "Thanks for your email!",
+          "definedQuestions": "",
+          "automationUrl": "https://app-ambient.ngrok.app/api/v1/automations/run/"
+        },
+        "outputAnchors": [
+          {
+            "id": "gmailAutomation_0-output-gmailAutomation-Automation",
+            "name": "gmailAutomation",
+            "label": "Automation",
+            "type": "Automation"
+          }
+        ],
+        "outputs": {},
+        "selected": false
+      },
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1441.5163894677967,
+        "y": -3.194408905757882
+      },
+      "dragging": false
+    },
+    {
+      "width": 300,
+      "height": 257,
+      "id": "slackEventAutomation_0",
+      "position": {
+        "x": 1441.5163894677967,
+        "y": 270.27065702535134
+      },
+      "type": "customNode",
+      "data": {
+        "id": "slackEventAutomation_0",
+        "label": "Slack Event Automation",
+        "version": 1,
+        "name": "slackEventAutomation",
+        "type": "Automation",
+        "baseClasses": [
+          "Automation"
+        ],
+        "category": "Automations",
+        "description": "Handles responses to a Slack Event. Defualt handler replis to the originating Slack thread. Make sure to configure the event and add automation URL to Slack app.",
+        "inputParams": [
+          {
+            "label": "Slack Bot Token",
+            "name": "credential",
+            "type": "credential",
+            "credentialNames": [
+              "slackBotToken"
+            ],
+            "id": "slackEventAutomation_0-input-credential-credential"
+          },
+          {
+            "label": "Automation Enabled",
+            "name": "automationEnabled",
+            "type": "boolean",
+            "default": false,
+            "optional": true,
+            "id": "slackEventAutomation_0-input-automationEnabled-boolean"
+          },
+          {
+            "label": "Automation Name",
+            "name": "automationName",
+            "type": "string",
+            "optional": false,
+            "id": "slackEventAutomation_0-input-automationName-string"
+          },
+          {
+            "label": "Pre-Defined Questions",
+            "name": "definedQuestions",
+            "type": "string",
+            "rows": 6,
+            "placeholder": "start each question with \"-\" and a space. For example: - What is 1 + 1?",
+            "additionalParams": true,
+            "id": "slackEventAutomation_0-input-definedQuestions-string"
+          },
+          {
+            "label": "Automation URL - make POST requets to this URL to trigger the automation",
+            "name": "automationUrl",
+            "type": "uniqueUrl",
+            "default": "https://app-ambient.ngrok.app/api/v1/automations/run/",
+            "additionalParams": true,
+            "optional": true,
+            "disabled": true,
+            "id": "slackEventAutomation_0-input-automationUrl-uniqueUrl"
+          }
+        ],
+        "inputAnchors": [],
+        "inputs": {
+          "automationEnabled": "",
+          "automationName": "",
+          "definedQuestions": "",
+          "automationUrl": "https://app-ambient.ngrok.app/api/v1/automations/run/"
+        },
+        "outputAnchors": [
+          {
+            "id": "slackEventAutomation_0-output-slackEventAutomation-Automation",
+            "name": "slackEventAutomation",
+            "label": "Automation",
+            "type": "Automation"
+          }
+        ],
+        "outputs": {},
+        "selected": false
+      },
+      "selected": false,
+      "positionAbsolute": {
+        "x": 1441.5163894677967,
+        "y": 270.27065702535134
+      },
+      "dragging": false
+    },
+    {
+      "width": 300,
+      "height": 283,
+      "id": "cloudCollection_0",
+      "position": {
+        "x": 31.03395576220447,
+        "y": 478.315909710562
+      },
+      "type": "customNode",
+      "data": {
+        "id": "cloudCollection_0",
+        "label": "Load Cloud Collection",
+        "version": 2,
+        "name": "cloudCollection",
+        "type": "CloudCollection",
+        "baseClasses": [
+          "CloudCollection",
+          "VectorStoreRetriever",
+          "BaseRetriever",
+          "Tool",
+          "StructuredTool",
+          "Runnable"
+        ],
+        "category": "Collections",
+        "description": "Load a collection hosted by AmbientWare!",
+        "inputParams": [
+          {
+            "label": "Collection Name",
+            "name": "selectedCollection",
+            "type": "asyncOptions",
+            "loadMethod": "listCollections",
+            "id": "cloudCollection_0-input-selectedCollection-asyncOptions"
+          },
+          {
+            "label": "Retriever Tool Description",
+            "name": "description",
+            "optional": true,
+            "type": "string",
+            "description": "When should agent use this tool to retrieve documents",
+            "rows": 3,
+            "default": "Searches and returns information essential to answering the question. Always use this tool to stay well informed",
+            "additionalParams": true,
+            "id": "cloudCollection_0-input-description-string"
+          },
+          {
+            "label": "Filter",
+            "name": "milvusFilter",
+            "type": "string",
+            "optional": true,
+            "description": "Filter data with a simple string query. Refer Milvus <a target=\"_blank\" href=\"https://milvus.io/blog/2022-08-08-How-to-use-string-data-to-empower-your-similarity-search-applications.md#Hybrid-search\">docs</a> for more details.",
+            "placeholder": "doc==\"a\"",
+            "additionalParams": true,
+            "id": "cloudCollection_0-input-milvusFilter-string"
+          },
+          {
+            "label": "Top K",
+            "name": "topK",
+            "description": "Number of top results to fetch. Default to 4",
+            "placeholder": "4",
+            "type": "number",
+            "additionalParams": true,
+            "optional": true,
+            "id": "cloudCollection_0-input-topK-number"
+          }
+        ],
+        "inputAnchors": [],
+        "inputs": {
+          "selectedCollection": "",
+          "description": "Searches and returns information essential to answering the question. Always use this tool to stay well informed",
+          "milvusFilter": "",
+          "topK": ""
+        },
+        "outputAnchors": [
+          {
+            "name": "output",
+            "label": "Output",
+            "type": "options",
+            "options": [
+              {
+                "id": "cloudCollection_0-output-retrieverTool-DynamicTool|Tool|StructuredTool|Runnable",
+                "name": "retrieverTool",
+                "label": "Retriever Tool",
+                "type": "DynamicTool | Tool | StructuredTool | Runnable"
+              },
+              {
+                "id": "cloudCollection_0-output-retriever-CloudCollection|VectorStoreRetriever|BaseRetriever|Tool|StructuredTool|Runnable",
+                "name": "retriever",
+                "label": "Retriever",
+                "type": "CloudCollection | VectorStoreRetriever | BaseRetriever | Tool | StructuredTool | Runnable"
+              },
+              {
+                "id": "cloudCollection_0-output-vectorStore-CloudCollection|VectorStore",
+                "name": "vectorStore",
+                "label": "Vector Store",
+                "type": "CloudCollection | VectorStore"
+              }
+            ],
+            "default": "retrieverTool"
+          }
+        ],
+        "outputs": {
+          "output": "retrieverTool"
+        },
+        "selected": false
+      },
+      "selected": false,
+      "positionAbsolute": {
+        "x": 31.03395576220447,
+        "y": 478.315909710562
+      },
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "agentTool_0",
+      "sourceHandle": "agentTool_0-output-agentTool-AgentTool|Tool|Tool|StructuredTool|Runnable",
+      "target": "planAndExecuteAgent_0",
+      "targetHandle": "planAndExecuteAgent_0-input-tools-Tool",
+      "type": "buttonedge",
+      "id": "agentTool_0-agentTool_0-output-agentTool-AgentTool|Tool|Tool|StructuredTool|Runnable-planAndExecuteAgent_0-planAndExecuteAgent_0-input-tools-Tool",
+      "data": {
+        "label": ""
+      }
+    },
+    {
+      "source": "requestsPost_0",
+      "sourceHandle": "requestsPost_0-output-requestsPost-RequestsPost|Tool|StructuredTool|Runnable",
+      "target": "planAndExecuteAgent_0",
+      "targetHandle": "planAndExecuteAgent_0-input-tools-Tool",
+      "type": "buttonedge",
+      "id": "requestsPost_0-requestsPost_0-output-requestsPost-RequestsPost|Tool|StructuredTool|Runnable-planAndExecuteAgent_0-planAndExecuteAgent_0-input-tools-Tool",
+      "data": {
+        "label": ""
+      }
+    },
+    {
+      "source": "chatOpenAI_0",
+      "sourceHandle": "chatOpenAI_0-output-chatOpenAI-ChatOpenAI|BaseChatModel|BaseLanguageModel|Runnable",
+      "target": "planAndExecuteAgent_0",
+      "targetHandle": "planAndExecuteAgent_0-input-model-BaseChatModel",
+      "type": "buttonedge",
+      "id": "chatOpenAI_0-chatOpenAI_0-output-chatOpenAI-ChatOpenAI|BaseChatModel|BaseLanguageModel|Runnable-planAndExecuteAgent_0-planAndExecuteAgent_0-input-model-BaseChatModel",
+      "data": {
+        "label": ""
+      }
+    },
+    {
+      "source": "cloudCollection_0",
+      "sourceHandle": "cloudCollection_0-output-retrieverTool-DynamicTool|Tool|StructuredTool|Runnable",
+      "target": "planAndExecuteAgent_0",
+      "targetHandle": "planAndExecuteAgent_0-input-tools-Tool",
+      "type": "buttonedge",
+      "id": "cloudCollection_0-cloudCollection_0-output-retrieverTool-DynamicTool|Tool|StructuredTool|Runnable-planAndExecuteAgent_0-planAndExecuteAgent_0-input-tools-Tool",
+      "data": {
+        "label": ""
+      }
+    }
+  ]
+}

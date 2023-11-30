@@ -34,7 +34,7 @@ export class OpenAiFiles {
         // check if the collection already exists
         const existingCollection = await dataSource.getRepository(Collection).findOneBy({
             user: user,
-            name: name,
+            name: name
         })
 
         if (existingCollection) {

@@ -1,35 +1,39 @@
 import PropTypes from 'prop-types'
 
 // material-ui
-import { useTheme } from '@mui/material/styles'
-import { Box, ButtonBase } from '@mui/material'
+import { Box } from '@mui/material'
 import { StyledButton } from 'ui-component/button/StyledButton'
 
 // icons
 import { IconLogin } from '@tabler/icons'
 
+// project imports
+import LogoSection from 'layout/MainLayout/LogoSection'
+
 // ==============================|| CANVAS HEADER ||============================== //
 
-const LandingHeader = ({ onClick, onCancel }) => {
-    const theme = useTheme()
-
+const LandingHeader = ({ onLogin, onPricing }) => {
     return (
         <>
+            <Box component='span' sx={{ display: { xs: 'none', md: 'block' }, flexGrow: 1 }}>
+                <LogoSection />
+            </Box>
             <Box sx={{ flexGrow: 1 }}>{/* additional elements here */}</Box>
             <Box>
-                <ButtonBase title='Back' sx={{ borderRadius: '50%' }}>
-                    <StyledButton variant='contained' sx={{ color: 'white' }} onClick={onClick} startIcon={<IconLogin />}>
-                        Login / Signup
-                    </StyledButton>
-                </ButtonBase>
+                <StyledButton variant='contained' color='secondary' sx={{ mr: '10px', color: 'white' }} onClick={onPricing}>
+                    Pricing
+                </StyledButton>
+                <StyledButton variant='contained' color='secondary' onClick={onLogin} startIcon={<IconLogin />}>
+                    Login / Signup
+                </StyledButton>
             </Box>
         </>
     )
 }
 
 LandingHeader.propTypes = {
-    onClick: PropTypes.func,
-    onCancel: PropTypes.func
+    onLogin: PropTypes.func,
+    onPricing: PropTypes.func
 }
 
 export default LandingHeader

@@ -20,6 +20,7 @@ import { useTheme } from '@mui/material/styles'
 
 // project imports
 import CanvasNode from './CanvasNode'
+import AnnotationNode from './AnnotationNode'
 import ButtonEdge from './ButtonEdge'
 import CanvasHeader from './CanvasHeader'
 import AddNodes from './AddNodes'
@@ -47,7 +48,7 @@ import useNotifier from 'utils/useNotifier'
 // const
 import { FLOWISE_CREDENTIAL_ID } from 'store/constant'
 
-const nodeTypes = { customNode: CanvasNode }
+const nodeTypes = { customNode: CanvasNode, annotationNode: AnnotationNode }
 const edgeTypes = { buttonedge: ButtonEdge }
 
 // ==============================|| CANVAS ||============================== //
@@ -297,10 +298,12 @@ const Canvas = () => {
 
             const newNodeId = getUniqueNodeId(nodeData, reactFlowInstance.getNodes())
 
+            const nodeType = nodeData.nodeType ?? 'customNode'
+
             const newNode = {
                 id: newNodeId,
                 position,
-                type: 'customNode',
+                type: nodeType,
                 data: initNode(nodeData, newNodeId)
             }
 

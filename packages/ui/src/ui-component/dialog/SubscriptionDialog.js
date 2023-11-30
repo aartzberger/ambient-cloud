@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import PropTypes from 'prop-types'
 import { createPortal } from 'react-dom'
-import { StyledButton } from 'ui-component/button/StyledButton'
 import {
     Dialog,
     DialogContent,
@@ -114,18 +113,15 @@ const ProductDisplay = ({ option }) => {
                 {/* <Logo /> */}
                 <Typography> {option.description} </Typography>
                 {option.features.map((feature, index) => (
-                    <Typography key={index}> {`✓ ${feature.name}`} </Typography>
+                    <Typography sx={{ m: 2 }} key={index}>
+                        {' '}
+                        {`✓ ${feature.name}`}{' '}
+                    </Typography>
                 ))}
                 <div className='description'>
                     <h5>{`${option.price} / ${option.recurring ? 'month' : 'one time'}`}</h5>{' '}
                 </div>
             </div>
-            <form onSubmit={handleSubmit}>
-                <input type='hidden' name='lookup_key' value={option.priceId} />
-                <StyledButton type='submit' variant='contained' sx={{ color: 'white' }}>
-                    Subscribe
-                </StyledButton>
-            </form>
         </section>
     )
 }

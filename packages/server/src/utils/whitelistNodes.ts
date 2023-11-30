@@ -105,6 +105,7 @@ const whitelistNodes = [
     'multiRetrievalQAChain',
     // 'NIBittensorChatModel',
     // 'NIBittensorLLM',
+    'noteAnnotation',
     // 'notionDB',
     // 'notionFolder',
     // 'notionPage',
@@ -192,7 +193,7 @@ const whitelistNodes = [
     'webBrowser',
     'writeFile',
     'zapierAutomation',
-    'zapierNLA',
+    'zapierNLA'
     // 'zep',
     // 'zepExistingIndex',
     // 'ZepMemory',

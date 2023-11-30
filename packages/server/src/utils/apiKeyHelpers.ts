@@ -1,10 +1,7 @@
 import { DataSource, DeleteResult } from 'typeorm'
 import { ApiKey } from '../database/entities/ApiKey'
 import { User } from '../database/entities/User'
-import { getDataSource } from '../DataSource'
 import { scryptSync, randomBytes, timingSafeEqual } from 'crypto'
-
-const dataSource = getDataSource()
 
 /**
  * Generate the api key

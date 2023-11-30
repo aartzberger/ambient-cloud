@@ -123,7 +123,7 @@ class Milvus_Upsert_Collection implements INode {
         // init MilvusLibArgs
         const milVusArgs: MilvusLibArgs = {
             url: address,
-            collectionName: collectionName + '_' + options.user.id,
+            collectionName: collectionName + '_' + options.user.id
         }
 
         if (milvusUser) milVusArgs.username = milvusUser

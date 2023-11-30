@@ -100,6 +100,7 @@ export interface INodeProperties {
     description?: string
     filePath?: string
     badge?: string
+    nodeType?: string
 }
 
 export interface INode extends INodeProperties {

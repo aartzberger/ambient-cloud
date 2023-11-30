@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { FullPageChat } from 'ambientware-embed-react'
-import { useNavigate } from 'react-router-dom'
 
 // Project import
 import LoginDialog from 'ui-component/dialog/LoginDialog'

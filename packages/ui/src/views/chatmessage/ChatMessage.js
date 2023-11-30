@@ -34,7 +34,7 @@ import robotPNG from 'assets/images/robot.png'
 import userPNG from 'assets/images/account.png'
 import { isValidURL, removeDuplicateURL, setLocalStorageChatflow } from 'utils/genericHelper'
 
-export const ChatMessage = ({ open, chatflowid, isDialog }) => {
+export const ChatMessage = ({ open, chatflowid, isDialog, isExternal = false }) => {
     const theme = useTheme()
     const customization = useSelector((state) => state.customization)
 
@@ -124,7 +124,12 @@ export const ChatMessage = ({ open, chatflowid, isDialog }) => {
             }
             if (isChatFlowAvailableToStream) params.socketIOClientId = socketIOClientId
 
-            const response = await predictionApi.sendMessageAndGetPrediction(chatflowid, params)
+            let response
+            if (isExternal) {
+                response = await predictionApi.sendExternalMessageAndGetPrediction(chatflowid, params)
+            } else {
+                response = await predictionApi.sendMessageAndGetPrediction(chatflowid, params)
+            }
 
             if (response.data) {
                 const data = response.data
@@ -458,5 +463,6 @@ export const ChatMessage = ({ open, chatflowid, isDialog }) => {
 ChatMessage.propTypes = {
     open: PropTypes.bool,
     chatflowid: PropTypes.string,
-    isDialog: PropTypes.bool
+    isDialog: PropTypes.bool,
+    isExternal: PropTypes.bool
 }

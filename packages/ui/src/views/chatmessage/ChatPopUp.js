@@ -23,7 +23,7 @@ import useNotifier from 'utils/useNotifier'
 // Const
 import { enqueueSnackbar as enqueueSnackbarAction, closeSnackbar as closeSnackbarAction } from 'store/actions'
 
-export const ChatPopUp = ({ chatflowid }) => {
+export const ChatPopUp = ({ chatflowid, isExternal = false }) => {
     const theme = useTheme()
     const { confirm } = useConfirm()
     const dispatch = useDispatch()
@@ -191,8 +191,8 @@ export const ChatPopUp = ({ chatflowid }) => {
                     <Transitions in={open} {...TransitionProps}>
                         <Paper>
                             <ClickAwayListener onClickAway={handleClose}>
-                                <MainCard border={false} elevation={16} content={false} boxShadow shadow={theme.shadows[16]}>
-                                    <ChatMessage chatflowid={chatflowid} open={open} />
+                                <MainCard border={false} height={'80%'} elevation={16} content={false} boxShadow shadow={theme.shadows[16]}>
+                                    <ChatMessage chatflowid={chatflowid} open={open} isExternal={isExternal} />
                                 </MainCard>
                             </ClickAwayListener>
                         </Paper>
@@ -209,4 +209,4 @@ export const ChatPopUp = ({ chatflowid }) => {
     )
 }
 
-ChatPopUp.propTypes = { chatflowid: PropTypes.string }
+ChatPopUp.propTypes = { chatflowid: PropTypes.string, isExternal: PropTypes.bool }

@@ -172,7 +172,7 @@ class Local_Existing_Collection implements INode {
         vectorStore.similaritySearchVectorWithScore = async (query: number[], k: number, filter?: string) => {
             // if there is no partision name, return empty array
             if (!partitionName) return []
-            
+
             const hasColResp = await vectorStore.client.hasCollection({
                 collection_name: vectorStore.collectionName
             })

@@ -12,7 +12,7 @@ import { styled } from '@mui/material/styles'
 import ProfileSection from './ProfileSection'
 
 // assets
-import { IconMenu2, IconLogout } from '@tabler/icons'
+import { IconMenu2 } from '@tabler/icons'
 import LogoSection from '../LogoSection'
 
 // store

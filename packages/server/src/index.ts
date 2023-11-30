@@ -80,6 +80,7 @@ import { createRateLimiter, getRateLimiter, initializeRateLimiter } from './util
 import { handleAutomationInterval, removeAutomationInterval } from './utils/scheduler'
 import { RecursiveCharacterTextSplitter, RecursiveCharacterTextSplitterParams } from 'langchain/text_splitter'
 import { OpenAIEmbeddings } from 'langchain/embeddings/openai'
+import { Document } from 'langchain/document'
 
 // import { HuggingFaceInferenceEmbeddings } from 'langchain/embeddings/hf'
 
@@ -332,6 +333,12 @@ export class App {
                 email: body.email,
                 password: body.password
             }
+
+            // TODO CMAN - can be removed after beta testing
+            if (body.accessCode !== process.env.ACCESS_CODE) {
+                return res.status(401).send('Unauthorized')
+            }
+
             // only sign up the user if the information is provided from signup form... not login form
             const loginResponse = await loginOrCreateUser(req.body.signup, profile, this.subscriptionMethod, this.AppDataSource)
 
@@ -392,7 +399,7 @@ export class App {
         // ----------------------------------------
 
         // get all subscirption levels/products
-        this.app.get('/api/v1/subscriptions', ensureAuthenticated, async (req, res) => {
+        this.app.get('/api/v1/subscriptions', async (req, res) => {
             try {
                 const subscriptions = await this.subscriptionMethod.getSubscriptionOptions()
 
@@ -645,6 +652,17 @@ export class App {
                 where: { user: req.user as User }
             })
             return res.json(chatflows)
+        })
+
+        // Get the demo chatflow id
+        this.app.get('/api/v1/chatflows/demo', async (req: Request, res: Response) => {
+            const demoId = process.env.DEMO_CHATFLOW_ID
+
+            if (!demoId) {
+                return res.status(404).send(`Demo chatflow not found`)
+            }
+
+            return res.json({ id: demoId })
         })
 
         // Get specific chatflow via api key
@@ -959,7 +977,7 @@ export class App {
         })
 
         // Get all credentials
-        this.app.get('/api/v1/credentials', ensureAuthenticated, async (req: Request, res: Response) => {
+        this.app.get('/api/v1/credentials', async (req: Request, res: Response) => {
             if (req.query.credentialName) {
                 let returnCredentials = []
                 if (Array.isArray(req.query.credentialName)) {
@@ -1985,8 +2003,7 @@ export class App {
             const defaultSplitter = new RecursiveCharacterTextSplitter(obj)
 
             const additionalInfo = {
-                textSplitter: defaultSplitter,
-                metadata: { fileName: req.body.dataDescription, partition: partitionName, user: String((req.user as User).id) }
+                textSplitter: defaultSplitter
             }
 
             const nodeData = req.body.nodeData
@@ -2004,7 +2021,15 @@ export class App {
                 databaseEntities: databaseEntities
             }
 
-            const alldocs = await nodeInstance.init(nodeData, '', options)
+            let alldocs = await nodeInstance.init(nodeData, '', options)
+
+            // only add metadata that is relevant to ambientware
+            alldocs = alldocs.map((doc: Document) => {
+                return {
+                    ...doc,
+                    metadata: { fileName: req.body.dataDescription, partition: partitionName, user: String((req.user as User).id) }
+                }
+            })
 
             const milvusArgs = {
                 collectionName: 'ambient',
@@ -2118,7 +2143,7 @@ export class App {
         // ----------------------------------------
 
         // Get all chatflows for marketplaces
-        this.app.get('/api/v1/marketplaces/chatflows', ensureAuthenticated, async (req: Request, res: Response) => {
+        this.app.get('/api/v1/marketplaces/chatflows', async (req: Request, res: Response) => {
             const marketplaceDir = path.join(__dirname, '..', 'marketplaces', 'chatflows')
             const jsonsInDir = fs.readdirSync(marketplaceDir).filter((file) => path.extname(file) === '.json')
             const templates: any[] = []
@@ -2779,10 +2804,7 @@ export class App {
                         continue
                     }
 
-                    let predResult = {
-                        status: 200,
-                        data: {}
-                    }
+                    let predResult: any = {}
 
                     // create a mock request objectf
                     const tmpReq = {
@@ -2792,25 +2814,26 @@ export class App {
 
                     // Create a mock response object
                     const tmpRes = {
-                        send: (response) => {
+                        send: function (response) {
                             predResult.data = response
-                            return tmpRes // Enable chaining by returning the mock itself
+                            return this // Enable chaining by returning the mock itself
                         },
-                        status: (statusCode) => {
+                        status: function (statusCode) {
                             predResult.status = statusCode
-                            return tmpRes // Enable chaining by returning the mock itself
+                            return this // Enable chaining by returning the mock itself
                         },
-                        json: (response) => {
+                        json: function (response) {
+                            predResult.status = 200 // default status
                             predResult.data = response
-                            return tmpRes // Enable chaining by returning the mock itself
+                            return this // Enable chaining by returning the mock itself
                         }
                         // ... other methods as needed
                     } as Partial<Response>
 
                     await this.buildChatflow(tmpReq as Request, tmpRes as Response, socketIO, isInternal, true)
 
-                    const result = predResult.data
-                    const status = predResult.status
+                    const result = predResult.data.text ? predResult.data.text : predResult.data
+                    const status = predResult.status ? predResult.status : 404
 
                     if (status !== 200) {
                         return res.status(status as any).send(result)

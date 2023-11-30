@@ -140,6 +140,8 @@ const AddNodes = ({ nodesData, node }) => {
     }
 
     const onDragStart = (event, node) => {
+        let ghost = event.target.querySelector('img') //select icon from accordion node
+        event.dataTransfer.setDragImage(ghost, 0, 0) //set icon as ghost while dragging
         event.dataTransfer.setData('application/reactflow', JSON.stringify(node))
         event.dataTransfer.effectAllowed = 'move'
     }
