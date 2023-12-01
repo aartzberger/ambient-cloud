@@ -281,51 +281,53 @@ const Canvas = () => {
     const onDrop = useCallback(
         (event) => {
             event.preventDefault()
-            const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect()
-            let nodeData = event.dataTransfer.getData('application/reactflow')
+            if (event.target.className.includes('react-flow') || event.target.closest('.react-flow__node')) {
+                const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect()
+                let nodeData = event.dataTransfer.getData('application/reactflow')
 
-            // check if the dropped element is valid
-            if (typeof nodeData === 'undefined' || !nodeData) {
-                return
-            }
+                // check if the dropped element is valid
+                if (typeof nodeData === 'undefined' || !nodeData) {
+                    return
+                }
 
-            nodeData = JSON.parse(nodeData)
+                nodeData = JSON.parse(nodeData)
 
-            const position = reactFlowInstance.project({
-                x: event.clientX - reactFlowBounds.left - 100,
-                y: event.clientY - reactFlowBounds.top - 50
-            })
-
-            const newNodeId = getUniqueNodeId(nodeData, reactFlowInstance.getNodes())
-
-            const nodeType = nodeData.nodeType ?? 'customNode'
-
-            const newNode = {
-                id: newNodeId,
-                position,
-                type: nodeType,
-                data: initNode(nodeData, newNodeId)
-            }
-
-            setSelectedNode(newNode)
-            setNodes((nds) =>
-                nds.concat(newNode).map((node) => {
-                    if (node.id === newNode.id) {
-                        node.data = {
-                            ...node.data,
-                            selected: true
-                        }
-                    } else {
-                        node.data = {
-                            ...node.data,
-                            selected: false
-                        }
-                    }
-
-                    return node
+                const position = reactFlowInstance.project({
+                    x: event.clientX - reactFlowBounds.left - 100,
+                    y: event.clientY - reactFlowBounds.top - 50
                 })
-            )
-            setTimeout(() => setDirty(), 0)
+
+                const newNodeId = getUniqueNodeId(nodeData, reactFlowInstance.getNodes())
+
+                const nodeType = nodeData.nodeType ?? 'customNode'
+
+                const newNode = {
+                    id: newNodeId,
+                    position,
+                    type: nodeType,
+                    data: initNode(nodeData, newNodeId)
+                }
+
+                setSelectedNode(newNode)
+                setNodes((nds) =>
+                    nds.concat(newNode).map((node) => {
+                        if (node.id === newNode.id) {
+                            node.data = {
+                                ...node.data,
+                                selected: true
+                            }
+                        } else {
+                            node.data = {
+                                ...node.data,
+                                selected: false
+                            }
+                        }
+
+                        return node
+                    })
+                )
+                setTimeout(() => setDirty(), 0)
+            }
         },
 
         // eslint-disable-next-line
